@@ -1,0 +1,60 @@
+.cmdt-banner {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	position: relative;
+}
+
+.employee-profile-container {
+	position: absolute;
+	top: 12px;
+	right: 12px;
+	z-index: 1000;
+}
+
+.employee-profile {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	background: rgba(255, 255, 255, 0.8);
+	border-radius: 9999px;
+	padding: 6px 10px;
+	backdrop-filter: saturate(180%) blur(10px);
+	cursor: pointer;
+	transition: all 0.2s ease;
+	border: 1px solid transparent;
+}
+
+.employee-profile:hover {
+	background: rgba(255, 255, 255, 0.9);
+	border-color: rgba(10, 106, 58, 0.2);
+}
+
+.dropdown-arrow {
+	color: #0a6a3a;
+	transition: transform 0.2s ease;
+}
+
+.employee-profile-container.open .dropdown-arrow {
+	transform: rotate(180deg);
+}
+
+.employee-avatar {
+	width: 36px;
+	height: 36px;
+	border-radius: 9999px;
+	object-fit: cover;
+	border: 2px solid #0a6a3a;
+}
+
+.employee-name {
+	font-weight: 600;
+	color: #0a6a3a;
+	font-size: 14px;
+}
+
+
+
+.gradient-fade {
+	/* keep existing semantics; styles can be refined later */
+}

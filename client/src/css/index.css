@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+.Toastify__toast {
+  @apply rounded-md shadow-md text-sm font-medium px-4 py-3;
+}
+
+.Toastify__toast--success {
+  @apply bg-green-100 text-green-800 border-l-4 border-green-500;
+}
+
+.Toastify__toast--error {
+  @apply bg-red-100 text-red-800 border-l-4 border-red-500;
+}
+
+.Toastify__toast--warning {
+  @apply bg-yellow-100 text-yellow-800 border-l-4 border-yellow-500;
+}
+
+.Toastify__toast-body {
+  @apply flex items-center gap-2;
+}
+
+.Toastify__close-button {
+  @apply text-gray-500 hover:text-gray-700;
+}
+
+:root {
+    --primary-color: #262b87;
+    --secondary-color: #ffffff;
+    --tertiary-color: rgba(0,0,0,0.1);
+}
+
+body {
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    font-family: 'Montserrat','Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    transition: all 0.2ms ease-in-out;
+}
+
+.show {
+    opacity: 1;
+}
+.hidden {
+    opacity: 0;
+}
+
+.gradient-fade {
+    display: inline-block;
+    padding: 1rem 2rem;
+    background: linear-gradient(138deg, #ddc6c6, #33cc8a);
+    -webkit-mask-image: linear-gradient(to right, black 60%, transparent 100%);
+    mask-image: linear-gradient(to right, black 60%, transparent 100%);
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
+    margin-top: 0.25rem;
+    margin-left: 0.25em;
+}
+  
+.text {
+    color: black;
+    font-size: 2rem;
+    font-weight: bold;
+    font-family: 'Inter', sans-serif;
+}
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-out-spin-button {
+    -webkit-appearance: none;
+    margin: none;
+}
+
+.bg-home, 
+.bg-invoice, 
+.bg-export, 
+.bg-joinDFC, 
+.bg-print, 
+.bg-stats, 
+.bg-search,
+.bg-dfc-formular {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+.bg-home {
+  background-image: url('client/public/image-coton-5.jpg');
+}
+
+.bg-invoice {
+  background-image: url('client/public/image-coton-5.jpg');
+}
+
+.bg-export {
+  background-image: url('client/public/image-coton-5.jpg');
+}
+
+.bg-joinDFC {
+  background-image: url('client/public/image-coton-5.jpg');
+}
+
+.bg-print {
+  background-image: url('client/public/image-coton-5.jpg');
+}
+
+.bg-stats {
+  background-image: url('client/public/image-coton-5.jpg');
+}
+
+.bg-search {
+  background-image: url('client/public/image-coton-5.jpg');
+}
+.bg-dfc-formular {
+  background-image: url('client/public/image-coton-5.jpg');
+}
