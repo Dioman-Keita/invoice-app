@@ -1,36 +1,90 @@
 // Register.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useTitle from '../hooks/useTitle';
+import { useInputFilters } from '../hooks/useInputFilter';
+import { usePhoneFormatter } from '../hooks/usePhoneFormater';
+import useToastFeedback from '../hooks/useToastFeedBack';
 import { Link } from 'react-router-dom';
+import { registerSchema } from '../features/connection/loginShema';
+import { useForm, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import AsyncSubmitBtn from '../components/AsyncSubmitBtn';
 
 function Register() {
   useTitle('CMDT - Inscription');
-  const [userType, setUserType] = useState('dfc');
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    employeeId: '',
-    department: ''
+  const [userType, setUserType] = useState('dfc_agent');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { 
+    filterEmail, 
+    filterFirstName,
+    filterLastName, 
+    filterPassword, 
+    filterConfirmPassword,
+    filterEmployeeId
+  } = useInputFilters();
+
+  const { formatPhoneNumber, handlePhoneKeyDown } = usePhoneFormatter();
+  const { success } = useToastFeedback();
+
+  const { 
+    register, 
+    handleSubmit, 
+    formState: {errors}, 
+    control, 
+    trigger, 
+    setValue
+  } = useForm({
+    mode: "onChange",
+    reValidateMode: "onChange",
+    shouldFocusError: true,
+    resolver: zodResolver(registerSchema),
+    criteriaMode: 'all',
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      employee_cmdt_id: "",
+      phone: "",
+      password: "",
+      confirm_password: "",
+      department: "",
+      terms: false,
+      user_type: 'dfc_agent',
+    }
   });
+  const password = useWatch({control, name: "password"});
+  const confirmPassword = useWatch({control, name: "confirm_password"});
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Ici, vous ajouterez la logique d'inscription
-    console.log('Inscription en tant que:', userType, formData);
-  };
+  useEffect(() => {
+    if (password && confirmPassword) {
+      trigger("confirm_password");
+    }
+  }, [password, confirmPassword, trigger]);
+  
+  useEffect(() => {
+    setValue('user_type', userType, {shouldValidate: true});
+  }, [userType, setValue]);
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
+  const onSubmit = async (data) => {
+    try {
+      setLoading(true);
+      await new Promise((res) => setTimeout(res, 2000));
+      success("Compte créé avec succès !");
+      console.log('Donnees soumises : ', data);
+    } catch (error) {
+      console.error('Erreurs de validation : ', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => {
+    setValue('user_type', userType, { shouldValidate: true, shouldDirty: true });
+  }, [userType, setValue]);
+  
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-gradient-to-br from-green-50 via-white to-amber-50">
+    <div className="min-h-screen flex flex-col md:flex-row bg-register">
       {/* Section illustration */}
       <div className="md:w-1/2 flex items-center justify-center p-8 bg-green-700 text-white">
         <div className="max-w-md text-center">
@@ -48,8 +102,8 @@ function Register() {
       </div>
 
       {/* Formulaire d'inscription */}
-      <div className="md:w-1/2 flex items-center justify-center p-8">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
+      <div className="md:w-1/2 flex items-center justify-center p-10">
+        <div className="w-full max-w-lg bg-white/90 backdrop-blur-md rounded-2xl shadow-lg p-10">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-green-800">Inscription</h2>
             <p className="text-gray-600 mt-2">Créez votre compte personnel</p>
@@ -61,9 +115,9 @@ function Register() {
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
-                onClick={() => setUserType('dfc')}
+                onClick={() => setUserType('dfc_agent')}
                 className={`py-3 px-4 rounded-lg border ${
-                  userType === 'dfc'
+                  userType === 'dfc_agent'
                     ? 'bg-green-100 border-green-500 text-green-700'
                     : 'bg-gray-100 border-gray-300 text-gray-700'
                 } transition-colors`}
@@ -72,9 +126,9 @@ function Register() {
               </button>
               <button
                 type="button"
-                onClick={() => setUserType('factures')}
+                onClick={() => setUserType('invoice_manager')}
                 className={`py-3 px-4 rounded-lg border ${
-                  userType === 'factures'
+                  userType === 'invoice_manager'
                     ? 'bg-green-100 border-green-500 text-green-700'
                     : 'bg-gray-100 border-gray-300 text-gray-700'
                 } transition-colors`}
@@ -84,8 +138,8 @@ function Register() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-2 gap-4 mb-4">
+          <form noValidate onSubmit={handleSubmit(onSubmit)}>
+            <div className="grid grid-cols-1 gap-4 mb-4">
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
                   Prénom
@@ -94,12 +148,14 @@ function Register() {
                   type="text"
                   id="firstName"
                   name="firstName"
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  onInput={filterFirstName}
+                  {...register("firstName")}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none ${errors['firstName']?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
                   placeholder="Votre prénom"
-                  required
                 />
+                {errors['firstName'] && (
+                <p className="text-sm text-red-600 mt-1">{errors['firstName'].message}</p>)}
+
               </div>
               <div>
                 <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -109,12 +165,12 @@ function Register() {
                   type="text"
                   id="lastName"
                   name="lastName"
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  onInput={filterLastName}
+                  {...register("lastName")}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none ${errors['lastName']?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
                   placeholder="Votre nom"
-                  required
                 />
+                {errors['lastName']?.message && (<p className="text-sm text-red-600 mt-1">{errors.lastName.message}</p>)}
               </div>
             </div>
 
@@ -126,31 +182,52 @@ function Register() {
                 type="email"
                 id="email"
                 name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                {...register("email")}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none ${errors['email']?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
                 placeholder="prenom.nom@cmdt.ml"
-                required
+                onInput={filterEmail}
               />
+              {errors.email?.message && (
+                <p className="text-sm text-red-600 mt-1">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="mb-4">
-              <label htmlFor="employeeId" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="employee_cmdt_id" className="block text-sm font-medium text-gray-700 mb-1">
                 Identifiant employé
               </label>
               <input
                 type="text"
-                id="employeeId"
-                name="employeeId"
-                value={formData.employeeId}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                onInput={filterEmployeeId}
+                id="employee_cmdt_id"
+                name="employee_cmdt_id"
+                {...register("employee_cmdt_id")}
+                className = {`w-full px-4 py-3 rounded-lg border focus:outline-none ${errors.employee_cmdt_id?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
                 placeholder="Votre identifiant CMDT"
-                required
               />
+              {errors.employee_cmdt_id?.message && <p className="text-sm text-red-600 mt-1">{errors.employee_cmdt_id.message}</p>}
+            </div>
+            <div className="mb-4">
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                Numéro de téléphone
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                onInput={formatPhoneNumber}
+                onKeyDown={handlePhoneKeyDown}
+                onFocus={(e) => {
+                    if (e.target.value === '') {
+                      e.target.value = '+223 ';
+                    }
+                }}
+                {...register("phone")}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none ${errors.phone?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
+                placeholder="+223 00 00 00 00"
+              />
+              {errors.phone?.message && <p className="text-sm text-red-600 mt-1">{errors.phone.message}</p>}
             </div>
 
-            {userType === 'dfc' && (
               <div className="mb-4">
                 <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1">
                   Département DFC
@@ -158,71 +235,107 @@ function Register() {
                 <select
                   id="department"
                   name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  required
+                  {...register("department")}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none ${errors.department?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
                 >
+                {userType === 'dfc_agent' ? (
+                  <>
+                    <option value="">Sélectionnez votre département</option>
+                    <option value="finance">Finance</option>
+                    <option value="comptabilité">Comptabilité</option>
+                    <option value="contrôle_de_gestion">Contrôle de gestion</option>
+                    <option value="audit_interne">Audit interne</option>
+                  </>
+                ) : (
+                 <>
                   <option value="">Sélectionnez votre département</option>
-                  <option value="finance">Finance</option>
-                  <option value="comptabilite">Comptabilité</option>
-                  <option value="controle">Contrôle de gestion</option>
-                  <option value="audit">Audit interne</option>
+                  <option value="facturation">Facturation</option>
+                  <option value="comptabilité_client">Comptabilité Client</option>
+                  <option value="gestion_factures">Gestion des Factures</option>
+                </>
+                )}
                 </select>
+                {errors.department?.message && (
+                  <p className="text-sm text-red-500 mt-1">{errors.department.message}</p>
+                )}
               </div>
-            )}
 
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                   Mot de passe
                 </label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="Créez un mot de passe"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    name="password"
+                    onInput={filterPassword}
+                    className={`w-full px-4 py-3 pr-12 border rounded-lg focus:outline-none ${errors.password?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'} appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden`}
+                    placeholder="mot de passe"
+                    {...register("password")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    className="absolute inset-y-0 right-0 my-1 mr-1 px-3 text-xs text-gray-500 hover:text-gray-700 rounded-md"
+                    aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                  >
+                    {showPassword ? 'Masquer' : 'Afficher'}
+                  </button>
+                </div>
+                {errors.password?.message && <p className="text-sm text-red-500">{errors.password.message}</p>}
               </div>
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700 mb-1">
                   Confirmation
                 </label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="Confirmez le mot de passe"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    id="confirm_password"
+                    name="confirm_password"
+                    onInput={filterConfirmPassword}
+                    className={`w-full px-4 py-3 pr-12 border rounded-lg focus:outline-none ${errors.confirm_password?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'} appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden`}
+                    placeholder="Confirmez"
+                    {...register("confirm_password")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(v => !v)}
+                    className="absolute inset-y-0 right-0 my-1 mr-1 px-3 text-xs text-gray-500 hover:text-gray-700 rounded-md"
+                    aria-label={showConfirmPassword ? 'Masquer la confirmation' : 'Afficher la confirmation'}
+                  >
+                    {showConfirmPassword ? 'Masquer' : 'Afficher'}
+                  </button>
+                </div>
+                {errors.confirm_password?.message && <p className="text-sm text-red-600 mt-1">{errors.confirm_password.message}</p>}
               </div>
             </div>
 
-            <div className="flex items-center mb-6">
-              <input
-                type="checkbox"
-                id="terms"
-                className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                required
-              />
-              <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
-                J'accepte les <a href="#" className="text-green-600 hover:text-green-800">conditions d'utilisation</a> et la <a href="#" className="text-green-600 hover:text-green-800">politique de confidentialité</a>
-              </label>
+            <div className="mb-6">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="terms"
+                  name="terms"
+                  {...register("terms")}
+                  className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                />
+                <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
+                  J'accepte les <a href="#" className="text-green-600 hover:text-green-800">conditions d'utilisation</a> et la <a href="#" className="text-green-600 hover:text-green-800">politique de confidentialité</a>
+                </label>
+              </div>
+              {errors.terms?.message && <p className="text-sm text-red-600 mt-1 ml-6">{errors.terms.message}</p>}
             </div>
+            <input type="hidden" {...register("user_type")} name="user_type" value={userType} />
 
-            <button
-              type="submit"
-              className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-            >
-              Créer mon compte
-            </button>
+            <AsyncSubmitBtn 
+              fullWidth
+              label="Créer mon compte"
+              loadingLabel="Création en cours..."
+              loading={loading}
+            />
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">

@@ -1,18 +1,28 @@
 import SupplierModal from "./SupplierModal";
 import { useFormContext } from "react-hook-form";
 import { useState } from "react";
-import useTostFeedBack from "../hooks/useToastFeedBack";
+import useProgressiveValidation from "../hooks/useProgressiveValidation";
 
 function ValidateSupplierInput() {
-    const { register, formState:{errors}} = useFormContext();
-    const {error} = useTostFeedBack();
+    const { register, formState:{errors}, setValue} = useFormContext();
+    const { validateLength } = useProgressiveValidation();
     const [isSupplierModalOpen, setSupplierModalOpen] = useState(false);
     
     const handleNameInput = (e) => {
         const value = e.target.value;
-        if (value.length > 45) {
-            error("Nom du fournisseur limité à 45 caractères");
-            e.target.value = value.slice(0, 45);
+        const validation = validateLength(value, 45, "Nom du fournisseur", {
+            warningThreshold: 0.89,  // 40 caractères exactement (45 * 0.89 = 40.05)
+            infoThreshold: 0.67,     // 30 caractères exactement (45 * 0.67 = 30.15)
+            showCount: true,
+            cooldownMs: 4000         // 4 secondes entre les notifications
+        });
+        
+        if (validation.shouldTruncate) {
+            const truncated = value.slice(0, 45);
+            e.target.value = truncated;
+            setValue('supplier_name', truncated);
+        } else {
+            setValue('supplier_name', value);
         }
     }
 

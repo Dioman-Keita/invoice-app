@@ -1,9 +1,9 @@
 import { useFormContext } from "react-hook-form";
-import useToastFeedback from "../hooks/useToastFeedBack";
+import useProgressiveValidation from "../hooks/useProgressiveValidation";
 import { useState } from "react";
 
 function ValidatedAmountInput({ name = "invoice_amount", label = "Montant de la facture", placeholder = "ex. 1 000 000" }) {
-  const { error } = useToastFeedback();
+  const { validatePattern } = useProgressiveValidation();
   const {
     register,
     formState: { errors },
@@ -22,7 +22,9 @@ function ValidatedAmountInput({ name = "invoice_amount", label = "Montant de la 
   // Bloc les nombre commencant par 0
   const formatNumberWith0  = (value) => {
     if (value.slice(0)[0] === '0') {
-      error("Le montant ne doit pas commencer par 0")
+      validatePattern(value, /^[1-9]/, "Montant", "Le montant ne doit pas commencer par 0", {
+        cooldownMs: 3000
+      });
       return value.replace('0', '');
     } else {
       return value;
@@ -45,7 +47,9 @@ function ValidatedAmountInput({ name = "invoice_amount", label = "Montant de la 
     const numeric = parseInt(rawValue, 10);
 
     if (numeric > MAX_AMOUNT) {
-      error("Montant maximum autorisé : 1 milliard FCFA");
+      validatePattern(numeric.toString(), /^[0-9]{1,9}$/, "Montant", "Montant maximum autorisé : 1 milliard FCFA", {
+        cooldownMs: 3000
+      });
       const formattedMax = formatWithSpaces(MAX_AMOUNT.toString());
       setDisplayValue(formattedMax);
       setValue(name, MAX_AMOUNT.toString(), { shouldDirty: true });

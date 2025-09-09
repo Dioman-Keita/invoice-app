@@ -1,29 +1,5 @@
 @import "tailwindcss";
 
-.Toastify__toast {
-  @apply rounded-md shadow-md text-sm font-medium px-4 py-3;
-}
-
-.Toastify__toast--success {
-  @apply bg-green-100 text-green-800 border-l-4 border-green-500;
-}
-
-.Toastify__toast--error {
-  @apply bg-red-100 text-red-800 border-l-4 border-red-500;
-}
-
-.Toastify__toast--warning {
-  @apply bg-yellow-100 text-yellow-800 border-l-4 border-yellow-500;
-}
-
-.Toastify__toast-body {
-  @apply flex items-center gap-2;
-}
-
-.Toastify__close-button {
-  @apply text-gray-500 hover:text-gray-700;
-}
-
 :root {
     --primary-color: #262b87;
     --secondary-color: #ffffff;
@@ -76,7 +52,10 @@ input[type=number]::-webkit-out-spin-button {
 .bg-print, 
 .bg-stats, 
 .bg-search,
-.bg-dfc-formular {
+.bg-dfc-formular,
+.bg-login,
+.bg-register,
+.bg-settings {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -111,6 +90,19 @@ input[type=number]::-webkit-out-spin-button {
 .bg-search {
   background-image: url('client/public/image-coton-5.jpg');
 }
+
+.bg-login {
+  background-image: url('client/public/image-coton-5.jpg');
+}
+
+.bg-register {
+  background-image: url('client/public/image-coton-5.jpg');
+}
+
 .bg-dfc-formular {
+  background-image: url('client/public/image-coton-5.jpg');
+}
+
+.bg-settings {
   background-image: url('client/public/image-coton-5.jpg');
 }

@@ -16,6 +16,7 @@ import FormSection from "../../components/FormSection";
 import AsyncSubmitBtn from "../../components/AsyncSubmitBtn";
 import { invoiceSchema } from "./InvoiceShema";
 import useToastFeedback from "../../hooks/useToastFeedBack";
+import useDateValidation from "../../hooks/useDateValidation";
 
 function InvoiceForm() {
 
@@ -37,15 +38,28 @@ function InvoiceForm() {
   const invoiceDate = useWatch({ control, name: "invoice_date" });
   const arrivalDate = useWatch({ control, name: "invoice_arrival_date" });
 
-  // Effet pour relancer la validation croisée
+  const { success } = useToastFeedback();
+  const { validateDateOrder } = useDateValidation();
+
+  // Effet pour la validation croisée des dates
   useEffect(() => {
     if (invoiceDate && arrivalDate) {
+      // Laisser Zod faire sa validation
       trigger("invoice_arrival_date");
+      
+      // Ajouter un warning discret pour l'incohérence des dates
+      validateDateOrder(invoiceDate, arrivalDate, {
+        showWarning: true,
+        cooldownMs: 5000,
+        fieldNames: {
+          invoice: "Date de la facture",
+          arrival: "Date d'arrivée du courrier"
+        }
+      });
     }
-  }, [invoiceDate, arrivalDate, trigger])
-
-  const {  success } = useToastFeedback();
+  }, [invoiceDate, arrivalDate, trigger, validateDateOrder])
   const [loading, setLoading] = useState(false);
+  
   const onSubmit = async (data) => {
     setLoading(true);
     try {

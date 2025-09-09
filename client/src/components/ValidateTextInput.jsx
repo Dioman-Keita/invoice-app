@@ -1,17 +1,22 @@
 import { useFormContext } from "react-hook-form";
-import useTostFeedBack from "../hooks/useToastFeedBack";
+import useProgressiveValidation from "../hooks/useProgressiveValidation";
 
-function ValidateTextInput({ label, placeholder, name, strictMode = false }) {
+function ValidateTextInput({ label, placeholder, name, strictMode = false, maxLength = 100 }) {
     const {register, formState: {errors}, setValue} = useFormContext();
-    const {error} = useTostFeedBack();
+    const { validateLength } = useProgressiveValidation();
 
     const handleInput = (e) => {
         const value = e.target.value;
-        if(value.length > 100) {
-            error("Objet limité à 100 caractères");
-            const trunced = value.slice(0, 100)
-            e.target.value = trunced;
-            setValue(name, trunced)
+        const validation = validateLength(value, maxLength, label || "Champ", {
+            warningThreshold: 0.8, // 80% de la limite
+            infoThreshold: 0.6,    // 60% de la limite
+            showCount: true
+        });
+        
+        if (validation.shouldTruncate) {
+            const truncated = value.slice(0, maxLength);
+            e.target.value = truncated;
+            setValue(name, truncated);
         } else {
             setValue(name, value);
         }

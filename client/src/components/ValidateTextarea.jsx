@@ -1,16 +1,22 @@
 import { useFormContext } from "react-hook-form";
-import useTostFeedBack from "../hooks/useToastFeedBack";
+import useProgressiveValidation from "../hooks/useProgressiveValidation";
 import { useState } from "react";
 
 function ValidatedTextarea({ name, label, placeholder = "", maxLength = 100 }) {
   const { register, formState: { errors }, setValue } = useFormContext();
-  const { error } = useTostFeedBack()
+  const { validateLength } = useProgressiveValidation();
   const [charCount, setCharCount] = useState(0);
 
   const handleInput = (e) => {
     const value = e.target.value;
-    if (value.length > maxLength) {
-      error(`Objet limité à ${maxLength} caractères`);
+    const validation = validateLength(value, maxLength, label || "Champ", {
+      warningThreshold: 0.8, // 80% de la limite
+      infoThreshold: 0.6,    // 60% de la limite
+      showCount: true,
+      cooldownMs: 4000       // 4 secondes entre les notifications
+    });
+    
+    if (validation.shouldTruncate) {
       const truncated = value.slice(0, maxLength);
       e.target.value = truncated;
       setValue(name, truncated);

@@ -8,6 +8,7 @@ import Export from "../pages/Export";
 import Search from "../pages/Search";
 import Stats from "../pages/Stats";
 import Print from "../pages/Print";
+import Settings from "../pages/Settings";
 import JoinDFC from "../pages/JoinDFC";
 import DFCFormular from "../pages/DFCFormular";
 
@@ -24,6 +25,7 @@ function AppRoutes() {
             <Route path="/search" element={<Search />} />
             <Route path="/stats" element={<Stats />} />
             <Route path="/print" element={<Print />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
             <Route path="/joinDFC" element={<JoinDFC />} />
             <Route path="/dfc_traitment" element={<DFCFormular />} />

@@ -1,13 +1,16 @@
 import { BrowserRouter } from 'react-router-dom';
-
-import 'react-toastify/dist/ReactToastify.css';
 import AppRoutes from './routes/AppRoutes';
+import { NotificationProvider } from './context/NotificationContext.jsx';
+import NotificationManager from './components/NotificationManager';
 
 function App() {
   return (
 
     <BrowserRouter>
-      <AppRoutes />
+      <NotificationProvider>
+        <AppRoutes />
+        <NotificationManager />
+      </NotificationProvider>
     </BrowserRouter> 
   )
 }

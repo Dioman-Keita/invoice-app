@@ -1,15 +1,21 @@
 import Modal from "./Modal";
-import useTostFeedBack from "../hooks/useToastFeedBack";
+import useProgressiveValidation from "../hooks/useProgressiveValidation";
 import { useFormContext } from "react-hook-form";
 
 function SupplierModal({ isOpen, onClose, register, errors }) {
     const {setValue} = useFormContext();
-    const {error} = useTostFeedBack();
+    const { validateLength } = useProgressiveValidation();
 
     const handleEmailInput = (e) => {
         const value = e.target.value;
-        if(value.length > 100) {
-            error("Emalil trop long — max 100 caractères");
+        const validation = validateLength(value, 100, "Email", {
+            warningThreshold: 0.8, // 80 caractères
+            infoThreshold: 0.6,    // 60 caractères
+            showCount: true,
+            cooldownMs: 3000       // 3 secondes entre les notifications
+        });
+        
+        if (validation.shouldTruncate) {
             const trunced = value.slice(0, 100);
             e.target.value = trunced;
             setValue('supplier_email', trunced);
@@ -18,8 +24,14 @@ function SupplierModal({ isOpen, onClose, register, errors }) {
 
     const handlePhoneInput = (e) => {
         const value = e.target.value.replace(/[^\d]/g, "");
-        if (value.length > 15) {
-            error("Vous ne pouvez pas saisir plus de 15 chiffres");
+        const validation = validateLength(value, 15, "Téléphone", {
+            warningThreshold: 0.8, // 12 caractères
+            infoThreshold: 0.6,    // 9 caractères
+            showCount: true,
+            cooldownMs: 3000       // 3 secondes entre les notifications
+        });
+        
+        if (validation.shouldTruncate) {
             const trunced = value.slice(0, 15);
             e.target.value = trunced;
             setValue('supplier_phone', trunced);

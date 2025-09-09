@@ -9,7 +9,7 @@ function InvoiceLastNumber() {
             <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white text-gray-700 text-sm font-medium shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 group">
                 <DocumentTextIcon className="w-4 h-4 text-blue-500" />
                 <span>Facture #0000</span>
-                <button 
+                <button type='button'
                     onMouseEnter={() => setShowTooltip(true)} 
                     onMouseLeave={() => setShowTooltip(false)}
                     className="text-gray-400 hover:text-gray-600 transition-colors"
