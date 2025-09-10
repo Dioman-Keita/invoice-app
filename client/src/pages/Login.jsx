@@ -19,7 +19,7 @@ function Login() {
     mode: 'onChange',
     reValidateMode: 'onChange',
     criteriaMode: 'all',
-    defaultValues: { email: '', password: '', remember: false, user_type: 'dfc_agent' },
+    defaultValues: { email: '', password: '', rememberMe: false, user_type: 'dfc_agent', rememberMe: false },
     resolver: zodResolver(loginSchema),
   });
   useEffect(() => {
@@ -103,7 +103,6 @@ function Login() {
               <input
                 type="email"
                 id="email"
-                name="email"
                 onInput={filterEmail}
                 {...register('email')}
                 className={`w-full px-4 py-3 border rounded-lg focus:outline-none ${errors.email?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
@@ -120,7 +119,6 @@ function Login() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   id="password"
-                  name="password"
                   onInput={filterPassword}
                   {...register('password')}
                   className={`w-full px-4 py-3 border rounded-lg focus:outline-none pr-12 ${errors.password?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
@@ -143,12 +141,14 @@ function Login() {
                 <input
                   type="checkbox"
                   id="remember"
+                  onChange={(e) => {e.target.checked}}
                   className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                  {...register('remember')}
+                  {...register('rememberMe')}
                 />
                 <label htmlFor="remember" className="ml-2 block text-sm text-gray-700">
                   Se souvenir de moi
                 </label>
+                {errors.rememberMe?.message && <p className="text-red-600 text-sm mt-1">{errors.password.message}</p>}
               </div>
 
               <a href="#" className="text-sm text-green-600 hover:text-green-800">

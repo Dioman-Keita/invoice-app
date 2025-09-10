@@ -79,7 +79,6 @@ function ValidatedAmountInput({ name = "invoice_amount", label = "Montant de la 
         placeholder={placeholder}
         value={displayValue}
         {...register(name)}
-        name={name}
         id={name}
         onChange={handleInput}
         onBlur={handleBlur}

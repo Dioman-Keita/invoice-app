@@ -35,7 +35,12 @@ const phoneSchema = z
 const userTypeShema = z
   .enum(['dfc_agent', 'invoice_manager'], {
   message: "Veuillez choisir le type d'agent"
-})
+});
+
+const rememberMe = z
+.boolean({
+  message: "Veuillez arreter de jouer les hacker"
+}).optional();
 
 // Minimal password for login (no hints about real constraints)
 const minimalPasswordSchema = z.string().min(1, "Le mot de passe est requis");
@@ -96,4 +101,5 @@ export const loginSchema = z.object({
   email: emailSchema,
   password: minimalPasswordSchema,
   user_type: userTypeShema,
+  rememberMe: rememberMe,
 });

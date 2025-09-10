@@ -8,7 +8,7 @@ function ValidateRadioGroup({ name, option = []}) {
             <div className="flex gap-4">
                 {option.map((e, i) => (
                     <label htmlFor={e.name} className="inline-flex items-center gap-2" key={i}>
-                    <input type="radio" id={e.name} name={name} {...register(name)} value={e.value ?? e.name} className={`text-blue-600 focus:ring-blue-500 ${errors[name] ? "border-red-700 focus:ring-red-500" : "border-blue-500"}`}/>
+                    <input type="radio" id={e.name} {...register(name)} value={e.value ?? e.name} className={`text-blue-600 focus:ring-blue-500 ${errors[name] ? "border-red-700 focus:ring-red-500" : "border-blue-500"}`}/>
                        <span>{e.name}</span>
                     </label>
                 ))}

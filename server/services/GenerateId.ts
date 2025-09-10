@@ -28,7 +28,7 @@ export async function generateId(entity: EntityType): Promise<string> {
     const year = new Date().getFullYear();
     const defaultFormat = `${config.prefix}-${year}-0001`;
 
-    const result: Row[] = await database.execute(`SELECT id FROM ${config.table} ORDER BY create_at DESC LIMIT 1`);
+    const result = await database.execute<Row[]>(`SELECT id FROM ${config.table} ORDER BY create_at DESC LIMIT 1`);
 
     if (result && result.length > 0) {
         const parts = result[0].id.split('-');

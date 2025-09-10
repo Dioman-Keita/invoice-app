@@ -147,7 +147,6 @@ function Register() {
                 <input
                   type="text"
                   id="firstName"
-                  name="firstName"
                   onInput={filterFirstName}
                   {...register("firstName")}
                   className={`w-full px-4 py-3 border rounded-lg focus:outline-none ${errors['firstName']?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
@@ -164,7 +163,6 @@ function Register() {
                 <input
                   type="text"
                   id="lastName"
-                  name="lastName"
                   onInput={filterLastName}
                   {...register("lastName")}
                   className={`w-full px-4 py-3 border rounded-lg focus:outline-none ${errors['lastName']?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
@@ -181,7 +179,6 @@ function Register() {
               <input
                 type="email"
                 id="email"
-                name="email"
                 {...register("email")}
                 className={`w-full px-4 py-3 border rounded-lg focus:outline-none ${errors['email']?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
                 placeholder="prenom.nom@cmdt.ml"
@@ -200,7 +197,6 @@ function Register() {
                 type="text"
                 onInput={filterEmployeeId}
                 id="employee_cmdt_id"
-                name="employee_cmdt_id"
                 {...register("employee_cmdt_id")}
                 className = {`w-full px-4 py-3 rounded-lg border focus:outline-none ${errors.employee_cmdt_id?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
                 placeholder="Votre identifiant CMDT"
@@ -234,7 +230,6 @@ function Register() {
                 </label>
                 <select
                   id="department"
-                  name="department"
                   {...register("department")}
                   className={`w-full px-4 py-3 border rounded-lg focus:outline-none ${errors.department?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
                 >
@@ -269,7 +264,6 @@ function Register() {
                   <input
                     type={showPassword ? 'text' : 'password'}
                     id="password"
-                    name="password"
                     onInput={filterPassword}
                     className={`w-full px-4 py-3 pr-12 border rounded-lg focus:outline-none ${errors.password?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'} appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden`}
                     placeholder="mot de passe"
@@ -294,7 +288,6 @@ function Register() {
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
                     id="confirm_password"
-                    name="confirm_password"
                     onInput={filterConfirmPassword}
                     className={`w-full px-4 py-3 pr-12 border rounded-lg focus:outline-none ${errors.confirm_password?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'} appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden`}
                     placeholder="Confirmez"
@@ -318,7 +311,6 @@ function Register() {
                 <input
                   type="checkbox"
                   id="terms"
-                  name="terms"
                   {...register("terms")}
                   className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                 />

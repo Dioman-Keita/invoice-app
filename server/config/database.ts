@@ -1,7 +1,6 @@
 import mysql from 'mysql2/promise'
-import dotenv from 'dotenv';
 import type { PoolConnection, Pool } from 'mysql2/promise'
-dotenv.config();
+import logger from '../utils/Logger'
 
 class Database {
     private pool: Pool | null = null;
@@ -11,7 +10,7 @@ class Database {
         this.init();
     }
 
-    init() {
+    init(): undefined {
         try {
             this.pool = mysql.createPool({
                 host: process.env.DB_HOST || 'localhost',
@@ -28,21 +27,21 @@ class Database {
                 enableKeepAlive: true,
                 keepAliveInitialDelay: 0
             })
-            console.log('✅ Pool MySQL initialisée avec succès');
+            logger.info('Pool MySQL initialisée avec succès');
         } catch (error) {
-            console.log('Une erreur est survenue lors de l\'initialisation du pool:', error);
+            logger.error('Une erreur est survenue lors de l\'initialisation du pool', error);
             throw error;
         }
     }
     /**
      * Retourne une connexion a la base de donnée
      */
-    async getConnection() {
+    async getConnection(): Promise<PoolConnection> {
         try {
             this.connection = await this.pool?.getConnection() || null;
             return this.connection;
         } catch (error) {
-            console.log('❌ Erreur lors de l\'obtention de la connexion:', error);
+            logger.error('Erreur lors de l\'obtention de la connexion', error);
             throw error;
         }
     }
@@ -53,17 +52,17 @@ class Database {
      * @returns {Promise} Résultats de la requête 
     */
 
-    async execute(query, param = []) {
-        let connection;
+    async execute<T = any>(query: string, param: unknown[] = []): Promise<T> {
+        let connection: PoolConnection | null = null;
         try {
             connection = await this.getConnection();
             const [rows] = await connection.execute(query, param);
-            return rows;
+            return rows as T;
         } catch (error) {
-            console.log("Une erreur est survenue lors de l'execution de votre requete: ", error);
+            logger.error("Une erreur est survenue lors de l'execution de votre requete", { error, query, param });
             throw error;
         } finally {
-            connection.release();
+            connection?.release();
         }
     }
     /**
@@ -74,10 +73,10 @@ class Database {
         const connection = await this?.getConnection() || null;
         await connection?.execute("SELECT 1");
         connection?.release();
-        console.log("✅ Connexion à la base de données réussie");
+        logger.info("Connexion à la base de données réussie");
         return true;
        } catch (error) {
-        console.log("Echec de la connection à la base de donnée:", error);
+        logger.error("Echec de la connection à la base de donnée", error);
        }
     }
     /**
@@ -87,10 +86,10 @@ class Database {
         try {
            if (this.pool) {
             await this.pool.end();
-            console.log('✅ Pool MySQL fermée avec succès');
+            console.log('Pool MySQL fermée avec succès');
            }
         } catch (error) {
-            console.error('❌ Erreur lors de la fermeture de la pool:', error);
+            logger.error('Erreur lors de la fermeture de la pool', error);
             throw error;
         }
     }
@@ -107,7 +106,7 @@ process.on("SIGINT", async () => {
         await database.close();
         process.exit(0);
     } catch (error) {
-        console.log("Une erreur est survenue lors de la fermeture securisée la pool : ", error);
+        logger.error("Une erreur est survenue lors de la fermeture securisée la pool", error);
         throw error;
     }
 })

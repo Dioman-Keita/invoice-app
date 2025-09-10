@@ -1,1 +1,0 @@
-Auth, Validation, error handling
