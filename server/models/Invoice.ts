@@ -1,6 +1,7 @@
 import database from "../config/database";
-import generateId from "../services/GenerateId";
+import generateId from "../services/generateId";
 import logger from "../utils/Logger";
+import { formatDate } from "../utils/Formatters";
 
 export type InvoiceType = 'Ordinaire' | 'Transporteur' | 'Transitaire';
 export type FolioType = '1 copie' | 'Org + 1 copie' | 'Org + 2 copies' | 'Org + 3 copies';
@@ -20,15 +21,23 @@ export type InvoiceRecord = {
 	create_at?: string;
 	update_at?: string;
 	status: InvoiceStatus;
+	documents?: string[];
+	created_by?: string;
+	created_by_email?: string;
+	created_by_role?: string;
 };
 
-export type CreateInvoiceInput = Omit<InvoiceRecord, 'id' | 'create_at' | 'update_at'>;
+export type CreateInvoiceInput = Omit<InvoiceRecord, 'id' | 'create_at' | 'update_at'> & {
+	createdBy?: string;
+	createdByEmail?: string;
+	createdByRole?: string;
+};
 
 class InvoiceModel {
 	async create(data: CreateInvoiceInput): Promise<unknown> {
 		const id = await generateId('invoice');
 		const query =
-			"INSERT INTO invoice(id, num_cmdt, num_invoice, invoice_object, supplier_id, invoice_type, invoice_arr_date, invoice_date, amount, folio, status) VALUES(?,?,?,?,?,?,?,?,?,?,?)";
+			"INSERT INTO invoice(id, num_cmdt, num_invoice, invoice_object, supplier_id, invoice_type, invoice_arr_date, invoice_date, amount, folio, status, created_by, created_by_email, created_by_role) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 		const params = [
 			id,
 			data.num_cmdt,
@@ -36,40 +45,109 @@ class InvoiceModel {
 			data.invoice_object,
 			data.supplier_id,
 			data.invoice_type,
-			data.invoice_arr_date,
-			data.invoice_date,
+			formatDate(data.invoice_arr_date),
+			formatDate(data.invoice_date),
 			data.amount,
 			data.folio,
 			data.status,
+			data.createdBy || null,
+			data.createdByEmail || null,
+			data.createdByRole || null,
 		];
 		const result = await database.execute(query, params);
+		logger.info(`Création de la facture ${data.num_invoice}`);
 		await logger.audit({
 			action: 'INSERT',
 			table_name: 'invoice',
 			record_id: id,
+			performed_by: data.createdBy,
 			description: `Création de la facture ${data.num_invoice}`,
 		});
+		if (data.documents.length > 0) {
+			await database.execute("INSERT INTO attachments(documents, invoice_id) VALUES (?,?)", [JSON.stringify(data.documents), id]);
+			await logger.audit({
+				action: 'INSERT',
+				table_name: 'attachments',
+				record_id: id,
+				performed_by: data.createdBy,
+				description: `Ajout des documents liés à la facture ${data.num_invoice}`,
+			});
+		}
 		return result;
 	}
 
 	async findById(id: string): Promise<InvoiceRecord[] | unknown> {
 		const query = "SELECT * FROM invoice WHERE id = ?";
-		return database.execute(query, [id]);
+		const result = await database.execute(query, [id]);
+		logger.audit({
+			action: 'SELECT',
+			table_name: 'invoice',
+			record_id: id,
+			performed_by: id,
+		});
+		return result;
+	}
+
+	async findAll(): Promise<InvoiceRecord[] | unknown> {
+		const query = "SELECT * FROM invoice ORDER BY create_at DESC";
+		const result = await database.execute(query, []);
+		logger.audit({
+			action: 'SELECT',
+			table_name: 'invoice',
+			record_id: 'all',
+			description: 'Récupération de toutes les factures',
+			performed_by: 'system'
+		});
+		return result;
+	}
+
+	async findByUserId(userId: string): Promise<InvoiceRecord[] | unknown> {
+		const query = "SELECT * FROM invoice WHERE created_by = ? ORDER BY create_at DESC";
+		const result = await database.execute(query, [userId]);
+		logger.audit({
+			action: 'SELECT',
+			table_name: 'invoice',
+			record_id: userId,
+			description: `Récupération des factures de l'utilisateur ${userId}`,
+			performed_by: 'system'
+		});
+		return result;
 	}
 
 	async findByNumber(numInvoice: string): Promise<InvoiceRecord[] | unknown> {
 		const query = "SELECT * FROM invoice WHERE num_invoice = ?";
-		return database.execute(query, [numInvoice]);
+		const result = await database.execute(query, [numInvoice]);
+		logger.audit({
+			action: 'SELECT',
+			table_name: 'invoice',
+			record_id: numInvoice,
+			performed_by: numInvoice,
+		});
+		return result;
 	}
 
 	async listBySupplier(supplierId: number): Promise<InvoiceRecord[] | unknown> {
 		const query = "SELECT * FROM invoice WHERE supplier_id = ? ORDER BY create_at DESC";
-		return database.execute(query, [supplierId]);
+		const result = await database.execute(query, [supplierId]);
+		logger.audit({
+			action: 'SELECT',
+			table_name: 'invoice',
+			record_id: supplierId.toString(),
+			performed_by: supplierId.toString(),
+		});
+		return result;
 	}
 
 	async listRecent(limit: number = 50): Promise<InvoiceRecord[] | unknown> {
 		const query = "SELECT * FROM invoice ORDER BY create_at DESC LIMIT ?";
-		return database.execute(query, [limit]);
+		const result = await database.execute(query, [limit]);
+		logger.audit({
+			action: 'SELECT',
+			table_name: 'invoice',
+			record_id: null,
+			description: `Obtention des ${limit} dernières factures`,
+		});
+		return result;
 	}
 
 	async updateStatus(id: string, status: InvoiceStatus): Promise<unknown> {

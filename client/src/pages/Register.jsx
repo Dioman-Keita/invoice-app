@@ -12,7 +12,7 @@ import AsyncSubmitBtn from '../components/AsyncSubmitBtn';
 
 function Register() {
   useTitle('CMDT - Inscription');
-  const [userType, setUserType] = useState('dfc_agent');
+  const [role, setRole] = useState('dfc_agent');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -45,13 +45,13 @@ function Register() {
       firstName: "",
       lastName: "",
       email: "",
-      employee_cmdt_id: "",
+      employeeId: "",
       phone: "",
       password: "",
       confirm_password: "",
       department: "",
       terms: false,
-      user_type: 'dfc_agent',
+      role: 'dfc_agent',
     }
   });
   const password = useWatch({control, name: "password"});
@@ -63,10 +63,6 @@ function Register() {
     }
   }, [password, confirmPassword, trigger]);
   
-  useEffect(() => {
-    setValue('user_type', userType, {shouldValidate: true});
-  }, [userType, setValue]);
-
   const onSubmit = async (data) => {
     try {
       setLoading(true);
@@ -80,8 +76,8 @@ function Register() {
     }
   }
   useEffect(() => {
-    setValue('user_type', userType, { shouldValidate: true, shouldDirty: true });
-  }, [userType, setValue]);
+    setValue('role', role, { shouldValidate: true, shouldDirty: true });
+  }, [role, setValue]);
   
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-register">
@@ -115,9 +111,9 @@ function Register() {
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
-                onClick={() => setUserType('dfc_agent')}
+                onClick={() => setRole('dfc_agent')}
                 className={`py-3 px-4 rounded-lg border ${
-                  userType === 'dfc_agent'
+                  role === 'dfc_agent'
                     ? 'bg-green-100 border-green-500 text-green-700'
                     : 'bg-gray-100 border-gray-300 text-gray-700'
                 } transition-colors`}
@@ -126,9 +122,9 @@ function Register() {
               </button>
               <button
                 type="button"
-                onClick={() => setUserType('invoice_manager')}
+                onClick={() => setRole('invoice_manager')}
                 className={`py-3 px-4 rounded-lg border ${
-                  userType === 'invoice_manager'
+                  role === 'invoice_manager'
                     ? 'bg-green-100 border-green-500 text-green-700'
                     : 'bg-gray-100 border-gray-300 text-gray-700'
                 } transition-colors`}
@@ -138,7 +134,7 @@ function Register() {
             </div>
           </div>
 
-          <form noValidate onSubmit={handleSubmit(onSubmit)}>
+          <form noValidate onSubmit={handleSubmit(onSubmit)} method='post'>
             <div className="grid grid-cols-1 gap-4 mb-4">
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -190,18 +186,18 @@ function Register() {
             </div>
 
             <div className="mb-4">
-              <label htmlFor="employee_cmdt_id" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="employeeId" className="block text-sm font-medium text-gray-700 mb-1">
                 Identifiant employé
               </label>
               <input
                 type="text"
                 onInput={filterEmployeeId}
-                id="employee_cmdt_id"
-                {...register("employee_cmdt_id")}
-                className = {`w-full px-4 py-3 rounded-lg border focus:outline-none ${errors.employee_cmdt_id?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
+                id="employeeId"
+                {...register("employeeId")}
+                className = {`w-full px-4 py-3 rounded-lg border focus:outline-none ${errors.employeeId?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
                 placeholder="Votre identifiant CMDT"
               />
-              {errors.employee_cmdt_id?.message && <p className="text-sm text-red-600 mt-1">{errors.employee_cmdt_id.message}</p>}
+              {errors.employeeId?.message && <p className="text-sm text-red-600 mt-1">{errors.employeeId.message}</p>}
             </div>
             <div className="mb-4">
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
@@ -233,7 +229,7 @@ function Register() {
                   {...register("department")}
                   className={`w-full px-4 py-3 border rounded-lg focus:outline-none ${errors.department?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
                 >
-                {userType === 'dfc_agent' ? (
+                {role === 'dfc_agent' ? (
                   <>
                     <option value="">Sélectionnez votre département</option>
                     <option value="finance">Finance</option>
@@ -320,7 +316,7 @@ function Register() {
               </div>
               {errors.terms?.message && <p className="text-sm text-red-600 mt-1 ml-6">{errors.terms.message}</p>}
             </div>
-            <input type="hidden" {...register("user_type")} name="user_type" value={userType} />
+            <input type="hidden" {...register("role")} name="role" value={role} />
 
             <AsyncSubmitBtn 
               fullWidth

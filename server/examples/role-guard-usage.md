@@ -1,0 +1,89 @@
+# Utilisation du roleGuard mis à jour
+
+## 🎯 **Rôles disponibles**
+- `admin` : Accès complet à toutes les fonctionnalités
+- `invoice_manager` : Gestion des factures et utilisateurs
+- `dfc_agent` : Agent DFC avec accès limité
+
+## 🛡️ **Middlewares de protection**
+
+### **Protection des routes**
+```typescript
+import { requireAdmin, requireManagerOrAdmin, requireAgentOrManager } from '../middleware/roleGuard';
+
+// Seuls les admins
+router.post('/admin/users', authGuard, requireAdmin, createUser);
+
+// Admins et managers
+router.get('/invoices/all', authGuard, requireManagerOrAdmin, getAllInvoices);
+
+// Agents et managers
+router.get('/invoices/dfc', authGuard, requireAgentOrManager, getDfcInvoices);
+```
+
+## 🔧 **Fonctions utilitaires dans les contrôleurs**
+
+### **Vérification simple**
+```typescript
+import { isAdmin, isManagerOrAdmin, canAccessInvoice } from '../middleware/roleGuard';
+
+export async function maFonction(req: Request, res: Response) {
+    const user = (req as any).user;
+    
+    // Vérifications simples
+    if (isAdmin(user)) {
+        // Logique admin
+    }
+    
+    if (isManagerOrAdmin(user)) {
+        // Logique manager/admin
+    }
+    
+    // Vérification d'accès à une ressource
+    if (canAccessInvoice(user, invoiceOwnerId)) {
+        // L'utilisateur peut accéder à cette facture
+    }
+}
+```
+
+## 📊 **Hiérarchie des permissions**
+
+| Rôle | Créer factures | Voir toutes factures | Gérer utilisateurs | Accès DFC |
+|------|----------------|---------------------|-------------------|-----------|
+| `admin` | ✅ | ✅ | ✅ | ✅ |
+| `invoice_manager` | ✅ | ✅ | ❌ | ✅ |
+| `dfc_agent` | ✅ | ❌ | ❌ | ✅ |
+
+## 🚀 **Exemples concrets**
+
+### **Route admin uniquement**
+```typescript
+router.post('/admin/create-user', authGuard, requireAdmin, createUser);
+```
+
+### **Route pour managers et admins**
+```typescript
+router.get('/invoices/export', authGuard, requireManagerOrAdmin, exportInvoices);
+```
+
+### **Vérification dans un contrôleur**
+```typescript
+export async function getInvoice(req: Request, res: Response) {
+    const user = (req as any).user;
+    const invoice = await Invoice.findById(req.params.id);
+    
+    // Vérifier l'accès
+    if (!canAccessInvoice(user, invoice.created_by)) {
+        return ApiResponder.forbidden(res, 'Accès refusé');
+    }
+    
+    return ApiResponder.success(res, invoice);
+}
+```
+
+## 💡 **Bonnes pratiques**
+
+1. **Toujours utiliser `authGuard` avant `roleGuard`**
+2. **Utiliser les fonctions utilitaires** pour des vérifications complexes
+3. **Logger les tentatives d'accès** non autorisées
+4. **Tester les permissions** dans les tests unitaires

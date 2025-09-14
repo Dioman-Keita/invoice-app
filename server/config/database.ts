@@ -36,7 +36,7 @@ class Database {
     /**
      * Retourne une connexion a la base de donnée
      */
-    async getConnection(): Promise<PoolConnection> {
+    private async getConnection(): Promise<PoolConnection> {
         try {
             this.connection = await this.pool?.getConnection() || null;
             return this.connection;
@@ -106,7 +106,7 @@ process.on("SIGINT", async () => {
         await database.close();
         process.exit(0);
     } catch (error) {
-        logger.error("Une erreur est survenue lors de la fermeture securisée la pool", error);
+        logger.error("Une erreur est survenue lors de la fermeture securisée de la pool", error);
         throw error;
     }
 })

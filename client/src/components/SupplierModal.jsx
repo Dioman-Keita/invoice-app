@@ -1,6 +1,7 @@
 import Modal from "./Modal";
 import useProgressiveValidation from "../hooks/useProgressiveValidation";
 import { useFormContext } from "react-hook-form";
+import { usePhoneFormatter } from "../hooks/usePhoneFormater";
 
 function SupplierModal({ isOpen, onClose, register, errors }) {
     const {setValue} = useFormContext();
@@ -22,23 +23,7 @@ function SupplierModal({ isOpen, onClose, register, errors }) {
         }
     }
 
-    const handlePhoneInput = (e) => {
-        const value = e.target.value.replace(/[^\d]/g, "");
-        const validation = validateLength(value, 15, "Téléphone", {
-            warningThreshold: 0.8, // 12 caractères
-            infoThreshold: 0.6,    // 9 caractères
-            showCount: true,
-            cooldownMs: 3000       // 3 secondes entre les notifications
-        });
-        
-        if (validation.shouldTruncate) {
-            const trunced = value.slice(0, 15);
-            e.target.value = trunced;
-            setValue('supplier_phone', trunced);
-        } else {
-            e.target.value = value;
-        }
-    }
+    const { formatPhoneNumber, handlePhoneKeyDown } = usePhoneFormatter();
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Informations du fournisseur">
             <div className="mb-4">
@@ -63,7 +48,13 @@ function SupplierModal({ isOpen, onClose, register, errors }) {
                     className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${errors["supplier_phone"] ? "focus:ring-red-500 focus:border-red-700 border-red-500" : ""}`}
                     placeholder="ex. +22377001122"
                     {...register('supplier_phone')}
-                    onInput={handlePhoneInput}
+                    onInput={formatPhoneNumber}
+                    onKeyDown={handlePhoneKeyDown}
+                    onFocus={(e) => {
+                        if (e.target.value === '') {
+                            e.target.value = '+223 ';
+                        }
+                    }}
                 />
                 {errors["supplier_phone"] && (
                     <p className='text-red-600 text-sm transition-opacity duration-300 mt-1'>{errors["supplier_phone"].message}</p>

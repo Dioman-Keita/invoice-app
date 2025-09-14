@@ -25,6 +25,7 @@ export class GmailEmailSender implements EmailSender {
 		if (!this.gmailUser || !this.gmailPass) {
 			throw new Error('GMAIL_USER and GMAIL_PASS must be set');
 		}
+		
 		this.transporter = nodemailer.createTransport({
 			service: 'gmail',
 			auth: {

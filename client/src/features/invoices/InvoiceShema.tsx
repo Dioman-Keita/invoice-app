@@ -58,7 +58,13 @@ export const invoiceSchema = z.object({
 
     supplier_name: z.string().min(1, "Le nom du fournisseur est requis").regex(supplierNameRegex, "Nom invalide : seuls les lettres accentuées(êèéï), chiffres(1,3,8), espaces( ), tirets(-) et apostrophes(') sont autorisés"),
     supplier_email: z.string().optional().transform(v => (v ?? '').trim()).refine((v) => v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), { message: "Email invalide" }),
-    supplier_phone: z.string().optional().transform(v => (v ?? '').trim()).refine((v) => v === '' || /^[+]?\d{7,15}$/.test(v), { message: "Téléphone invalide" }),
+    supplier_phone: z
+    .string()
+    .optional()
+    .transform(v => (v ?? '').trim())
+    .refine((v) => v === '' || /^\+223(\s\d{2}){0,4}$/.test(v), {
+        message: "Le numéro doit être au format +223 XX XX XX XX"
+    }),
     invoice_object: z.string().min(1, "L'objet est requis")
     .max(100, "Maximum 100 caractères"),
 

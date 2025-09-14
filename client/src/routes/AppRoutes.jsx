@@ -11,6 +11,9 @@ import Print from "../pages/Print";
 import Settings from "../pages/Settings";
 import JoinDFC from "../pages/JoinDFC";
 import DFCFormular from "../pages/DFCFormular";
+import Verify from "../pages/Verify";
+import ResetPassword from "../pages/ResetPassword";
+import ForgotPassword from "../pages/ForgotPassword";
 
 function AppRoutes() {
     return (
@@ -26,6 +29,9 @@ function AppRoutes() {
             <Route path="/stats" element={<Stats />} />
             <Route path="/print" element={<Print />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/verify" element={<Verify />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="*" element={<NotFound />} />
             <Route path="/joinDFC" element={<JoinDFC />} />
             <Route path="/dfc_traitment" element={<DFCFormular />} />

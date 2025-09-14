@@ -9,7 +9,7 @@ type IdConfig = {
     table: string
 }
 
-type EntityType = 'invoice' | 'employee';
+export type EntityType = 'invoice' | 'employee';
 
 const idMap: Record<EntityType, IdConfig> = {
     invoice: {table: 'invoice', prefix: 'INV'},

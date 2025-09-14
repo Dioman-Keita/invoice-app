@@ -32,9 +32,9 @@ const phoneSchema = z
     message: "Le numéro doit être au format +223 XX XX XX XX",
   });
 
-const userTypeShema = z
+const roleSchema = z
   .enum(['dfc_agent', 'invoice_manager'], {
-  message: "Veuillez choisir le type d'agent"
+  message: "Veuillez choisir le rôle"
 });
 
 const rememberMe = z
@@ -49,7 +49,7 @@ export const registerSchema = z.object({
   firstName: createNameSchema('Le prenom'),
   lastName: createNameSchema('Le nom'),
   email: emailSchema,
-  employee_cmdt_id: employeeIdSchema,
+  employeeId: employeeIdSchema,
   phone: phoneSchema,
   password: z
     .string()
@@ -63,7 +63,7 @@ export const registerSchema = z.object({
   terms: z.boolean().refine((val) => val === true, {
     message: "L'acceptation des conditions est obligatoire."
   }),
-  user_type: userTypeShema,
+  role: roleSchema,
 })
 .superRefine((data, ctx) => {
   // Cross-field: confirm_password must match password
@@ -76,7 +76,7 @@ export const registerSchema = z.object({
   }
 
   // Validation conditionnelle par type d'utilisateur
-  if (data.user_type === 'dfc_agent') {
+  if (data.role === 'dfc_agent') {
     if (!['finance', 'comptabilité', 'contrôle_de_gestion', 'audit_interne'].includes(data.department)) {
       ctx.addIssue({ 
         code: 'custom', 
@@ -84,7 +84,7 @@ export const registerSchema = z.object({
         message: 'Département DFC invalide' 
       });
     }
-  } else if (data.user_type === 'invoice_manager') {
+  } else if (data.role === 'invoice_manager') {
     if (!['facturation', 'comptabilité_client', 'gestion_factures'].includes(data.department)) {
       ctx.addIssue({ 
         code: 'custom', 
@@ -100,6 +100,6 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email: emailSchema,
   password: minimalPasswordSchema,
-  user_type: userTypeShema,
+  role: roleSchema,
   rememberMe: rememberMe,
 });

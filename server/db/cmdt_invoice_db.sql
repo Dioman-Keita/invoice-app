@@ -123,5 +123,7 @@ CREATE VIEW view_invoice AS SELECT * FROM invoice;
 CREATE VIEW view_invoice_by_status_reject AS SELECT * FROM view_invoice WHERE status = 'Oui';
 CREATE VIEW view_invoice_by_status_accept AS SELECT * FROM view_invoice WHERE status = 'Non';
 
--- Liste des mises à jour realiser sur la table :
+-- Liste des mises à jour ou changement realisés sur la table :
 ALTER TABLE invoice ADD COLUMN amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 AFTER invoice_date;
+ALTER TABLE attachments DROP COLUMN documents;
+ALTER TABLE attachments ADD COLUMN documents JSON;

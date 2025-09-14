@@ -11,7 +11,7 @@ import AsyncSubmitBtn from '../components/AsyncSubmitBtn';
 
 function Login() {
   useTitle('CMDT - Connexion');
-  const [userType, setUserType] = useState('dfc_agent');
+  const [role, setRole] = useState('dfc_agent');
   const { filterEmail, filterPassword } = useInputFilters();
   const [loading, setLoading] = useState(false);
   const { success } = useToastFeedback();
@@ -19,12 +19,12 @@ function Login() {
     mode: 'onChange',
     reValidateMode: 'onChange',
     criteriaMode: 'all',
-    defaultValues: { email: '', password: '', rememberMe: false, user_type: 'dfc_agent', rememberMe: false },
+    defaultValues: { email: '', password: '', rememberMe: false, role: 'dfc_agent' },
     resolver: zodResolver(loginSchema),
   });
   useEffect(() => {
-    setValue('user_type', userType, { shouldValidate: true, shouldDirty: true });
-  }, [userType, setValue]);
+    setValue('role', role, { shouldValidate: true, shouldDirty: true });
+  }, [role, setValue]);
   const [showPassword, setShowPassword] = useState(false);
   const onSubmit = async (data) => { 
     console.log(data); 
@@ -72,9 +72,9 @@ function Login() {
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
-                onClick={() => setUserType('dfc_agent')}
+                onClick={() => setRole('dfc_agent')}
                 className={`py-3 px-4 rounded-lg border ${
-                  userType === 'dfc_agent'
+                  role === 'dfc_agent'
                     ? 'bg-green-100 border-green-500 text-green-700'
                     : 'bg-gray-100 border-gray-300 text-gray-700'
                 } transition-colors`}
@@ -83,9 +83,9 @@ function Login() {
               </button>
               <button
                 type="button"
-                onClick={() => setUserType('invoice_manager')}
+                onClick={() => setRole('invoice_manager')}
                 className={`py-3 px-4 rounded-lg border ${
-                  userType === 'invoice_manager'
+                  role === 'invoice_manager'
                     ? 'bg-green-100 border-green-500 text-green-700'
                     : 'bg-gray-100 border-gray-300 text-gray-700'
                 } transition-colors`}
@@ -151,11 +151,11 @@ function Login() {
                 {errors.rememberMe?.message && <p className="text-red-600 text-sm mt-1">{errors.password.message}</p>}
               </div>
 
-              <a href="#" className="text-sm text-green-600 hover:text-green-800">
+              <Link to="/forgot-password" className="text-sm text-green-600 hover:text-green-800">
                 Mot de passe oublié?
-              </a>
+              </Link>
             </div>
-            <input type="hidden" {...register("user_type")} name="user_type" value={userType} />
+            <input type="hidden" {...register("role")} name="role" value={role} />
 
             <AsyncSubmitBtn
               fullWidth
