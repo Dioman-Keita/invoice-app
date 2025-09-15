@@ -26,26 +26,26 @@ function DFCFormular() {
     {
       id: 'INV-2023-001',
       supplier: 'SARL COTON-MALI',
-      amount: '1,250.00 €',
+      amount: '1,250.00 FCFA',
       date: '2023-10-15',
       dueDate: '2023-11-15',
       category: 'Fournitures agricoles',
       status: 'pending',
       items: [
-        { description: 'Engrais NPK', quantity: 50, price: '25.00 €' },
-        { description: 'Pesticides', quantity: 20, price: '12.50 €' }
+        { description: 'Engrais NPK', quantity: 50, price: '25.00 FCFA' },
+        { description: 'Pesticides', quantity: 20, price: '12.50 FCFA' }
       ]
     },
     {
       id: 'INV-2023-002',
       supplier: 'ENTREPRISE AGRO-TECH',
-      amount: '3,450.00 €',
+      amount: '3,450.00 FCFA',
       date: '2023-10-18',
       dueDate: '2023-11-18',
       category: 'Équipement',
       status: 'pending',
       items: [
-        { description: 'Tracteur pièces', quantity: 1, price: '3,450.00 €' }
+        { description: 'Tracteur pièces', quantity: 1, price: '3,450.00 FCFA' }
       ]
     }
   ];

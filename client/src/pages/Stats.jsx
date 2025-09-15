@@ -22,7 +22,7 @@ function Stats() {
   const statsData = {
     overview: [
       { label: 'Factures totales', value: '1,247', change: '+12%', icon: DocumentTextIcon, color: 'blue' },
-      { label: 'Montant total', value: '4.2M €', change: '+8%', icon: CurrencyDollarIcon, color: 'green' },
+      { label: 'Montant total', value: '4.2M FCFA', change: '+8%', icon: CurrencyDollarIcon, color: 'green' },
       { label: 'Fournisseurs actifs', value: '89', change: '+5%', icon: BuildingStorefrontIcon, color: 'purple' },
       { label: 'Taux de paiement', value: '94%', change: '+2%', icon: ChartBarIcon, color: 'orange' }
     ],
@@ -150,8 +150,8 @@ function Stats() {
                     <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4 font-medium">{item.month}</td>
                       <td className="py-3 px-4">{item.factures}</td>
-                      <td className="py-3 px-4">{item.montant.toLocaleString()} €</td>
-                      <td className="py-3 px-4">{Math.round(item.montant / item.factures).toLocaleString()} €</td>
+                      <td className="py-3 px-4">{item.montant.toLocaleString()} FCFA</td>
+                      <td className="py-3 px-4">{Math.round(item.montant / item.factures).toLocaleString()} FCFA</td>
                     </tr>
                   ))}
                 </tbody>

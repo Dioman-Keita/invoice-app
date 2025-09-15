@@ -23,9 +23,9 @@ function Print() {
   });
 
   const invoices = [
-    { id: 'INV-2023-001', date: '2023-10-15', amount: '1,250.00 €', status: 'Payée' },
-    { id: 'INV-2023-002', date: '2023-10-18', amount: '3,450.00 €', status: 'En attente' },
-    { id: 'INV-2023-003', date: '2023-10-20', amount: '2,100.00 €', status: 'Payée' }
+    { id: 'INV-2023-001', date: '2023-10-15', amount: '1,250.00 FCFA', status: 'Payée' },
+    { id: 'INV-2023-002', date: '2023-10-18', amount: '3,450.00 FCFA', status: 'En attente' },
+    { id: 'INV-2023-003', date: '2023-10-20', amount: '2,100.00 FCFA', status: 'Payée' }
   ];
 
   const handlePrint = () => {
