@@ -1,6 +1,6 @@
-import mysql from 'mysql2/promise'
-import type { PoolConnection, Pool } from 'mysql2/promise'
-import logger from '../utils/Logger'
+import mysql from 'mysql2/promise';
+import type { PoolConnection, Pool } from 'mysql2/promise';
+import logger from '../utils/Logger';
 
 class Database {
     private pool: Pool | null = null;
@@ -26,7 +26,7 @@ class Database {
                 timezone: '+00:00',
                 enableKeepAlive: true,
                 keepAliveInitialDelay: 0
-            })
+            });
             logger.info('Pool MySQL initialisée avec succès');
         } catch (error) {
             logger.error('Une erreur est survenue lors de l\'initialisation du pool', error);
@@ -38,7 +38,10 @@ class Database {
      */
     private async getConnection(): Promise<PoolConnection> {
         try {
-            this.connection = await this.pool?.getConnection() || null;
+            if (!this.pool) {
+                throw new Error('Pool de connexion non initialisé');
+            }
+            this.connection = await this.pool.getConnection();
             return this.connection;
         } catch (error) {
             logger.error('Erreur lors de l\'obtention de la connexion', error);
@@ -48,7 +51,8 @@ class Database {
 
     /** 
      * Exécute une requête avec paramètres (préparation contre les injections SQL) 
-     * @param {string} query - Requête SQL * @param {Array} params - Paramètres de la requête 
+     * @param {string} query - Requête SQL 
+     * @param {Array} param - Paramètres de la requête 
      * @returns {Promise} Résultats de la requête 
     */
 
@@ -68,7 +72,7 @@ class Database {
     /**
      * Verifie la connexion à la base de donnée
      */
-    async checkConnection() {
+    async checkConnection(): Promise<boolean> {
        try {
         const connection = await this?.getConnection() || null;
         await connection?.execute("SELECT 1");
@@ -77,6 +81,7 @@ class Database {
         return true;
        } catch (error) {
         logger.error("Echec de la connection à la base de donnée", error);
+        return false;
        }
     }
     /**

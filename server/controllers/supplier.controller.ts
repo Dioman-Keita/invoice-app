@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import ApiResponder from "../utils/ApiResponder";
-import supplier from "../models/Supplier";
+import supplier, {SupplierRecord} from "../models/Supplier";
 import logger from '../utils/Logger';
 
 type CreateSupplierBody = {
@@ -21,8 +21,8 @@ export async function createSupplier(
             return ApiResponder.badRequest(res, 'Le nom du fournisseur est requis');
         }
 
-        const isSupplierExist = await supplier.findSupplier(supplier_email, 'email');
-        if (isSupplierExist || isSupplierExist.length > 0) return ApiResponder.badRequest(res, 'Ce fournisseur existe déjà');
+        const isSupplierExist: SupplierRecord[] = await supplier.findSupplier(supplier_email, 'email');
+        if (isSupplierExist && isSupplierExist.length > 0) return ApiResponder.badRequest(res, 'Ce fournisseur existe déjà');
 
         const result = await supplier.create({
             suplier_name: supplier_name,
@@ -31,7 +31,9 @@ export async function createSupplier(
         } as any);
         return ApiResponder.created(res, result, 'Fournisseur créé');
     } catch (err) {
-        logger.error(err);
+        logger.error('Erreur lors de la création du fournisseur', { 
+            error: err instanceof Error ? err.message : 'Erreur inconnue' 
+        });
         return ApiResponder.error(res, err);
     }
 }
@@ -48,7 +50,9 @@ export async function getSupplier(
         }
         return ApiResponder.success(res, rows[0]);
     } catch (err) {
-        logger.error(err);
+        logger.error('Erreur lors de la récupération du fournisseur', { 
+            error: err instanceof Error ? err.message : 'Erreur inconnue' 
+        });
         return ApiResponder.error(res, err);
     }
 }
@@ -61,7 +65,9 @@ export async function listSuppliers(
         const rows = await supplier.getAllsupplier();
         return ApiResponder.success(res, rows);
     } catch (err) {
-        logger.error(err);
+        logger.error('Erreur lors de la récupération de la liste des fournisseurs', { 
+            error: err instanceof Error ? err.message : 'Erreur inconnue' 
+        });
         return ApiResponder.error(res, err);
     }
 }
@@ -80,7 +86,9 @@ export async function findSupplierByPhone(
             ? ApiResponder.success(res, rows[0])
             : ApiResponder.notFound(res, 'Fournisseur introuvable');
     } catch (err) {
-        logger.error(err);
+        logger.error('Erreur lors de la recherche du fournisseur par téléphone', { 
+            error: err instanceof Error ? err.message : 'Erreur inconnue' 
+        });
         return ApiResponder.error(res, err);
     }
 }

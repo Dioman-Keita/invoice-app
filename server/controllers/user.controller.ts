@@ -4,7 +4,7 @@ import { NotificationFactory } from "../services/notificationFactory";
 import Users, {UserType, User} from "../models/User";
 import { generateUserToken, verifyUserToken } from "../services/userToken";
 import type { Response, Request } from "express";
-import { isValidEmail } from "../middleware/validator";
+import { isValidEmail, isValidPassword, isValidPasswordStrength } from "../middleware/validator";
 import database from "../config/database";
 import logger from "../utils/Logger";
 import { BcryptHasher } from "../utils/PasswordHasher";
@@ -74,25 +74,6 @@ export async function login(req: Request, res: Response): Promise<Response> {
     }
 }
 
-type GetUser = { id: string }
-
-export async function getUser(req: Request<GetUser>, res: Response): Promise<Response> {
-    try {
-        const { id } = req.params;
-        const user = (await Users.findUser(id, "id") as UserType[]);
-        if (!user || user.length === 0) {
-            logger.debug("user not found after call getUser from userController");
-            return ApiResponder.notFound(res, 'Utilisateur introuvable');
-        }
-        return ApiResponder.success(res, user, "get all user");
-    } catch (error) {
-        logger.error(error);
-        return ApiResponder.error(res, error);
-    }
-}
-
-
-
 export async function getCurrentToken(req: Request, res: Response): Promise<Response> {
     const token = req.cookies?.auth_token;
     if (!token) return ApiResponder.unauthorized(res, 'Jeton manquant')
@@ -100,18 +81,27 @@ export async function getCurrentToken(req: Request, res: Response): Promise<Resp
         const payload = verifyUserToken(token);
         return ApiResponder.success(res, { token, payload }, 'Jeton actuel');
     } catch (error) {
-        logger.error(error);
+        logger.error('Erreur lors de la vérification du jeton', { 
+            error: error instanceof Error ? error.message : 'Erreur inconnue' 
+        });
         return ApiResponder.unauthorized(res, 'Jeton invalide', error);
     }
 }
 
-export function logout(res: Response): Response {
+export function logout(req: Request, res: Response): Response {
+    const user = (req as any).user;
+    const requestId = req.headers['x-request-id'] || 'unknown';
+    if(!user) {
+        logger.warn(`[${requestId}] Tentative de déconnexion invalide`, {id: user.sup, email: user.email, role: user.role})
+        return ApiResponder.badRequest(res, 'Tentative de deconnexion d\'un utilisateur non connecté');
+    } 
+    
     res.clearCookie('auth_token', {
         httpOnly: true,
         sameSite: 'none',
         secure: process.env.MODE_ENV === 'production'
     });
-    logger.debug(`Utilisateur déconecté`);
+    logger.debug(`[${requestId}] Utilisateur déconecté`, {id: user.sup, email: user.email, role: user.role});
     return ApiResponder.success(res, null, 'Déconnecté');
 }
 
@@ -173,7 +163,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<Respo
         const token = generateUserToken({
             sup: user[0].id,
             role: user[0].role,
-            email: user[0].email
+            email: user[0].email,
         });
         
         await database.execute(
@@ -222,17 +212,19 @@ export function verifyResetToken(token: string): boolean {
         verifyUserToken(token);
         return true;
     } catch(err) {
-        logger.error(err);
+        logger.error('Erreur lors de la vérification du token de réinitialisation', { 
+            error: err instanceof Error ? err.message : 'Erreur inconnue' 
+        });
         return false;
     }
 }
 
 export async function resetUserPassword(res: Response, req: Request): Promise<Response> {
-    const { password, confirm_password, token } = req.body;
+    const { password, token } = req.body;
 
     try {
-        if (password !== confirm_password) return ApiResponder.badRequest(res, 'Les mots de passe ne correspondent pas');
-
+        if (!isValidPassword(req)) return ApiResponder.badRequest(res, 'Les mots de passe ne correspondent pas');
+        if (!isValidPasswordStrength(password)) return ApiResponder.badRequest(res, 'Format du mot de passe invalide');
         const payload = verifyUserToken(token);
         const user = await Users.findUser(payload.sup, 'id');
 
@@ -273,7 +265,9 @@ export async function resetUserPassword(res: Response, req: Request): Promise<Re
         logger.info(`Succès de la réinitialisation du mot de passe de l'utilisateur ${user[0].id}`);
         return ApiResponder.success(res, null, 'Mot de passe réinitialiser avec succès');
     } catch (error) {
-        logger.error(error);
+        logger.error('Erreur lors de la réinitialisation du mot de passe', { 
+            error: error instanceof Error ? error.message : 'Erreur inconnue',
+        });
         return ApiResponder.error(res, error);
     }
 }

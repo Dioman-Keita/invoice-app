@@ -1,6 +1,6 @@
 import database from "../config/database";
 import generateId, { EntityType } from "../services/generateId";
-import { isValidEmail } from "../middleware/validator";
+import { isValidEmail, isValidPassword, isValidPasswordStrength } from "../middleware/validator";
 import { BcryptHasher } from "../utils/PasswordHasher";
 import { generateUserToken } from "../services/userToken";
 import { GmailEmailSender } from "../services/emailService";
@@ -34,9 +34,9 @@ export class UserModel {
     private email: string | null = null;
     private hash: string | null = null;
     private employeeId: string | null = null;
-    private role: UserRole = null;
-    private entity: EntityType = null;
-    public static token: string = null;
+    private role: UserRole | null= null;
+    private entity: EntityType;
+    public static token: string | null = null;
 
     constructor (entity: EntityType) {
         this.entity = entity;
@@ -47,7 +47,7 @@ export class UserModel {
         try {
 
             this.id = await generateId(this.entity);
-            const ok = isValidEmail(email);
+            const ok = isValidEmail(email) && isValidPasswordStrength(password);
             if(ok) {
                 const user: User[] = await database.execute("SELECT * FROM employee WHERE email = ? LIMIT 1", [email]);
                 if(user && user.length > 0) {
@@ -125,8 +125,8 @@ export class UserModel {
             throw error;
         }
     }
-    async verifyCredentials(data: LoginType): Promise<{id: string, email: string, role: UserRole}> | null {
-        if (!isValidEmail(data.email)) return null;
+    async verifyCredentials(data: LoginType): Promise<{id: string, email: string, role: UserRole} | null> {
+        if (!isValidEmail(data.email) && !isValidPasswordStrength(data.password)) return null;
 
         const rows = await database.execute(
             "SELECT id, email, password, role FROM employee WHERE email = ? LIMIT 1",

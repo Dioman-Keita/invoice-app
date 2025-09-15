@@ -63,7 +63,7 @@ class InvoiceModel {
 			performed_by: data.createdBy,
 			description: `Création de la facture ${data.num_invoice}`,
 		});
-		if (data.documents.length > 0) {
+		if (data.documents && data.documents.length > 0) {
 			await database.execute("INSERT INTO attachments(documents, invoice_id) VALUES (?,?)", [JSON.stringify(data.documents), id]);
 			await logger.audit({
 				action: 'INSERT',

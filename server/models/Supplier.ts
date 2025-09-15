@@ -1,3 +1,4 @@
+import { email } from "zod";
 import database from "../config/database";
 import logger from "../utils/Logger";
 
@@ -7,7 +8,7 @@ type CreateSupplierInput = {
     suplier_phone: string,
 }
 
-type SupplierRecord = {
+export type SupplierRecord = {
     id: string,
     name: string,
     email: string,
@@ -25,20 +26,22 @@ class Supplier {
             const query = "INSERT INTO supplier(name, email, phone) VALUES (?,?,?)";
             const params = [
                 suplier_name,
-                suplier_phone,
+                suplier_email,
                 suplier_phone,
             ]
             
             logger.audit({
                 table_name: 'Supplier',
                 action: 'INSERT',
-                performed_by: null,
-                record_id: null,
+                performed_by: 'By current current user',
+                record_id: 'Current user',
                 description: `Création du fournisseur ${suplier_name} ${suplier_email}`,
             })
             return await database.execute(query, params);
         } catch (error) {
-            logger.error(error);
+            logger.error('Erreur lors de la création du fournisseur', { 
+                error: error instanceof Error ? error.message : 'Erreur inconnue' 
+            });
             throw error;
         }
     }

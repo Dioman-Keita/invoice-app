@@ -7,6 +7,9 @@ app.listen(PORT, () => {
     logger.info(`🚀 Serveur démarré sur le port ${PORT}`);
     logger.info(`📡 API disponible sur http://localhost:${PORT}/api`);
     logger.info(`🔍 Health check: http://localhost:${PORT}/api/health`);
+    console.log(`🚀 Serveur démarré sur le port ${PORT}`);
+    console.log(`📡 API disponible sur http://localhost:${PORT}/api`);
+    console.log(`🔍 Health check: http://localhost:${PORT}/api/health`);
 });
 
 export default app;

@@ -2,7 +2,7 @@ import type { Response, Request, NextFunction } from 'express';
 import ApiResponder from '../utils/ApiResponder';
 import logger from '../utils/Logger';
 
-// Types de rôles autorisés (cohérents avec la base de données)
+// Types de rôles autorisés
 type AllowedRole = 'admin' | 'invoice_manager' | 'dfc_agent';
 
 // Fonction pour créer un middleware de vérification de rôle

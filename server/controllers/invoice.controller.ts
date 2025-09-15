@@ -29,13 +29,13 @@ export async function createInvoice(
       createdByRole: user.role    // Rôle pour autorisation
     };
 
+    const result = await Invoice.create(invoiceData);
+
     logger.info(`[${requestId}] Création de facture`, { 
       userId: user.sup, 
       email: user.email,
       role: user.role 
     });
-
-    const result = await Invoice.create(invoiceData);
     return ApiResponder.created(res, result, 'Facture créée');
   } catch (err) {
     logger.error(`[${requestId}] Erreur lors de la création de facture`, { 
@@ -74,7 +74,7 @@ export async function getInvoice(
     const invoiceData = invoice[0];
     
     // Vérifier les permissions d'accès à la facture
-    if (!canAccessInvoice(user, invoiceData.created_by)) {
+    if (!canAccessInvoice(user, invoiceData.created_by as string)) {
       logger.warn(`[${requestId}] Tentative d'accès non autorisé à une facture`, { 
         invoiceId: id, 
         userId: user.sup, 

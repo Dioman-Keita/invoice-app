@@ -14,3 +14,10 @@ export function isValidPassword(req: Request<unknown, unknown, PasswordType>): b
     const { password, confirm_password } = req.body;
     return password === confirm_password;
 }
+
+export function isValidPasswordStrength(password: string): boolean {
+    return password.length >= 8 && 
+           /[A-Z]/.test(password) && 
+           /[0-9]/.test(password) &&
+           /[@$!%*?&]/.test(password);
+}
