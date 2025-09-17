@@ -7,37 +7,31 @@ function SupplierModal({ isOpen, onClose, register, errors }) {
     const {setValue} = useFormContext();
     const { validateLength } = useProgressiveValidation();
 
-    const handleEmailInput = (e) => {
-        const value = e.target.value;
-        const validation = validateLength(value, 100, "Email", {
-            warningThreshold: 0.8, // 80 caractères
-            infoThreshold: 0.6,    // 60 caractères
-            showCount: true,
-            cooldownMs: 3000       // 3 secondes entre les notifications
-        });
-        
-        if (validation.shouldTruncate) {
-            const trunced = value.slice(0, 100);
-            e.target.value = trunced;
-            setValue('supplier_email', trunced);
-        }
+    const handleAccountNumberInput = (e) => {
+        // Conserver uniquement les chiffres et limiter à 12
+        const rawDigits = e.target.value.replace(/\D/g, "");
+        const nextVal = rawDigits.slice(0, 12);
+        e.target.value = nextVal;
+        setValue('supplier_account_number', nextVal);
     }
 
     const { formatPhoneNumber, handlePhoneKeyDown } = usePhoneFormatter();
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Informations du fournisseur">
             <div className="mb-4">
-                <label htmlFor="supplier_email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label htmlFor="supplier_account_number" className="block text-sm font-medium text-gray-700 mb-1">Numéro de compte</label>
                 <input
-                    id="supplier_email"
-                    type="email"
-                    className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${errors["supplier_email"] ? "focus:ring-red-500 focus:border-red-700 border-red-500" : ""}`}
-                    placeholder="ex. contact@fournisseur.ml"
-                    {...register('supplier_email')}
-                    onInput={handleEmailInput}
+                    id="supplier_account_number"
+                    type="text"
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${errors["supplier_account_number"] ? "focus:ring-red-500 focus:border-red-700 border-red-500" : ""}`}
+                    placeholder="ex. 000123456789"
+                    inputMode="numeric"
+                    pattern="\d{12}"
+                    {...register('supplier_account_number')}
+                    onInput={handleAccountNumberInput}
                 />
-                {errors["supplier_email"] && (
-                    <p className='text-red-500 text-sm mt-1'>{errors["supplier_email"].message}</p>
+                {errors["supplier_account_number"] && (
+                    <p className='text-red-500 text-sm mt-1'>{errors["supplier_account_number"].message}</p>
                 )}
             </div>
             <div className="mb-2">

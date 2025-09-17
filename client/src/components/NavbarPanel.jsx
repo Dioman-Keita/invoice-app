@@ -363,10 +363,12 @@ function NavbarPanel({ isOpen, onClose, isConnected, userType, userName, onLogou
                       <p className="text-gray-800">{label}</p>
                       <p className="text-xs text-gray-400">/{action}</p>
                     </div>
-                    <button
-                      type="button"
+                    <span
+                      role="button"
+                      tabIndex={0}
                       onClick={(e) => { e.stopPropagation(); toggleFavorite(action); }}
-                      className={favoriteActions.includes(action) ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 hover:text-amber-500'}
+                      onKeyDown={(e) => handleFavKeyDown(e, action)}
+                      className={favoriteActions.includes(action) ? 'text-amber-500 hover:text-amber-600 cursor-pointer' : 'text-gray-300 hover:text-amber-500 cursor-pointer'}
                       aria-label={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                       title={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                     >
@@ -375,7 +377,7 @@ function NavbarPanel({ isOpen, onClose, isConnected, userType, userName, onLogou
                       ) : (
                         <StarIcon className="w-5 h-5" />
                       )}
-                    </button>
+                    </span>
                   </button>
                 ))}
             </div>

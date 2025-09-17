@@ -20,10 +20,25 @@ export async function createInvoice(
     }
 
     const data = req.body as CreateInvoiceInput;
+
+    // Défauts et validations rapides côté contrôleur (défense en profondeur)
+    const normalizedStatus = (data.status as any) ?? 'Non';
+    const normalizedNum = String(data.num_invoice ?? '').trim();
+    const normalizedAmount = Number(data.amount);
+
+    if (!/^\d{1,12}$/.test(normalizedNum)) {
+      return ApiResponder.badRequest(res, 'Le numéro de facture doit contenir 1 à 12 chiffres');
+    }
+    if (!(normalizedAmount > 0) || normalizedAmount > 100_000_000_000) {
+      return ApiResponder.badRequest(res, 'Montant maximum autorisé : 100 000 000 000');
+    }
     
     // Associer la facture à l'utilisateur connecté
     const invoiceData = {
       ...data,
+      num_invoice: normalizedNum,
+      amount: normalizedAmount,
+      status: normalizedStatus,
       createdBy: user.sup,        // ID de l'utilisateur qui crée la facture
       createdByEmail: user.email, // Email pour traçabilité
       createdByRole: user.role    // Rôle pour autorisation

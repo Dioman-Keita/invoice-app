@@ -1,17 +1,17 @@
-import { email } from "zod";
 import database from "../config/database";
 import logger from "../utils/Logger";
+import { auditLog } from "../utils/auditLogger";
 
 type CreateSupplierInput = {
     suplier_name: string,
-    suplier_email: string,
+    suplier_account_number: string,
     suplier_phone: string,
 }
 
 export type SupplierRecord = {
     id: string,
     name: string,
-    email: string,
+    account_number: string,
     phone: string,
     create_at: string,
     update_at: string,
@@ -22,20 +22,23 @@ class Supplier {
 
     async create(supplierData: CreateSupplierInput): Promise<unknown> {
         try {
-            const { suplier_name, suplier_email, suplier_phone } = supplierData;
-            const query = "INSERT INTO supplier(name, email, phone) VALUES (?,?,?)";
+            const { suplier_name, suplier_account_number, suplier_phone } = supplierData;
+            if (!/^\d{12}$/.test(String(suplier_account_number))) {
+                throw new Error('Le numéro de compte doit contenir exactement 12 chiffres');
+            }
+            const query = "INSERT INTO supplier(name, account_number, phone) VALUES (?,?,?)";
             const params = [
                 suplier_name,
-                suplier_email,
+                suplier_account_number,
                 suplier_phone,
             ]
             
-            logger.audit({
+            auditLog({
                 table_name: 'Supplier',
                 action: 'INSERT',
                 performed_by: 'By current current user',
                 record_id: 'Current user',
-                description: `Création du fournisseur ${suplier_name} ${suplier_email}`,
+                description: `Création du fournisseur ${suplier_name} ${suplier_account_number}`,
             })
             return await database.execute(query, params);
         } catch (error) {
@@ -46,10 +49,10 @@ class Supplier {
         }
     }
 
-    async findSupplier(id: string, type: 'email' | 'id' = 'id'): Promise<SupplierRecord[]> {
-        const focus = type === 'email' ? 'email' : 'id';
+    async findSupplier(id: string, type: 'account_number' | 'id' = 'id'): Promise<SupplierRecord[]> {
+        const focus = type === 'account_number' ? 'account_number' : 'id';
         const result = await database.execute(`SELECT * FROM supplier WHERE ${focus} = ? LIMIT 1`, [id]);
-        logger.audit({
+        auditLog({
             table_name: 'supplier',
             action: 'SELECT',
             record_id: id,
@@ -60,7 +63,7 @@ class Supplier {
 
     async findSupplierByPhone(phone: string): Promise<SupplierRecord[]> {
         const result = await database.execute("SELECT * FROM supplier WHERE phone = ? LIMIT 1", [phone]);
-        logger.audit({
+        auditLog({
             action: 'SELECT',
             table_name: 'supplier',
             record_id: phone,
@@ -71,7 +74,7 @@ class Supplier {
 
     async getAllsupplier(): Promise<SupplierRecord[]> {
         const result = await database.execute("SELECT * FROM supplier");
-        logger.audit({
+        auditLog({
             action: 'SELECT',
             table_name: 'supplier',
             record_id: 'all supplier in table supplier',

@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import useToastFeedback from './useToastFeedBack';
+import useToastFeedback from './useToastFeedback';
 
 export const useProgressiveValidation = () => {
   const { warning, info, error } = useToastFeedback();

@@ -4,17 +4,19 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema } from '../features/connection/loginShema';
 import useTitle from '../hooks/useTitle';
-import useToastFeedback from '../hooks/useToastFeedBack';
 import { Link } from 'react-router-dom';
 import { useInputFilters } from '../hooks/useInputFilter';
 import AsyncSubmitBtn from '../components/AsyncSubmitBtn';  
+import { useAuth } from '../services/useAuth';
 
 function Login() {
   useTitle('CMDT - Connexion');
+
   const [role, setRole] = useState('dfc_agent');
   const { filterEmail, filterPassword } = useInputFilters();
   const [loading, setLoading] = useState(false);
-  const { success } = useToastFeedback();
+  const { login } = useAuth();
+
   const { register, formState: { errors }, handleSubmit, setValue } = useForm({
     mode: 'onChange',
     reValidateMode: 'onChange',
@@ -22,24 +24,29 @@ function Login() {
     defaultValues: { email: '', password: '', rememberMe: false, role: 'dfc_agent' },
     resolver: zodResolver(loginSchema),
   });
+
   useEffect(() => {
     setValue('role', role, { shouldValidate: true, shouldDirty: true });
   }, [role, setValue]);
+
   const [showPassword, setShowPassword] = useState(false);
   const onSubmit = async (data) => { 
     console.log(data); 
     try {
       setLoading(true);
       await new Promise((res) => setTimeout(res, 2000));
-      success('Connexion réussie');
+      await login({
+        password: data.password,
+        email: data.email
+      });
       console.log('Donnees soumises : ', data);
-    } catch (error) {
-      console.error('Erreurs de validation : ', error);
+    } catch (err) {
+      console.log(err);
     } finally {
       setLoading(false);
     }
   };
-
+  
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-login">
       {/* Section illustration */}

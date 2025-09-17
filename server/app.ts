@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import express from 'express';
@@ -7,6 +8,8 @@ import { requestIdMiddleware } from './middleware/requestIdMiddleware';
 import logger from './utils/Logger';
 import ApiResponder from './utils/ApiResponder';
 import type { Response, Request, NextFunction } from 'express';
+import authGuard from './middleware/authGuard';
+
 
 const app = express();
 

@@ -14,7 +14,11 @@ const fourDigitCode = z
   .regex(/^\d{4}$/, "Doit contenir exactement 4 chiffres (ex. 0001)");
 
 export const invoiceSchema = z.object({
-    invoice_num: fourDigitCode,
+    // Numéro de facture: 1 à 12 chiffres, zéros en tête autorisés
+    invoice_num: z
+    .string()
+    .min(1, "Champ requis")
+    .regex(/^\d{1,12}$/, "Doit contenir 1 à 12 chiffres"),
     num_cmdt: fourDigitCode,
     invoice_date: z
     .string()
@@ -51,13 +55,17 @@ export const invoiceSchema = z.object({
     .min(1, "Le montant est requis")
     .regex(/^\d+$/, "Le montant doit être un entier positif")
     .transform((val) => parseInt(val, 10))
-    .refine((val) => val > 0 && val <= 1_000_000_000, {
-        message: "Montant maximum autorisé : 1 milliard FCFA"
+    .refine((val) => val > 0 && val <= 100_000_000_000, {
+        message: "Montant maximum autorisé : 100 000 000 000"
     }),
 
 
     supplier_name: z.string().min(1, "Le nom du fournisseur est requis").regex(supplierNameRegex, "Nom invalide : seuls les lettres accentuées(êèéï), chiffres(1,3,8), espaces( ), tirets(-) et apostrophes(') sont autorisés"),
-    supplier_email: z.string().optional().transform(v => (v ?? '').trim()).refine((v) => v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), { message: "Email invalide" }),
+    // Remplacement de l'email par le numéro de compte
+    supplier_account_number: z
+    .string()
+    .min(1, "Le numéro de compte est requis")
+    .regex(/^\d{12}$/, "Le numéro de compte doit contenir exactement 12 chiffres"),
     supplier_phone: z
     .string()
     .optional()
@@ -74,9 +82,10 @@ export const invoiceSchema = z.object({
 
     invoice_type: z.enum(["Ordinaire", "Transporteur", "Transitaire"], {error: "Nature de la facture obligatoire"}),
 
+    // Statut par défaut "Non"
     invoice_status: z.enum(["Oui", "Non"], {
         error: "Etat de la facture requis"
-    }),
+    }).default('Non'),
 
     folio: z.enum(["1 copie", "Orig + 1 copie", "Orig + 2 copies", "Orig + 3 copies"], {
         error: "Folio invalide"

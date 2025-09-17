@@ -10,3 +10,18 @@ ADD FOREIGN KEY (created_by) REFERENCES employee(id) ON DELETE SET NULL;
 
 -- Ajouter un index pour optimiser les requêtes par utilisateur
 CREATE INDEX idx_invoice_created_by ON invoice(created_by);
+
+-- Ajout des colonnes phone et department dans la table employee
+ALTER TABLE employee ADD COLUMN phone VARCHAR(45) NULL;
+ALTER TABLE employee ADD COLUMN department VARCHAR(50) NOT NULL;
+
+
+-- 3) Plafond montant 100 000 000 000
+-- Adapter le type pour supporter la valeur maximale
+ALTER TABLE invoice 
+MODIFY COLUMN amount DECIMAL(12,0) NOT NULL;
+
+-- 4) Mise de de la table supplier
+-- changement de la colone email par la colone account_number
+ALTER TABLE supplier
+CHANGE COLUMN email account_number CHAR(12) NOT NULL;

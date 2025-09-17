@@ -14,27 +14,28 @@ import DFCFormular from "../pages/DFCFormular";
 import Verify from "../pages/Verify";
 import ResetPassword from "../pages/ResetPassword";
 import ForgotPassword from "../pages/ForgotPassword";
+import PrivateRoute from "../components/PrivateRoute";
 
 function AppRoutes() {
     return (
         <Routes>
             <Route path="/" element={<Home />} />
                 <Route path="login" element={<Login />}>
-                    <Route path="register" element={<Register />}></Route>
+                <Route path="register" element={<Register />}></Route>
             </Route>
             <Route path="register" element={<Register />} />
             <Route path="/facture" element={<Invoice />} />
-            <Route path="/export" element={<Export />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/stats" element={<Stats />} />
-            <Route path="/print" element={<Print />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/export" element={<PrivateRoute><Export /></PrivateRoute>} />
+            <Route path="/search" element={<PrivateRoute><Search /></PrivateRoute>} />
+            <Route path="/stats" element={<PrivateRoute><Stats /></PrivateRoute>} />
+            <Route path="/print" element={<PrivateRoute><Print /></PrivateRoute>} />
+            <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
             <Route path="/verify" element={<Verify />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="*" element={<NotFound />} />
-            <Route path="/joinDFC" element={<JoinDFC />} />
-            <Route path="/dfc_traitment" element={<DFCFormular />} />
+            <Route path="/joinDFC" element={<PrivateRoute><JoinDFC /></PrivateRoute>} />
+            <Route path="/dfc_traitment" element={<PrivateRoute><DFCFormular /></PrivateRoute>} />
         </Routes>
     )
 }

@@ -7,6 +7,7 @@ import type { Response, Request } from "express";
 import { isValidEmail, isValidPassword, isValidPasswordStrength } from "../middleware/validator";
 import database from "../config/database";
 import logger from "../utils/Logger";
+import { auditLog } from "../utils/auditLogger";
 import { BcryptHasher } from "../utils/PasswordHasher";
 
 export async function createUser(req: Request<unknown, unknown, UserType>, res: Response): Promise<Response> {
@@ -22,7 +23,7 @@ export async function createUser(req: Request<unknown, unknown, UserType>, res: 
             employeeId: data.employeeId,
             role: data.role 
         });
-        return ApiResponder.created(res, result, 'Utilisateur créé');
+        return ApiResponder.created(res, { success: true }, 'Un email de verification vous a été envoyé pour completer votre inscription');
     } catch (error) {
         logger.error(`[${requestId}] Échec de création d'utilisateur`, { 
             email: req.body?.email, 
@@ -43,7 +44,7 @@ export async function login(req: Request, res: Response): Promise<Response> {
         const authUser = await Users.verifyCredentials({ email, password: req.body.password });
         if (!authUser) {
             logger.warn(`[${requestId}] Échec de connexion - identifiants invalides`, { email });
-            return ApiResponder.unauthorized(res, "Identifiants invalides")
+            return ApiResponder.unauthorized(res, "Identifiants invalides");
         }
 
         const token = generateUserToken({
@@ -76,7 +77,9 @@ export async function login(req: Request, res: Response): Promise<Response> {
 
 export async function getCurrentToken(req: Request, res: Response): Promise<Response> {
     const token = req.cookies?.auth_token;
-    if (!token) return ApiResponder.unauthorized(res, 'Jeton manquant')
+    if (!token) {
+        return ApiResponder.unauthorized(res, 'Veuillez vous connecter pour accéder à cette page.');
+    }
     try {
         const payload = verifyUserToken(token);
         return ApiResponder.success(res, { token, payload }, 'Jeton actuel');
@@ -84,7 +87,7 @@ export async function getCurrentToken(req: Request, res: Response): Promise<Resp
         logger.error('Erreur lors de la vérification du jeton', { 
             error: error instanceof Error ? error.message : 'Erreur inconnue' 
         });
-        return ApiResponder.unauthorized(res, 'Jeton invalide', error);
+        return ApiResponder.unauthorized(res, 'Veuillez vous connecter pour accéder à cette page.', error);
     }
 }
 
@@ -136,7 +139,7 @@ export async function getCurrentUser(req: Request, res: Response): Promise<Respo
         logger.error(`[${requestId}] Erreur lors de la récupération du profil`, { 
             error: error instanceof Error ? error.message : 'Erreur inconnue' 
         });
-        return ApiResponder.error(res, error);
+        return ApiResponder.error(res, error, 'Veuillez vous connecter pour accéder à cette page.');
     }
 }
 
@@ -170,8 +173,8 @@ export async function forgotPassword(req: Request, res: Response): Promise<Respo
             "INSERT INTO auth_token(token, employee_id) VALUES (?,?)",
             [token, user[0].id]
         )
-        
-        await logger.audit({
+
+        await auditLog({
             table_name: 'auth_token',
             action: 'INSERT',
             record_id: user[0].id,
@@ -245,7 +248,7 @@ export async function resetUserPassword(res: Response, req: Request): Promise<Re
             "UPDATE employee SET password = ? WHERE id = ?",
             [hash, payload.sup]
         )
-        await logger.audit({
+        await auditLog({
             action: 'UPDATE',
             table_name: 'employee',
             record_id: payload.sup,
@@ -256,7 +259,7 @@ export async function resetUserPassword(res: Response, req: Request): Promise<Re
             "UPDATE auth_token SET token = null WHERE token = ?",
             [token]
         )
-        await logger.audit({
+        await auditLog({
             action: 'UPDATE',
             table_name: 'auth_token',
             record_id: payload.sup,

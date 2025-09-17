@@ -9,13 +9,14 @@ import ValidateCheckboxGroup from "../../components/ValidateCheckboxGroup";
 import formatDate from "../../utils/formatDate";
 import ValidateSupplierInput from "../../components/ValidateSupplierInput";
 import ValidatedCodeInput from "../../components/ValidatedCodeInput";
+import ValidatedInvoiceNumberInput from "../../components/ValidatedInvoiceNumberInput";
 import ValidatedAmountInput from "../../components/ValidatedAmountInput";
 import ValidateDateInput from "../../components/ValidateDateInput";
 import FormContainer from "../../components/FormContainer";
 import FormSection from "../../components/FormSection";
 import AsyncSubmitBtn from "../../components/AsyncSubmitBtn";
 import { invoiceSchema } from "./InvoiceShema";
-import useToastFeedback from "../../hooks/useToastFeedBack";
+import useToastFeedback from "../../hooks/useToastFeedback";
 import useDateValidation from "../../hooks/useDateValidation";
 
 function InvoiceForm() {
@@ -30,7 +31,8 @@ function InvoiceForm() {
       invoice_date: formatDate(),
       invoice_arrival_date: formatDate(),
       invoice_num: "",
-      num_cmdt: ""
+      num_cmdt: "",
+      invoice_status: "Non"
     }
   });
   
@@ -74,7 +76,7 @@ function InvoiceForm() {
     <FormProvider {...methods}>
       <FormContainer handleSubmit={methods.handleSubmit} onSubmit={onSubmit}>
           <FormSection>
-          <ValidatedCodeInput name="invoice_num" label="Numéro de la facture" placeholder="XXXX"/>
+          <ValidatedInvoiceNumberInput name="invoice_num" label="Numéro de la facture" placeholder="000000000001"/>
           <ValidatedCodeInput name="num_cmdt" label="N° CMDT courrier" placeholder="XXXX"/>
           <ValidateDateInput name={"invoice_date"}  label={'Date de la facture'}  placeholder={'JJ/MM/AAAA'} />
           <ValidateDateInput name={'invoice_arrival_date'} label={'Date d\'arrivée du courrier'} placeholder={'JJ/MM/AAAA'} />

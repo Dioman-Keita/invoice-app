@@ -1,14 +1,13 @@
-// Register.jsx
 import { useState, useEffect } from 'react';
 import useTitle from '../hooks/useTitle';
 import { useInputFilters } from '../hooks/useInputFilter';
 import { usePhoneFormatter } from '../hooks/usePhoneFormater';
-import useToastFeedback from '../hooks/useToastFeedBack';
 import { Link } from 'react-router-dom';
 import { registerSchema } from '../features/connection/loginShema';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import AsyncSubmitBtn from '../components/AsyncSubmitBtn';
+import { useAuth } from '../services/useAuth';
 
 function Register() {
   useTitle('CMDT - Inscription');
@@ -26,8 +25,7 @@ function Register() {
   } = useInputFilters();
 
   const { formatPhoneNumber, handlePhoneKeyDown } = usePhoneFormatter();
-  const { success } = useToastFeedback();
-
+  const { register: registerUser } = useAuth();
   const { 
     register, 
     handleSubmit, 
@@ -67,7 +65,18 @@ function Register() {
     try {
       setLoading(true);
       await new Promise((res) => setTimeout(res, 2000));
-      success("Compte créé avec succès !");
+  await registerUser({
+    firstName: data.firstName,
+    lastName: data.lastName,
+    email: data.email,
+    employeeId: data.employeeId,
+    password: data.password,
+    confirm_password: data.confirm_password,
+    phone: data.phone,
+    role: data.role,
+    department: data.department,
+    terms: data.terms,
+  });
       console.log('Donnees soumises : ', data);
     } catch (error) {
       console.error('Erreurs de validation : ', error);

@@ -5,7 +5,7 @@ import logger from '../utils/Logger';
 
 type CreateSupplierBody = {
     supplier_name: string;
-    supplier_email?: string;
+    supplier_account_number: string;
     supplier_phone?: string;
 };
 
@@ -16,17 +16,23 @@ export async function createSupplier(
     res: Response
 ): Promise<Response> {
     try {
-        const { supplier_name, supplier_email = '', supplier_phone = '' } = req.body || {};
+        const { supplier_name, supplier_account_number = '', supplier_phone = '' } = req.body || {};
         if (!supplier_name) {
             return ApiResponder.badRequest(res, 'Le nom du fournisseur est requis');
         }
+        if (!supplier_account_number) {
+            return ApiResponder.badRequest(res, 'Le numéro de compte du fournisseur est requis');
+        }
+        if (!/^\d{12}$/.test(supplier_account_number)) {
+            return ApiResponder.badRequest(res, 'Le numéro de compte doit contenir exactement 12 chiffres');
+        }
 
-        const isSupplierExist: SupplierRecord[] = await supplier.findSupplier(supplier_email, 'email');
+        const isSupplierExist: SupplierRecord[] = await supplier.findSupplier(supplier_account_number, 'account_number');
         if (isSupplierExist && isSupplierExist.length > 0) return ApiResponder.badRequest(res, 'Ce fournisseur existe déjà');
 
         const result = await supplier.create({
             suplier_name: supplier_name,
-            suplier_email: supplier_email,
+            suplier_account_number: supplier_account_number,
             suplier_phone: supplier_phone,
         } as any);
         return ApiResponder.created(res, result, 'Fournisseur créé');

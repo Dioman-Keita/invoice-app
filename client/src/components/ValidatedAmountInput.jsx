@@ -32,7 +32,7 @@ function ValidatedAmountInput({ name = "invoice_amount", label = "Montant de la 
   }
 
   // Seuil maximum
-  const MAX_AMOUNT = 1_000_000_000;
+  const MAX_AMOUNT = 100_000_000_000;
 
   const handleInput = (e) => {
     // Supprime tout sauf les chiffres
@@ -47,7 +47,7 @@ function ValidatedAmountInput({ name = "invoice_amount", label = "Montant de la 
     const numeric = parseInt(rawValue, 10);
 
     if (numeric > MAX_AMOUNT) {
-      validatePattern(numeric.toString(), /^[0-9]{1,9}$/, "Montant", "Montant maximum autorisé : 1 milliard FCFA", {
+      validatePattern(numeric.toString(), /^[0-9]{1,12}$/, "Montant", "Montant maximum autorisé : 100 000 000 000", {
         cooldownMs: 3000
       });
       const formattedMax = formatWithSpaces(MAX_AMOUNT.toString());

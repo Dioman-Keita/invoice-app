@@ -1,24 +1,8 @@
-import database from "../config/database";
 import fs from 'fs';
 import path from 'path';
 
 type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
 
-type AuditAction = 'INSERT' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'SELECT';
-
-type AuditLogParams = {
-    action: AuditAction,
-    table_name: string,
-    record_id: string | null,
-    description?: string | null,
-    performed_by?: string | null,
-};
-
-type ExportLogParams = {
-    invoice_id: string | null,
-    format: 'PDF' | 'Excel' | 'CSV' | 'JSON',
-    exported_by: string,
-};
 
 class Logger {
     private static instance: Logger | null = null;
@@ -105,31 +89,6 @@ class Logger {
         this.log('DEBUG', message, meta);
     }
 
-    async audit(params: AuditLogParams): Promise<void> {
-        const { action, table_name, record_id, description = null, performed_by = null } = params;
-        try {
-            await database.execute(
-                "INSERT INTO audit_log(action, table_name, record_id, description, performed_by) VALUES(?,?,?,?,?)",
-                [action, table_name, record_id, description, performed_by]
-            );
-            this.info('Audit log enregistré', { action, table_name, record_id, performed_by });
-        } catch (error) {
-            this.error('Echec de l\'enregistrement de l\'audit_log', { error, params });
-        }
-    }
-
-    async export(params: ExportLogParams): Promise<void> {
-        const { invoice_id, format, exported_by } = params;
-        try {
-            await database.execute(
-                "INSERT INTO export_log(invoice_id, format, exported_by) VALUES(?,?,?)",
-                [invoice_id, format, exported_by]
-            );
-            this.info('Export log enregistré', { invoice_id, format, exported_by });
-        } catch (error) {
-            this.error('Echec de l\'enregistrement de l\'export_log', { error, params });
-        }
-    }
 }
 
 const logger = Logger.getInstance();

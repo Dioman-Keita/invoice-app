@@ -1,11 +1,12 @@
 import database from "../config/database";
 import generateId, { EntityType } from "../services/generateId";
-import { isValidEmail, isValidPassword, isValidPasswordStrength } from "../middleware/validator";
+import { isValidEmail, isValidPasswordStrength } from "../middleware/validator";
 import { BcryptHasher } from "../utils/PasswordHasher";
 import { generateUserToken } from "../services/userToken";
 import { GmailEmailSender } from "../services/emailService";
 import { NotificationFactory } from "../services/notificationFactory";
 import logger from "../utils/Logger";
+import { auditLog } from "../utils/auditLogger";
 
 
 export type UserType = {
@@ -14,7 +15,9 @@ export type UserType = {
     email: string,
     password: string,
     employeeId: string,
-    role: UserRole
+    role: UserRole,
+    phone: string,
+    department: string,
 }
 
 export type LoginType = {
@@ -34,7 +37,8 @@ export class UserModel {
     private email: string | null = null;
     private hash: string | null = null;
     private employeeId: string | null = null;
-    private role: UserRole | null= null;
+    private role: UserRole | null = null;
+    private phone: string | null = null;
     private entity: EntityType;
     public static token: string | null = null;
 
@@ -43,11 +47,14 @@ export class UserModel {
     }
 
     async create(userData: UserType): Promise<unknown> {
-        const {firstName, lastName, email, password, employeeId, role} = userData;
+        const {firstName, lastName, email, password, employeeId, role, phone} = userData;
         try {
 
             this.id = await generateId(this.entity);
-            const ok = isValidEmail(email) && isValidPasswordStrength(password);
+            if (!isValidEmail(email) || !isValidPasswordStrength(password)) {
+                return null;
+            }
+            const ok = true;
             if(ok) {
                 const user: User[] = await database.execute("SELECT * FROM employee WHERE email = ? LIMIT 1", [email]);
                 if(user && user.length > 0) {
@@ -62,12 +69,13 @@ export class UserModel {
                 this.hash = await BcryptHasher.hash(password);
                 this.employeeId = employeeId;
                 this.role = role || 'invoice_manager';
+                this.phone = phone;
                 const result: unknown = await database.execute(
-                    "INSERT INTO employee(id, firstname, lastname, email, password, employee_cmdt_id, role) VALUES(?,?,?,?,?,?,?)",
-                    [this.id, this.firstName, this.lastName, this.email, this.hash, this.employeeId, this.role]
+                    "INSERT INTO employee(id, firstname, lastname, email, password, employee_cmdt_id, role, phone) VALUES(?,?,?,?,?,?,?,?)",
+                    [this.id, this.firstName, this.lastName, this.email, this.hash, this.employeeId, this.role, this.phone]
                 );
 
-                await logger.audit({
+                await auditLog({
                     action: 'INSERT',
                     table_name: 'employee',
                     record_id: this.id,
@@ -113,7 +121,7 @@ export class UserModel {
         try {
             const focus = findType === 'email' ? 'email' : 'id'
             const user = await database.execute(`SELECT * FROM employee WHERE ${focus} = ? LIMIT 1`, [target]);
-            await logger.audit({
+            await auditLog({
                 action: 'SELECT',
                 table_name: 'employee',
                 performed_by: target,
@@ -133,7 +141,7 @@ export class UserModel {
             [data.email]
         ) as any[];
 
-        await logger.audit({
+        await auditLog({
             action: 'SELECT',
             table_name: 'employee',
             record_id: data.email,
