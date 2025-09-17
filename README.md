@@ -79,6 +79,29 @@ Si front et back sont sur des origines différentes, activer CORS avec `credenti
 - **Mise à jour requise** : Exécuter `server/db/add_user_tracking_to_invoice.sql` pour ajouter la traçabilité utilisateur aux factures
 - **Colonnes ajoutées** : `created_by`, `created_by_email`, `created_by_role` dans la table `invoice`
 
+#### Règles et contraintes récentes
+- Facture:
+  - `status` par défaut à "Non" (choix visible côté UI, valeur par défaut côté front et back)
+  - `num_invoice` limité à 12 caractères numériques (1..12 chiffres au front, stockage `VARCHAR(12)` recommandé)
+  - `amount` plafonné à `100 000 000 000` (validation front et back; côté SQL, utiliser un type numérique suffisant, ex. `DECIMAL(12,0)`)
+- Fournisseur:
+  - L'email est remplacé par le **numéro de compte** `account_number` (exactement 12 chiffres, unique)
+
+#### Migrations
+- Traçabilité facture: `server/db/add_user_tracking_to_invoice.sql`
+- Numéro de compte fournisseur (si vous avez déjà des données):
+  - Renommer la colonne `supplier.email` en `supplier.account_number` (type `CHAR(12)` ou `VARCHAR(12)`),
+  - Normaliser les valeurs existantes en 12 chiffres (suppression des non-chiffres, tronquer/padder),
+  - Créer un index unique sur `supplier(account_number)`.
+  - Exemple (MySQL 8+):
+    ```sql
+    ALTER TABLE supplier CHANGE COLUMN email account_number CHAR(12) NOT NULL;
+    UPDATE supplier SET account_number = LPAD(SUBSTRING(REGEXP_REPLACE(account_number, '[^0-9]', ''), 1, 12), 12, '0');
+    CREATE UNIQUE INDEX ux_supplier_account_number ON supplier(account_number);
+    -- Optionnel (si supporté):
+    -- ALTER TABLE supplier ADD CONSTRAINT chk_supplier_account_number_digits CHECK (account_number REGEXP '^[0-9]{12}$');
+    ```
+
 ### Scripts utiles
 ```bash
 # racine
