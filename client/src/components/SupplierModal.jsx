@@ -1,11 +1,9 @@
 import Modal from "./Modal";
-import useProgressiveValidation from "../hooks/useProgressiveValidation";
 import { useFormContext } from "react-hook-form";
-import { usePhoneFormatter } from "../hooks/usePhoneFormater";
+import { useInputFilters } from "../hooks/useInputFilter";
 
 function SupplierModal({ isOpen, onClose, register, errors }) {
     const {setValue} = useFormContext();
-    const { validateLength } = useProgressiveValidation();
 
     const handleAccountNumberInput = (e) => {
         // Conserver uniquement les chiffres et limiter à 12
@@ -15,7 +13,7 @@ function SupplierModal({ isOpen, onClose, register, errors }) {
         setValue('supplier_account_number', nextVal);
     }
 
-    const { formatPhoneNumber, handlePhoneKeyDown } = usePhoneFormatter();
+    const { filterPhone } = useInputFilters();
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Informations du fournisseur">
             <div className="mb-4">
@@ -40,10 +38,9 @@ function SupplierModal({ isOpen, onClose, register, errors }) {
                     id="supplier_phone"
                     type="tel"
                     className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${errors["supplier_phone"] ? "focus:ring-red-500 focus:border-red-700 border-red-500" : ""}`}
-                    placeholder="ex. +22377001122"
+                    placeholder="ex. +223 77 00 11 22"
                     {...register('supplier_phone')}
-                    onInput={formatPhoneNumber}
-                    onKeyDown={handlePhoneKeyDown}
+                    onInput={filterPhone}
                     onFocus={(e) => {
                         if (e.target.value === '') {
                             e.target.value = '+223 ';

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import useTitle from '../hooks/useTitle';
 import { useInputFilters } from '../hooks/useInputFilter';
-import { usePhoneFormatter } from '../hooks/usePhoneFormater';
 import { Link } from 'react-router-dom';
 import { registerSchema } from '../features/connection/loginShema';
 import { useForm, useWatch } from 'react-hook-form';
@@ -21,10 +20,10 @@ function Register() {
     filterLastName, 
     filterPassword, 
     filterConfirmPassword,
-    filterEmployeeId
+    filterEmployeeId,
+    filterPhone
   } = useInputFilters();
 
-  const { formatPhoneNumber, handlePhoneKeyDown } = usePhoneFormatter();
   const { register: registerUser } = useAuth();
   const { 
     register, 
@@ -200,6 +199,7 @@ function Register() {
               </label>
               <input
                 type="text"
+                inputMode="numeric"
                 onInput={filterEmployeeId}
                 id="employeeId"
                 {...register("employeeId")}
@@ -215,12 +215,11 @@ function Register() {
               <input
                 type="tel"
                 id="phone"
-                onInput={formatPhoneNumber}
-                onKeyDown={handlePhoneKeyDown}
+                onInput={filterPhone}
                 onFocus={(e) => {
-                    if (e.target.value === '') {
-                      e.target.value = '+223 ';
-                    }
+                  if (e.target.value === '') {
+                    e.target.value = '+223 ';
+                  }
                 }}
                 {...register("phone")}
                 className={`w-full px-4 py-3 border rounded-lg focus:outline-none ${errors.phone?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}

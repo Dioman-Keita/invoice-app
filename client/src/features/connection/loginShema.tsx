@@ -21,8 +21,8 @@ const emailSchema = z
 const employeeIdSchema = z
   .string()
   .min(1, "l'identifiant CMDT est requis")
-  .regex(/^\d{5}$/, {
-    message: "L'identifiant CMDT doit être au format XXXXXX ex.(56756)",
+  .regex(/^\d{5,7}$/, {
+    message: "L'identifiant CMDT doit contenir 5 à 7 chiffres",
   }); 
 
 const phoneSchema = z
