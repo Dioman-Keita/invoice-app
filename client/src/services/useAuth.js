@@ -20,15 +20,19 @@ export function useAuth() {
             setUser(me);
             return me;
         } catch (err) {
-            setUser(null);
+            if(err?.response?.status === 401) {
+                setUser(null);
+                return null;
+            }
             throw err;
         } finally {
             setLoading(false);
         }
-    }, [error]);
+    }, []);
 
     useEffect(() => {
-        if (window.location.pathname === '/login') {
+        const publicPage = ['/register', '/login']
+        if (publicPage.includes(window.location.pathname)) {
             setLoading(false);
             return;
         }
@@ -56,18 +60,40 @@ export function useAuth() {
     const register = useCallback(async (payload) => {
         try {
             const data = await api.post('/auth/register', { ...payload });
+    
             if (data.success !== true) {
-                error(data?.message || "Erreur lors de l'inscription");
-                return;
-            } else {
-                success(data.message || "Consulter votre courrier pour finaliser la création de votre compte");
+                error(data.message || "Erreur lors de l'inscription");
+    
+                // Retourne l'erreur au composant appelant
+                return {
+                    success: false,
+                    message: data.message,
+                    field: data.field
+                };
             }
+    
+            success(data.message || "Consulter votre courrier pour finaliser la création de votre compte");
             await fetchMe(false);
+    
+            return {
+                success: true,
+                userId: data.userId
+            };
+    
         } catch (err) {
-            error(err?.response?.data?.message || "Erreur lors de l'inscription");
-            throw err;
+            const message = err?.response?.data?.message || "Erreur lors de l'inscription";
+            const field = err?.response?.data?.field;
+    
+            error(message);
+    
+            return {
+                success: false,
+                message,
+                field
+            };
         }
     }, [success, error, fetchMe]);
+    
 
     const logout = useCallback(async () => {
         try {

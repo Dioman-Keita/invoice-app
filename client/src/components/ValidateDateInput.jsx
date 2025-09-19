@@ -1,5 +1,5 @@
 import { useFormContext } from "react-hook-form";
-import useTostFeedBack from "../hooks/useToastFeedBack";
+import useTostFeedBack from "../hooks/useToastFeedback";
 
 function ValidateDateInput({ label, placeholder, name, type="text"}) {
     const {register, formState: {errors}, setValue} = useFormContext();

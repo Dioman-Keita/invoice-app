@@ -25,3 +25,7 @@ MODIFY COLUMN amount DECIMAL(12,0) NOT NULL;
 -- changement de la colone email par la colone account_number
 ALTER TABLE supplier
 CHANGE COLUMN email account_number CHAR(12) NOT NULL;
+
+-- 5) Update de la table employee pour inclure creat_at
+ALTER TABLE employee 
+ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP;

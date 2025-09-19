@@ -36,7 +36,7 @@ class Database {
     /**
      * Retourne une connexion a la base de donnée
      */
-    private async getConnection(): Promise<PoolConnection> {
+    public async getConnection(): Promise<PoolConnection> {
         try {
             if (!this.pool) {
                 throw new Error('Pool de connexion non initialisé');

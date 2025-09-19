@@ -38,7 +38,7 @@ export class GmailEmailSender implements EmailSender {
 	async send(recipient: EmailRecipient, content: EmailContent): Promise<void> {
 		await this.transporter.sendMail({
 			from: {
-				name: 'CMDT Invoices',
+				name: 'CMDT Gestion des factures',
 				address: this.gmailUser,
 			},
 			to: recipient.to,

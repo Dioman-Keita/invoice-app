@@ -18,7 +18,6 @@ router.post('/auth/register', (req, res, next) => {
         return ApiResponder.badRequest(res, "L'acceptation des conditions d'utilisation est obligatoire");
     }
     createUser(req, res);
-    return next();
 })
 router.post('/auth/login', login);
 router.post('/auth/forgot-password', forgotPassword);
@@ -26,7 +25,7 @@ router.post('/auth/reset-password', resetUserPassword);
 router.post('/auth/logout', logout);
 router.get('/auth/verify-user-reset-token', verifyResetToken);
 router.get('/auth/token', getCurrentToken);
-router.get('/auth/me', getCurrentUser);
+router.get('/auth/me', authGuard, getCurrentUser);
 
 // Route admin pour créer des utilisateurs (nécessite le rôle admin)
 router.post('/auth/admin/create-user', authGuard, requireAdmin, createUser);

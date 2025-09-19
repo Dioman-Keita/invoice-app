@@ -12,18 +12,34 @@ import { BcryptHasher } from "../utils/PasswordHasher";
 
 export async function createUser(req: Request<unknown, unknown, UserType>, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
+    const data = req.body as UserType;
+    logger.info(`[${requestId}] Tentative de création d'utilisateur`, { email: data.email, role: data.role });
+
     try {
-        const data = req.body as UserType;
-        logger.info(`[${requestId}] Tentative de création d'utilisateur`, { email: data.email, role: data.role });
         
         const result = await Users.create(data);
         
+        if(!result.success) {
+            logger.warn(`[${requestId}] Échec de création d'utilisateur`, {
+                email: data.email,
+                employeeId: data.employeeId,
+                role: data.role,
+                userId: result.userId
+            });
+
+            return ApiResponder.badRequest(res, result.message, {
+                success: false,
+                message: result.message,
+                field: result.field
+            });
+        }
         logger.info(`[${requestId}] Utilisateur créé avec succès`, { 
             email: data.email, 
             employeeId: data.employeeId,
-            role: data.role 
+            role: data.role,
+            userId: result.userId
         });
-        return ApiResponder.created(res, { success: true }, 'Un email de verification vous a été envoyé pour completer votre inscription');
+        return ApiResponder.created(res, { success: true, userId: result.userId }, 'Un email de verification vous a été envoyé pour completer votre inscription');
     } catch (error) {
         logger.error(`[${requestId}] Échec de création d'utilisateur`, { 
             email: req.body?.email, 

@@ -68,7 +68,7 @@ export async function listSuppliers(
     res: Response
 ): Promise<Response> {
     try {
-        const rows = await supplier.getAllsupplier();
+        const rows = await supplier.getAllSupplier();
         return ApiResponder.success(res, rows);
     } catch (err) {
         logger.error('Erreur lors de la récupération de la liste des fournisseurs', { 
@@ -98,5 +98,26 @@ export async function findSupplierByPhone(
         return ApiResponder.error(res, err);
     }
 }
+
+export async function deleteSupplierById(
+    req: Request<unknown, unknown, unknown, { id?: string }>,
+    res: Response
+): Promise<Response> {
+    try {
+        const id = req.query?.id || '';
+        if (!id) {
+            return ApiResponder.badRequest(res, 'Paramètre id requis');
+        }
+        const rows = await supplier.deleteSupplier(Number(id));
+        if (!rows) return ApiResponder.notFound(res, 'Fournisseur introuvable');
+        return ApiResponder.success(res, rows, 'Fournisseur supprimé');
+    } catch (err) {
+        logger.error('Erreur lors de la suppression du fournisseur', {
+            error: err instanceof Error ? err.message : 'Erreur inconnue'
+        });
+        return ApiResponder.error(res, err);
+    }
+}
+
 
 

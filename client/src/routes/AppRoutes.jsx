@@ -24,7 +24,7 @@ function AppRoutes() {
                 <Route path="register" element={<Register />}></Route>
             </Route>
             <Route path="register" element={<Register />} />
-            <Route path="/facture" element={<Invoice />} />
+            <Route path="/facture" element={<PrivateRoute><Invoice /></PrivateRoute>} />
             <Route path="/export" element={<PrivateRoute><Export /></PrivateRoute>} />
             <Route path="/search" element={<PrivateRoute><Search /></PrivateRoute>} />
             <Route path="/stats" element={<PrivateRoute><Stats /></PrivateRoute>} />

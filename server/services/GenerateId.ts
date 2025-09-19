@@ -23,25 +23,30 @@ const idMap: Record<EntityType, IdConfig> = {
  */
 
 export async function generateId(entity: EntityType): Promise<string> {
-
     const config = idMap[entity];
-    const year = new Date().getFullYear();
-    const defaultFormat = `${config.prefix}-${year}-0001`;
+    const currentYear = new Date().getFullYear();
+    const defaultFormat = `${config.prefix}-${currentYear}-0001`;
 
-    const result = await database.execute<Row[]>(`SELECT id FROM ${config.table} ORDER BY create_at DESC LIMIT 1`);
+    const result = await database.execute<Row[]>(`SELECT id FROM ${config.table} ORDER BY created_at DESC LIMIT 1`);
 
     if (result && result.length > 0) {
-        const parts = result[0].id.split('-');
+        const lastId = result[0].id;
+        const parts = lastId.split('-');
+
         if (parts.length === 3) {
-            const lastInsertId = Number(parts[parts.length - 1]);
-            if (!isNaN(lastInsertId)) {
-                const format = `${config.prefix}-${year}-${(lastInsertId + 1).toString().padStart(4, '0')}`;
-                return format;
+            const lastYear = Number(parts[1]);
+            const lastNumber = Number(parts[2]);
+
+            if (!isNaN(lastYear) && !isNaN(lastNumber)) {
+                const newNumber = lastYear === currentYear ? lastNumber + 1 : 1;
+                const formatted = `${config.prefix}-${currentYear}-${newNumber.toString().padStart(4, '0')}`;
+                return formatted;
             }
         }
     }
 
     return defaultFormat;
 }
+
 
 export default generateId;

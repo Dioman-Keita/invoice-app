@@ -72,17 +72,43 @@ class Supplier {
         return result
     }
 
-    async getAllsupplier(): Promise<SupplierRecord[]> {
+    async getAllSupplier(): Promise<SupplierRecord[]> {
         const result = await database.execute("SELECT * FROM supplier");
         auditLog({
             action: 'SELECT',
             table_name: 'supplier',
             record_id: 'all supplier in table supplier',
+        });
+        return result;
+    }
+
+    async deleteSupplier(id: number): Promise<unknown> {
+        const result = await database.execute(
+            "DELETE FROM supplier WHERE id = ?",
+            [id]
+        );
+        auditLog({
+            table_name: 'supplier',
+            action: 'DELETE',
+            record_id: id.toString(),
+        })
+        return result;
+    }
+
+    async updateSupplier(data: CreateSupplierInput, id: number): Promise<unknown> {
+        const result = await database.execute(
+            "UPDATE supplier SET (name, acount_number, phone) WHERE id = ?",
+            [data.suplier_name, data.suplier_account_number, data.suplier_phone]
+        )
+        auditLog({
+            table_name: 'supplier',
+            action: 'UPDATE',
+            record_id: id.toString(),
             performed_by: null
         });
         return result;
     }
 }
 
-const supplier = new Supplier()
+const supplier = new Supplier();
 export default supplier;

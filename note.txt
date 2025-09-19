@@ -1,1 +1,2 @@
 Tu veux ajouter le login avant de continuer avec les cookies
+Tu dois faire migrer validateDateInput vers l'utilisation de useProgressiveValidation
