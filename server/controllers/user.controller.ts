@@ -52,7 +52,7 @@ export async function createUser(req: Request<unknown, unknown, UserType>, res: 
 
 export async function login(req: Request, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
-    const { email } = req.body;
+    const { email, rememberMe } = req.body;
     
     try {
         logger.info(`[${requestId}] Tentative de connexion`, { email });
@@ -69,11 +69,16 @@ export async function login(req: Request, res: Response): Promise<Response> {
             role: authUser.role,
         });
 
+        const oneDay = 24 * 60 * 60 * 1000; // 1 jour en ms;
+        const sevenDays = 7 * oneDay;
+
         res.cookie('auth_token', token, {
             httpOnly: true,
-            secure: process.env.MODE_ENV === 'production',
-            sameSite: 'none',
-            maxAge: 60 * 60 * 1000,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge: rememberMe ? sevenDays : oneDay,
+            domain: process.env.COOKIE_DOMAINE,
+            path: '/',
         });
         
         logger.info(`[${requestId}] Connexion réussie`, { 
@@ -118,14 +123,14 @@ export function logout(req: Request, res: Response): Response {
     res.clearCookie('auth_token', {
         httpOnly: true,
         sameSite: 'none',
-        secure: process.env.MODE_ENV === 'production'
+        secure: process.env.NODE_ENV === 'production'
     });
     logger.debug(`[${requestId}] Utilisateur déconecté`, {id: user.sup, email: user.email, role: user.role});
     return ApiResponder.success(res, null, 'Déconnecté');
 }
 
 // Endpoint pour récupérer le profil de l'utilisateur connecté
-export async function getCurrentUser(req: Request, res: Response): Promise<Response> {
+export async function getUserProfil(req: Request, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
     
     try {
@@ -150,7 +155,7 @@ export async function getCurrentUser(req: Request, res: Response): Promise<Respo
             email: user.email 
         });
 
-        return ApiResponder.success(res, userDetails[0], 'Profil utilisateur récupéré');
+        return ApiResponder.success(res, { user: userDetails[0] }, 'Profil utilisateur récupéré');
     } catch (error) {
         logger.error(`[${requestId}] Erreur lors de la récupération du profil`, { 
             error: error instanceof Error ? error.message : 'Erreur inconnue' 
@@ -288,5 +293,80 @@ export async function resetUserPassword(res: Response, req: Request): Promise<Re
             error: error instanceof Error ? error.message : 'Erreur inconnue',
         });
         return ApiResponder.error(res, error);
+    }
+}
+
+export async function verifyRegistrationToken(req: Request, res: Response): Promise<Response> {
+    const requestId = req.headers['x-request-id'] || 'unknown';
+    const currentToken = req.body.token || req.query.token;
+
+    logger.info(`[${requestId}] Vérification du token d'inscription`, { currentToken });
+
+    if (!currentToken) {
+        logger.warn(`[${requestId}] Token manquant dans la requête`);
+        return ApiResponder.badRequest(res, 'Token de vérification manquant');
+    }
+
+    try {
+        const payload = verifyUserToken(currentToken);
+        const userId = payload.sup;
+
+        const user = await Users.findUser(userId, 'id') as User[];
+
+        if (!user || user.length === 0) {
+            logger.warn(`[${requestId}] Utilisateur introuvable pour le token`, { userId });
+            return ApiResponder.notFound(res, 'Utilisateur introuvable');
+        }
+
+        if(user[0].isVerified === 1) {
+            logger.info(`[${requestId}] Utilisateur déjà vérifié`, { userId });
+            return ApiResponder.success(res, null, 'Compte déjà vérifié');
+        }
+
+        const updateResult = await Users.updateVerificationStatus(userId, 1);
+
+        if (!updateResult.success) {
+            logger.error(`[${requestId}] Échec de la mise à jour du statut de vérification`, { userId });
+            return ApiResponder.error(res, null, 'Impossible de vérifier le compte');
+        }
+
+        await auditLog({
+            table_name: 'users',
+            action: 'UPDATE',
+            record_id: userId,
+            performed_by: userId,
+            description: `Activation du compte utilisateur via lien de vérification`
+        });
+
+        const token = generateUserToken({
+            sup: user[0].id,
+            email: user[0].email,
+            role: user[0].role,
+        });
+
+        res.cookie('auth_token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge: 24 * 60 * 60 * 1000, // 1 jour
+            domain: process.env.COOKIE_DOMAIN,
+            path: '/',
+        });
+
+        logger.info(`[${requestId}] Vérification réussie et utilisateur connecté`, { userId });
+
+        return ApiResponder.success(res, {
+            user: {
+                id: user[0].id,
+                email: user[0].email,
+                role: user[0].role,
+            }
+        }, 'Compte vérifié et utilisateur connecté');
+
+    } catch (error) {
+        logger.error(`[${requestId}] Erreur lors de la vérification du token`, {
+            error: error instanceof Error ? error.message : 'Erreur inconnue'
+        });
+        return ApiResponder.unauthorized(res, 'Token invalide ou expiré');
     }
 }

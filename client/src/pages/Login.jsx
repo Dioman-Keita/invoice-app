@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { useInputFilters } from '../hooks/useInputFilter';
 import AsyncSubmitBtn from '../components/AsyncSubmitBtn';  
 import { useAuth } from '../services/useAuth';
+import useToastFeedback from '../hooks/useToastFeedback';
 
 function Login() {
   useTitle('CMDT - Connexion');
@@ -16,7 +17,7 @@ function Login() {
   const { filterEmail, filterPassword } = useInputFilters();
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
-
+  const { success, error } = useToastFeedback();
   const { register, formState: { errors }, handleSubmit, setValue } = useForm({
     mode: 'onChange',
     reValidateMode: 'onChange',
@@ -35,12 +36,19 @@ function Login() {
     try {
       setLoading(true);
       await new Promise((res) => setTimeout(res, 2000));
-      await login({
+      const result = await login({
         password: data.password,
         email: data.email
       });
+
+      if (result.success) {
+        success(result.message || 'Connexion réussie');
+      } else {
+        error(result.message || 'Une erreur interne est survenue');
+      }
       console.log('Donnees soumises : ', data);
     } catch (err) {
+      error(result?.message);
       console.log(err);
     } finally {
       setLoading(false);

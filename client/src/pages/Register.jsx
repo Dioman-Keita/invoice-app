@@ -7,6 +7,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import AsyncSubmitBtn from '../components/AsyncSubmitBtn';
 import { useAuth } from '../services/useAuth';
+import useToastFeedback from '../hooks/useToastFeedback';
 
 function Register() {
   useTitle('CMDT - Inscription');
@@ -23,6 +24,8 @@ function Register() {
     filterEmployeeId,
     filterPhone
   } = useInputFilters();
+  
+  const { error, success } = useToastFeedback();
 
   const { register: registerUser } = useAuth();
   const { 
@@ -64,21 +67,28 @@ function Register() {
     try {
       setLoading(true);
       await new Promise((res) => setTimeout(res, 2000));
-  await registerUser({
-    firstName: data.firstName,
-    lastName: data.lastName,
-    email: data.email,
-    employeeId: data.employeeId,
-    password: data.password,
-    confirm_password: data.confirm_password,
-    phone: data.phone,
-    role: data.role,
-    department: data.department,
-    terms: data.terms,
-  });
-      console.log('Donnees soumises : ', data);
+      const result = await registerUser({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        employeeId: data.employeeId,
+        password: data.password,
+        confirm_password: data.confirm_password,
+        phone: data.phone,
+        role: data.role,
+        department: data.department,
+        terms: data.terms,
+      });
+
+      if (result?.success) {
+        console.log('Donnees soumises : ', data);
+        success(result.message || "Consultez votre email pour finaliser l'inscription");
+      } else {
+        error(result.message || "Erreur lors de l'inscription");
+      }
     } catch (error) {
       console.error('Erreurs de validation : ', error);
+      error(result.message || "Erreur lors de l'inscription");
     } finally {
       setLoading(false);
     }

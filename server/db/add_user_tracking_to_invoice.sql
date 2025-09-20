@@ -29,3 +29,6 @@ CHANGE COLUMN email account_number CHAR(12) NOT NULL;
 -- 5) Update de la table employee pour inclure creat_at
 ALTER TABLE employee 
 ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP;
+
+-- 6) Update de la table employee pour inclure la table isVerified indiquand si une Table a ete verifiee ou non
+ ALTER TABLE employee ADD COLUMN isVerified BOOLEAN DEFAULT FALSE;
