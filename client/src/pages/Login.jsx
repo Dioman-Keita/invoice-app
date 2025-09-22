@@ -4,12 +4,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema } from '../features/connection/loginShema';
 import useTitle from '../hooks/useTitle';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useInputFilters } from '../hooks/useInputFilter';
 import AsyncSubmitBtn from '../components/AsyncSubmitBtn';  
 import { useAuth } from '../services/useAuth';
 import useToastFeedback from '../hooks/useToastFeedback';
-
 function Login() {
   useTitle('CMDT - Connexion');
 
@@ -18,6 +17,7 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const { success, error } = useToastFeedback();
+  const navigate = useNavigate();
   const { register, formState: { errors }, handleSubmit, setValue } = useForm({
     mode: 'onChange',
     reValidateMode: 'onChange',
@@ -43,6 +43,9 @@ function Login() {
 
       if (result.success) {
         success(result.message || 'Connexion réussie');
+        setTimeout(() => {
+          navigate('/facture', { replace: true });
+        }, 3000)
       } else {
         error(result.message || 'Une erreur interne est survenue');
       }

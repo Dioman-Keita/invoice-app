@@ -12,13 +12,12 @@ import {
   HomeIcon,
   UserGroupIcon,
   Cog6ToothIcon,
-  QuestionMarkCircleIcon,
-  ArrowRightStartOnRectangleIcon
+  QuestionMarkCircleIcon
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid, CommandLineIcon } from '@heroicons/react/24/solid';
 import { StarIcon } from '@heroicons/react/24/outline';
 
-function NavbarPanel({ isOpen, onClose, isConnected, userType, userName, onLogout }) {
+function NavbarPanel({ isOpen, onClose }) {
   const navigate = useNavigate();
   const [favoriteActions, setFavoriteActions] = useState(() => {
     try {
@@ -78,21 +77,21 @@ function NavbarPanel({ isOpen, onClose, isConnected, userType, userName, onLogou
     { label: 'Rechercher', icon: <MagnifyingGlassIcon className="w-6 h-6" />, action: 'search' },
     { label: 'Imprimer une facture', icon: <PrinterIcon className="w-6 h-6" />, action: 'print' },
     { label: 'Devenir agent DFC', icon: <UserPlusIcon className="w-6 h-6" />, action: 'joinDFC' },
-    { label: 'Accueil', icon: <HomeIcon className="w-6 h-6" />, action: 'home' }
+    { label: 'Accueil', icon: <HomeIcon className="w-6 h-6" />, action: 'home' },
+    { label: 'Aide & Support', icon: <QuestionMarkCircleIcon className="w-6 h-6" />, action: 'help' }
+
   ];
 
-  // Menu supplémentaire pour les utilisateurs connectés
-  const connectedMenuItems = [
+  // Menu admin uniquement
+  const adminMenuItems = [
     { label: 'Tableau de bord', icon: <ChartBarIcon className="w-6 h-6" />, action: 'dashboard' },
     { label: 'Gestion des utilisateurs', icon: <UserGroupIcon className="w-6 h-6" />, action: 'users' },
-    { label: 'Aide & Support', icon: <QuestionMarkCircleIcon className="w-6 h-6" />, action: 'help' }
+    { label: 'Statistiques avancées', icon: <ChartBarIcon className="w-6 h-6" />, action: 'adminStats' },
   ];
 
   const availableActions = useMemo(() => {
-    const base = [...baseMenuItems];
-    const extra = isConnected ? connectedMenuItems : [];
-    return [...base, ...extra];
-  }, [isConnected]);
+    return [...baseMenuItems, ...adminMenuItems];
+  }, []);
 
   const toggleFavorite = (action) => {
     setFavoriteActions((prev) =>
@@ -113,7 +112,7 @@ function NavbarPanel({ isOpen, onClose, isConnected, userType, userName, onLogou
     [availableActions, favoriteActions]
   );
 
-  const contentClasses = `p-4 space-y-3 overflow-y-auto flex-1 ${isConnected ? 'pb-10' : 'pb-6'}`;
+  const contentClasses = `p-4 space-y-3 overflow-y-auto flex-1 pb-6`;
 
   const handleAction = (action) => {
     switch(action) {
@@ -144,15 +143,14 @@ function NavbarPanel({ isOpen, onClose, isConnected, userType, userName, onLogou
       case 'users':
         navigate('/users');
         break;
+      case 'adminStats':
+        navigate('/admin-stats');
+        break;
       case 'settings':
         navigate('/settings');
         break;
       case 'help':
         navigate('/help');
-        break;
-      case 'logout':
-        onLogout();
-        navigate('/');
         break;
       default:
         console.log(`${action}`);
@@ -169,14 +167,6 @@ function NavbarPanel({ isOpen, onClose, isConnected, userType, userName, onLogou
         <div className="p-6 border-b border-gray-200/50 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-semibold text-gray-800">Menu CMDT</h2>
-            {isConnected && (
-              <p className="text-sm text-gray-600 mt-1">
-                Connecté en tant que <span className="font-medium">{userName}</span>
-                <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                  {userType === 'dfc' ? 'Agent DFC' : 'Chargé des factures'}
-                </span>
-              </p>
-            )}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -277,61 +267,43 @@ function NavbarPanel({ isOpen, onClose, isConnected, userType, userName, onLogou
             </button>
           ))}
 
-          {/* Menu pour utilisateurs connectés */}
-          {isConnected && (
-            <>
-              <div className="pt-6 pb-2">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider pl-4">Espace personnel</h3>
+          {/* Menu admin */}
+          <div className="pt-6 pb-2">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider pl-4">Administration</h3>
+          </div>
+          
+          {adminMenuItems
+            .filter(({ action }) => !favoriteActions.includes(action))
+            .map(({ label, icon, action }) => (
+            <button
+              key={action}
+              onClick={() => handleAction(action)}
+              className="w-full max-w-md mx-auto flex items-center space-x-4 p-4 rounded-lg border border-gray-200 
+              bg-white hover:bg-blue-50 hover:border-blue-200 hover:shadow-md transition-all duration-200 text-left group overflow-hidden"
+            >
+              <div className="text-blue-600 flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
+                {icon}
               </div>
-              
-              {connectedMenuItems
-                .filter(({ action }) => !favoriteActions.includes(action))
-                .map(({ label, icon, action }) => (
-                <button
-                  key={action}
-                  onClick={() => handleAction(action)}
-                  className="w-full max-w-md mx-auto flex items-center space-x-4 p-4 rounded-lg border border-gray-200 
-                  bg-white hover:bg-blue-50 hover:border-blue-200 hover:shadow-md transition-all duration-200 text-left group overflow-hidden"
-                >
-                  <div className="text-blue-600 flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
-                    {icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-800 group-hover:text-blue-800 truncate">{label}</p>
-                  </div>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => { e.stopPropagation(); toggleFavorite(action); }}
-                    onKeyDown={(e) => handleFavKeyDown(e, action)}
-                    className={favoriteActions.includes(action) ? 'text-amber-500 hover:text-amber-600 cursor-pointer' : 'text-gray-300 hover:text-amber-500 cursor-pointer'}
-                    aria-label={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                    title={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                  >
-                    {favoriteActions.includes(action) ? (
-                      <StarIconSolid className="w-5 h-5" />
-                    ) : (
-                      <StarIcon className="w-5 h-5" />
-                    )}
-                  </span>
-                </button>
-              ))}
-              
-              {/* Bouton de déconnexion */}
-              <button
-                onClick={() => handleAction('logout')}
-                className="w-full max-w-md mx-auto flex items-center space-x-4 p-4 rounded-lg border border-gray-200 
-                bg-white hover:bg-red-50 hover:border-red-200 hover:shadow-md transition-all duration-200 text-left group overflow-hidden mt-4"
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-800 group-hover:text-blue-800 truncate">{label}</p>
+              </div>
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); toggleFavorite(action); }}
+                onKeyDown={(e) => handleFavKeyDown(e, action)}
+                className={favoriteActions.includes(action) ? 'text-amber-500 hover:text-amber-600 cursor-pointer' : 'text-gray-300 hover:text-amber-500 cursor-pointer'}
+                aria-label={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                title={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
               >
-                <div className="text-red-600 flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
-                  <ArrowRightStartOnRectangleIcon className="w-6 h-6" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-800 group-hover:text-red-800 truncate">Déconnexion</p>
-                </div>
-              </button>
-            </>
-          )}
+                {favoriteActions.includes(action) ? (
+                  <StarIconSolid className="w-5 h-5" />
+                ) : (
+                  <StarIcon className="w-5 h-5" />
+                )}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
       {isPaletteOpen && (

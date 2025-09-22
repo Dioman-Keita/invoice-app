@@ -1,14 +1,61 @@
 // components/PrivateRoute.jsx
 import { useEffect, useState } from 'react';
-import { useAuth } from '../services/useAuth'; // Vérifiez le chemin
+import { useAuth } from '../services/useAuth';
 import { useLocation, Navigate } from 'react-router-dom';
+
+// ✅ Déplacer les fonctions helpers en dehors du composant
+const getFrenchRoleName = (role) => {
+    const roleNames = {
+        'admin': 'Administrateur',
+        'invoice_manager': 'Gestionnaire de factures',
+        'dfc_agent': 'Agent DFC'
+    };
+    return roleNames[role] || role;
+};
+
+const getRoleSpecificMessage = (requiredRole, userRole) => {
+    const roleNames = {
+        'admin': 'administrateur',
+        'invoice_manager': 'gestionnaire de factures', 
+        'dfc_agent': 'agent DFC'
+    };
+
+    switch(requiredRole) {
+        case 'admin':
+            return "Accès réservé aux administrateurs uniquement";
+        case 'invoice_manager':
+            return "Espace réservé aux gestionnaires de factures";
+        case 'dfc_agent':
+            return "Zone réservée aux agents DFC";
+        default:
+            return `Accès réservé aux ${roleNames[requiredRole] || requiredRole}`;
+    }
+};
+
+const getGenericRoleMessage = (requiredRoles, userRole) => {
+    const roleNames = requiredRoles.map(role => {
+        const names = {
+            'admin': 'administrateurs',
+            'invoice_manager': 'gestionnaires de factures',
+            'dfc_agent': 'agents DFC'
+        };
+        return names[role] || role;
+    });
+
+    if (requiredRoles.length === 2) {
+        return `Accès réservé aux ${roleNames.join(' et ')}`;
+    } else {
+        return `Accès réservé aux ${roleNames.join(', ')}`;
+    }
+};
 
 export default function PrivateRoute({ 
     children, 
-    requiredRoles = [], // Doit toujours être un tableau
+    requiredRoles = [],
     requireAuth = true,
     redirectTo = '/login',
-    unauthorizedRedirect = '/unauthorized'
+    unauthorizedRedirect = '/unauthorized',
+    customMessage = ''
 }) {
     const { isAuthenticated, isLoading, isInitialized, user } = useAuth();
     const location = useLocation();
@@ -29,21 +76,24 @@ export default function PrivateRoute({
             if (requireAuth && !isAuthenticated) {
                 hasAccess = false;
                 accessMessage = 'Authentication required';
+                setMessage('Veuillez vous connecter pour accéder à cette page');
             } 
             // Vérifier les rôles si nécessaire
             else if (isAuthenticated && normalizedRequiredRoles.length > 0) {
                 const userRole = user?.role;
                 if (!userRole || !normalizedRequiredRoles.includes(userRole)) {
                     hasAccess = false;
-                    accessMessage = 'Insufficient permissions';
                     
-                    // Message personnalisé selon le rôle
-                    if (userRole === 'invoice_manager') {
-                        setMessage('Accès réservé aux agents DFC et administrateurs');
-                    } else if (userRole === 'dfc_agent') {
-                        setMessage('Accès réservé aux administrateurs');
+                    // ✅ Messages personnalisés selon le rôle requis
+                    if (customMessage) {
+                        setMessage(customMessage);
+                    } else if (normalizedRequiredRoles.length === 1) {
+                        // Message spécifique pour un seul rôle requis
+                        const requiredRole = normalizedRequiredRoles[0];
+                        setMessage(getRoleSpecificMessage(requiredRole, userRole));
                     } else {
-                        setMessage('Permissions insuffisantes pour accéder à cette ressource');
+                        // Message générique pour multiple rôles
+                        setMessage(getGenericRoleMessage(normalizedRequiredRoles, userRole));
                     }
                 }
             }
@@ -55,7 +105,7 @@ export default function PrivateRoute({
                 setAccessState('granted');
             }
         }
-    }, [isAuthenticated, isLoading, isInitialized, user, normalizedRequiredRoles, requireAuth]);
+    }, [isAuthenticated, isLoading, isInitialized, user, normalizedRequiredRoles, requireAuth, customMessage]);
 
     // États d'affichage
     const states = {
@@ -82,16 +132,23 @@ export default function PrivateRoute({
                     </div>
                     
                     <h1 className="text-2xl font-bold text-red-800 mb-3">Accès Restreint</h1>
-                    <p className="text-gray-700 mb-4">{message || "Vous n'avez pas les permissions nécessaires"}</p>
+                    <p className="text-gray-700 mb-4 text-lg font-medium">{message}</p>
                     
-                    <div className="bg-white rounded-lg p-4 shadow-sm border border-red-100">
-                        <p className="text-sm text-gray-600 mb-2">Rôle actuel: <span className="font-medium text-blue-600">{user?.role || 'Non connecté'}</span></p>
-                        <p className="text-sm text-gray-600">Rôles requis: <span className="font-medium text-green-600">
-                            {normalizedRequiredRoles.join(', ')}
-                        </span></p>
+                    <div className="bg-white rounded-lg p-4 shadow-sm border border-red-100 mb-4">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                            <span className="text-gray-600 text-right">Votre rôle:</span>
+                            <span className="font-medium text-blue-600 text-left">
+                                {user?.role ? getFrenchRoleName(user.role) : 'Non connecté'}
+                            </span>
+                            
+                            <span className="text-gray-600 text-right">Rôle(s) requis:</span>
+                            <span className="font-medium text-green-600 text-left">
+                                {normalizedRequiredRoles.map(getFrenchRoleName).join(', ')}
+                            </span>
+                        </div>
                     </div>
 
-                    <p className="text-sm text-gray-500 mt-6 animate-pulse">Redirection en cours...</p>
+                    <p className="text-sm text-gray-500 animate-pulse">Redirection vers la page appropriée...</p>
                 </div>
             </div>
         ),

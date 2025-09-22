@@ -1,7 +1,7 @@
 import ApiResponder from "../utils/ApiResponder";
 import { GmailEmailSender } from "../services/emailService";
 import { NotificationFactory } from "../services/notificationFactory";
-import Users, {UserType, User} from "../models/User";
+import Users, {UserType, User, UserModel} from "../models/User";
 import { generateUserToken, verifyUserToken } from "../services/userToken";
 import type { Response, Request } from "express";
 import { isValidEmail, isValidPassword, isValidPasswordStrength } from "../middleware/validator";
@@ -39,6 +39,7 @@ export async function createUser(req: Request<unknown, unknown, UserType>, res: 
             role: data.role,
             userId: result.userId
         });
+
         return ApiResponder.created(res, { success: true, userId: result.userId }, 'Un email de verification vous a été envoyé pour completer votre inscription');
     } catch (error) {
         logger.error(`[${requestId}] Échec de création d'utilisateur`, { 
@@ -58,7 +59,20 @@ export async function login(req: Request, res: Response): Promise<Response> {
         logger.info(`[${requestId}] Tentative de connexion`, { email });
         
         const authUser = await Users.verifyCredentials({ email, password: req.body.password });
-        if (!authUser) {
+        
+        console.log('🔧 DEBUG - authUser reçu:', authUser);
+        console.log('🔧 DEBUG - Type de authUser:', typeof authUser);
+        console.log('🔧 DEBUG - authUser.error:', (authUser as any)?.error);
+        
+        // Vérifier si c'est une erreur de connexion à la base de données
+        if (authUser && (authUser as any).error === 'DATABASE_CONNECTION_ERROR') {
+            console.log('🔧 DEBUG - Erreur de connexion DB détectée');
+            logger.error(`[${requestId}] Erreur de connexion à la base de données`, { email });
+            return ApiResponder.error(res, null, "Service temporairement indisponible. Veuillez réessayer plus tard.");
+        }
+        
+        if (!authUser || !authUser.id) {
+            console.log('🔧 DEBUG - Identifiants invalides détectés');
             logger.warn(`[${requestId}] Échec de connexion - identifiants invalides`, { email });
             return ApiResponder.unauthorized(res, "Identifiants invalides");
         }
@@ -301,25 +315,66 @@ export async function verifyRegistrationToken(req: Request, res: Response): Prom
     const currentToken = req.body.token || req.query.token;
 
     logger.info(`[${requestId}] Vérification du token d'inscription`, { currentToken });
+    console.log('🔐 verifyRegistrationToken - Token reçu:', currentToken);
 
     if (!currentToken) {
         logger.warn(`[${requestId}] Token manquant dans la requête`);
+        console.log('❌ Token manquant');
         return ApiResponder.badRequest(res, 'Token de vérification manquant');
     }
 
     try {
         const payload = verifyUserToken(currentToken);
         const userId = payload.sup;
+        
+        logger.info(`[${requestId}] Token décodé`, { userId, email: payload.email });
+        console.log('🔐 verifyRegistrationToken - Payload décodé:', payload);
+        console.log('🔐 verifyRegistrationToken - UserID extrait:', userId);
 
-        const user = await Users.findUser(userId, 'id') as User[];
+        const users = await Users.findUser(userId, 'id');
+        
+        logger.info(`[${requestId}] Résultat findUser`, { 
+            userId, 
+            usersCount: users.length,
+            userFound: users.length > 0 
+        });
+        console.log('🔐 verifyRegistrationToken - Résultat findUser:', {
+            nombreUtilisateurs: users.length,
+            utilisateurs: users
+        });
 
-        if (!user || user.length === 0) {
+        // ✅ CORRECTION ICI : Vérification correcte du tableau
+        if (!Array.isArray(users) || users.length === 0) {
             logger.warn(`[${requestId}] Utilisateur introuvable pour le token`, { userId });
+            console.log('❌ Utilisateur non trouvé pour ID:', userId);
             return ApiResponder.notFound(res, 'Utilisateur introuvable');
         }
 
-        if(user[0].isVerified === 1) {
+        const user = users[0];
+        logger.info(`[${requestId}] Utilisateur trouvé`, { 
+            userId: user.id, 
+            email: user.email, 
+            isVerified: user.isVerified 
+        });
+        console.log('🔐 Utilisateur trouvé:', user);
+        
+        // ✅ Vérification que user existe et a les propriétés nécessaires
+        if (!user || typeof user !== 'object') {
+            logger.warn(`[${requestId}] Format de données utilisateur invalide`, { userId });
+            console.log('❌ Format utilisateur invalide');
+            return ApiResponder.unauthorized(res, 'Données utilisateur invalides');
+        }
+
+        // ✅ Vérification de isVerified
+        if (user.isVerified === undefined || user.isVerified === null) {
+            logger.warn(`[${requestId}] Propriété isVerified manquante`, { userId });
+            console.log('❌ Propriété isVerified manquante');
+            return ApiResponder.unauthorized(res, 'Données utilisateur incomplètes');
+        }
+
+        if (user.isVerified === 1) {
             logger.info(`[${requestId}] Utilisateur déjà vérifié`, { userId });
+            console.log('✅ Utilisateur déjà vérifié');
             return ApiResponder.success(res, null, 'Compte déjà vérifié');
         }
 
@@ -327,11 +382,12 @@ export async function verifyRegistrationToken(req: Request, res: Response): Prom
 
         if (!updateResult.success) {
             logger.error(`[${requestId}] Échec de la mise à jour du statut de vérification`, { userId });
+            console.log('❌ Échec mise à jour statut vérification');
             return ApiResponder.error(res, null, 'Impossible de vérifier le compte');
         }
 
         await auditLog({
-            table_name: 'users',
+            table_name: 'employee',
             action: 'UPDATE',
             record_id: userId,
             performed_by: userId,
@@ -339,34 +395,37 @@ export async function verifyRegistrationToken(req: Request, res: Response): Prom
         });
 
         const token = generateUserToken({
-            sup: user[0].id,
-            email: user[0].email,
-            role: user[0].role,
+            sup: user.id,
+            email: user.email,
+            role: user.role,
         });
 
         res.cookie('auth_token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            maxAge: 24 * 60 * 60 * 1000, // 1 jour
-            domain: process.env.COOKIE_DOMAIN,
-            path: '/',
+            domain: process.env.COOKIE_DOMAINE,
+            maxAge: 24 * 60 * 60 * 1000,
+            path: '/'
         });
 
         logger.info(`[${requestId}] Vérification réussie et utilisateur connecté`, { userId });
-
+        console.log('✅ Vérification réussie et utilisateur connecté');
+        
         return ApiResponder.success(res, {
             user: {
-                id: user[0].id,
-                email: user[0].email,
-                role: user[0].role,
+                id: user.id,
+                email: user.email,
+                role: user.role,
             }
         }, 'Compte vérifié et utilisateur connecté');
 
     } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
         logger.error(`[${requestId}] Erreur lors de la vérification du token`, {
-            error: error instanceof Error ? error.message : 'Erreur inconnue'
+            error: errorMessage
         });
+        console.error('❌ verifyRegistrationToken - Erreur:', error);
         return ApiResponder.unauthorized(res, 'Token invalide ou expiré');
     }
 }

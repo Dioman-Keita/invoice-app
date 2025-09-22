@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import NavbarPanel from './NavbarPanel';
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Bars3Icon } from '@heroicons/react/24/outline';
 
-function Navbar({ isConnected, userType, userName, onLogout }) {
+function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -32,20 +32,9 @@ function Navbar({ isConnected, userType, userName, onLogout }) {
         </div>
       </div>
 
-      {/* Indicateur de notification (optionnel) */}
-      {isConnected && (
-        <div className="fixed left-3 top-1/2 transform -translate-y-16 z-30">
-          <div className="w-3 h-3 bg-amber-400 rounded-full ring-2 ring-white animate-pulse"></div>
-        </div>
-      )}
-
       <NavbarPanel 
         isOpen={isOpen} 
         onClose={() => setIsOpen(false)} 
-        isConnected={isConnected}
-        userType={userType}
-        userName={userName}
-        onLogout={onLogout}
       />
     </>
   );

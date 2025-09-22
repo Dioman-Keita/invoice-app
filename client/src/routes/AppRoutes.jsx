@@ -14,8 +14,12 @@ import DFCFormular from "../pages/DFCFormular";
 import Verify from "../pages/Verify";
 import ResetPassword from "../pages/ResetPassword";
 import ForgotPassword from "../pages/ForgotPassword";
+import Help from "../pages/Help";
 import PrivateRoute from "../components/PrivateRoute";
 import UnauthorizedPage from "../pages/Unauthorized";
+import Dashboard from "../pages/Dashboard";
+import Users from "../pages/Users";
+import StatsSimple from "../pages/StatsSimple";
 
 function AppRoutes() {
     return (
@@ -30,31 +34,79 @@ function AppRoutes() {
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/joinDFC" element={<JoinDFC />} />
+            <Route path="/help" element={<Help />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
             {/* ==================== */}
-            {/* ROUTES PROTÉGÉES (Authentification requise) */}
+            {/* ROUTES PROTÉGÉES - Accès tous utilisateurs authentifiés */}
             {/* ==================== */}
-            <Route path="/export" element={<PrivateRoute><Export /></PrivateRoute>} />
-            <Route path="/search" element={<PrivateRoute><Search /></PrivateRoute>} />
-            <Route path="/stats" element={<PrivateRoute><Stats /></PrivateRoute>} />
-            <Route path="/print" element={<PrivateRoute><Print /></PrivateRoute>} />
+            <Route path="/export" element={
+                <PrivateRoute requiredRoles={['admin', 'invoice_manager', 'dfc_agent']}>
+                    <Export />
+                </PrivateRoute>
+            } />
+            <Route path="/search" element={
+                <PrivateRoute requiredRoles={['admin', 'invoice_manager', 'dfc_agent']}>
+                    <Search />
+                </PrivateRoute>
+            } />
+            <Route path="/stats" element={
+                <PrivateRoute requiredRoles={['admin', 'invoice_manager', 'dfc_agent']}>
+                    <StatsSimple />
+                </PrivateRoute>
+            } />
+            <Route path="/print" element={
+                <PrivateRoute requiredRoles={['admin', 'invoice_manager', 'dfc_agent']}>
+                    <Print />
+                </PrivateRoute>
+            } />
 
             {/* ==================== */}
-            {/* ROUTES ADMINISTRATIVES (Rôles spécifiques) */}
+            {/* ROUTES SPÉCIFIQUES - Permissions par rôle */}
             {/* ==================== */}
+            
+            {/* Facturation - Admin + Gestionnaires */}
             <Route path="/facture" element={
-                <PrivateRoute requiredRoles={['admin', 'invoice_manager']}>
+                <PrivateRoute 
+                    requiredRoles={['admin', 'invoice_manager']}
+                    customMessage="Espace de facturation réservé aux administrateurs et gestionnaires"
+                >
                     <Invoice />
                 </PrivateRoute>
             } />
+
+            {/* Paramètres - Admin seulement */}
             <Route path="/settings" element={
-                <PrivateRoute requiredRoles={['admin']}>
+                <PrivateRoute 
+                    requiredRoles={['admin']}
+                    customMessage="Panneau d'administration réservé aux administrateurs système"
+                >
                     <Settings />
                 </PrivateRoute>
             } />
+
+            {/* Tableau de bord admin - Accès libre pour test */}
+            <Route path="/dashboard" element={<Dashboard />} />
+
+            {/* Gestion des utilisateurs - Accès libre pour test */}
+            <Route path="/users" element={<Users />} />
+
+            {/* Statistiques avancées - Admin seulement */}
+            <Route path="/admin-stats" element={
+                <PrivateRoute 
+                    requiredRoles={['admin']}
+                    customMessage="Statistiques avancées réservées aux administrateurs"
+                >
+                    <Stats />
+                </PrivateRoute>
+            } />
+
+            {/* Traitement DFC - Agents DFC + Admin */}
             <Route path="/dfc_traitment" element={
-                <PrivateRoute requiredRoles={['dfc_agent', 'admin']}>
+                <PrivateRoute 
+                    requiredRoles={['dfc_agent', 'admin']}
+                    customMessage="Zone de traitement DFC réservée aux agents et administrateurs"
+                >
                     <DFCFormular />
                 </PrivateRoute>
             } />

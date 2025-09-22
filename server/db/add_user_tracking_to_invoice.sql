@@ -32,3 +32,5 @@ ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP;
 
 -- 6) Update de la table employee pour inclure la table isVerified indiquand si une Table a ete verifiee ou non
  ALTER TABLE employee ADD COLUMN isVerified BOOLEAN DEFAULT FALSE;
+--7) Update de la table employee pour inclure la table isActive
+ALTER TABLE employee ADD COLUMN isActive BOOLEAN DEFAULT TRUE;
