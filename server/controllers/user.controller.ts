@@ -353,7 +353,8 @@ export async function verifyRegistrationToken(req: Request, res: Response): Prom
         const user = users[0];
         logger.info(`[${requestId}] Utilisateur trouvé`, { 
             userId: user.id, 
-            email: user.email, 
+            email: user.email,
+            role: user.role, 
             isVerified: user.isVerified 
         });
         console.log('🔐 Utilisateur trouvé:', user);

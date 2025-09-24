@@ -26,13 +26,6 @@ export type LoginType = {
 export type User = UserType & { id: string, create_at: string, update_at: string, isVerified: 0 | 1, isActive: 0 | 1 };
 export type UserRole = 'invoice_manager' | 'admin' | 'dfc_agent';
 
-// Configuration des tentatives d'envoi d'email
-const EMAIL_CONFIG = {
-    MAX_ATTEMPTS: 3,
-    RETRY_DELAY: 2000,
-    TIMEOUT: 10000,
-};
-
 export class UserModel {
     private id: string | null = null;
     private firstName: string | null = null;
@@ -50,150 +43,98 @@ export class UserModel {
 
     private async sendVerificationEmail(): Promise<{ success: boolean; error?: string }> {
         if (!this.email || !this.firstName || !this.lastName) {
+            logger.warn("Envoi email échoué : données manquantes", { email: this.email });
             return { success: false, error: 'Données utilisateur manquantes' };
         }
     
-        try {
-            const token = generateUserToken({
-                sup: this.id as string,
-                email: this.email,
-                role: this.role as UserRole,
-            });
-            
-            const verifyLinkBase = process.env.APP_URL || "http://localhost:5173";
-            const verifyLink = `${verifyLinkBase}/verify?token=${encodeURIComponent(token)}`;
-            
-            const template = NotificationFactory.create('register', {
-                name: `${this.firstName} ${this.lastName}`,
-                email: this.email,
-                link: verifyLink,
-                token,
-            });
+        const token = generateUserToken({
+            sup: this.id as string,
+            email: this.email,
+            role: this.role as UserRole,
+        });
     
-            const sender = new GmailEmailSender();
-            
-            for (let attempt = 1; attempt <= 3; attempt++) {
-                try {
-                    logger.info(`Tentative d'envoi d'email #${attempt}`, { email: this.email });
-                    
-                    // ✅ Timeout court pour éviter les blocages
-                    await Promise.race([
-                        sender.send({ to: this.email, name: `${this.firstName} ${this.lastName}` }, template),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout email')), 20000))
-                    ]);
-                    
-                    logger.info('Email envoyé avec succès', { email: this.email, attempt });
-                    return { success: true };
-                    
-                } catch (error) {
-                    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-                    
-                    // ✅ Message d'erreur plus user-friendly
-                    let userFriendlyError = "Problème de connexion";
-                    if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('smtp')) {
-                        userFriendlyError = "Connexion lente ou instable";
-                    } else if (errorMessage.includes('Timeout')) {
-                        userFriendlyError = "Temps d'attente dépassé";
-                    }
+        const verifyLinkBase = process.env.APP_URL || "http://localhost:5173";
+        const verifyLink = `${verifyLinkBase}/verify?token=${encodeURIComponent(token)}`;
     
-                    logger.warn(`Échec tentative #${attempt} d'envoi d'email`, {
-                        email: this.email,
-                        error: errorMessage,
-                        attempt
-                    });
+        const template = NotificationFactory.create('register', {
+            name: `${this.firstName} ${this.lastName}`,
+            email: this.email,
+            link: verifyLink,
+            token,
+        });
     
-                    if (attempt < 3) {
-                        await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
-                    } else {
-                        throw new Error(userFriendlyError);
-                    }
+        const sender = new GmailEmailSender();
+    
+        const MAX_ATTEMPTS = 3;
+        const RETRY_DELAY = 2000; // en ms
+        const TIMEOUT = 20000; // en ms
+    
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                logger.info(`Tentative d'envoi d'email #${attempt}`, { email: this.email });
+    
+                // Timeout explicite avec message clair
+                await Promise.race([
+                    sender.send({ to: this.email, name: `${this.firstName} ${this.lastName}` }, template),
+                    new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Timeout_email')), TIMEOUT)
+                    )
+                ]);
+    
+                logger.info('Email envoyé avec succès', { email: this.email, attempt });
+                return { success: true };
+    
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+    
+                // Messages user-friendly constants
+                let userFriendlyError = 'Échec de l’envoi de l’email';
+                if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('smtp')) {
+                    userFriendlyError = 'Connexion réseau lente ou instable';
+                } else if (errorMessage.includes('Timeout_email')) {
+                    userFriendlyError = 'Délai d’attente dépassé pour l’email';
+                }
+    
+                logger.warn(`Échec tentative #${attempt} d'envoi d'email`, {
+                    email: this.email,
+                    error: errorMessage,
+                    attempt
+                });
+    
+                if (attempt < MAX_ATTEMPTS) {
+                    // Attente progressive avant la prochaine tentative
+                    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attempt));
+                } else {
+                    // Dernière tentative échouée → rejet clair
+                    logger.error('Échec définitif de l’envoi de l’email', { email: this.email });
+                    return { success: false, error: userFriendlyError };
                 }
             }
-            
-            return { success: false, error: 'Échec après plusieurs tentatives' };
-            
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-            logger.error('Erreur lors de l\'envoi d\'email', {
-                email: this.email,
-                error: errorMessage
-            });
-            return { success: false, error: errorMessage };
         }
-    }
-
-    private async cleanupUserAfterEmailFailure(userId: string): Promise<boolean> {
-        const conn = await database.getConnection();
-        
-        try {
-            await conn.beginTransaction();
-            
-            // Désactiver les contraintes FK pour cette session
-            await conn.execute("SET FOREIGN_KEY_CHECKS = 0");
-            
-            // 1. Supprimer les logs d'audit associés
-            await conn.execute(
-                "DELETE FROM audit_log WHERE performed_by = ? OR record_id = ?",
-                [userId, userId]
-            );
-            
-            // 2. Supprimer l'utilisateur
-            await conn.execute(
-                "DELETE FROM employee WHERE id = ?",
-                [userId]
-            );
-            
-            // Réactiver les contraintes
-            await conn.execute("SET FOREIGN_KEY_CHECKS = 1");
-            
-            await conn.commit();
-            
-            logger.info("Nettoyage utilisateur réussi après échec email", { userId });
-            return true;
-            
-        } catch (error) {
-            await conn.rollback();
-            
-            // S'assurer que FOREIGN_KEY_CHECKS est réactivé
-            try {
-                await conn.execute("SET FOREIGN_KEY_CHECKS = 1");
-            } catch (fkError) {
-                logger.error("Erreur réactivation contraintes FK", {
-                    error: fkError instanceof Error ? fkError.message : 'Unknown error'
-                });
-            }
-            
-            logger.error("Échec nettoyage utilisateur après échec email", {
-                userId,
-                error: error instanceof Error ? error.message : 'Unknown error'
-            });
-            
-            return false;
-        } finally {
-            await conn.release();
-        }
-    }
-
-    async create(userData: UserType): Promise<{success: boolean, message: string, field?: string, userId?: string}> {
-        const conn = await database.getConnection();
-        
-        try {
-            await conn.beginTransaction();
-            
-            const {firstName, lastName, email, password, employeeId, role, phone} = userData;
     
-            // Validation des données
+        // Cas très improbable, mais couverture complète
+        return { success: false, error: 'Échec de l’envoi après plusieurs tentatives' };
+    }
+    
+
+    async create(userData: UserType): Promise<{ success: boolean; message: string; field?: string; userId?: string }> {
+        const conn = await database.getConnection();
+    
+        try {
+            await conn.beginTransaction();
+    
+            const { firstName, lastName, email, password, employeeId, role, phone } = userData;
+    
+            // ✅ Validation rapide
             if (!isValidEmail(email)) {
-                await conn.rollback();
                 return { success: false, message: "Email invalide", field: "email" };
             }
     
             if (!isValidPasswordStrength(password)) {
-                await conn.rollback();
                 return { success: false, message: "Mot de passe trop faible", field: "password" };
             }
     
-            // Génération de l'ID
+            // 1️⃣ Génération de l'ID
             this.id = await generateId(this.entity);
             this.firstName = firstName;
             this.lastName = lastName;
@@ -203,77 +144,24 @@ export class UserModel {
             this.role = role || 'invoice_manager';
             this.phone = phone;
     
-            // ✅ Vérification d'unicité d'abord (rapide)
-            const [existingUserRows]: [any[], any] = await conn.execute(
+            // 2️⃣ Vérification unicité
+            const [existingRows]: [any[], any] = await conn.execute(
                 "SELECT id FROM employee WHERE email = ? OR employee_cmdt_id = ?",
                 [email, employeeId]
             );
     
-            if (existingUserRows.length > 0) {
-                const [existingEmailRows]: [any[], any] = await conn.execute(
-                    "SELECT id FROM employee WHERE email = ?",
-                    [email]
-                );
-                
-                if (existingEmailRows.length > 0) {
-                    await conn.rollback();
-                    return {
-                        success: false,
-                        message: "Cet email est déjà utilisé",
-                        field: "email",
-                        userId: this.id
-                    };
-                }
-    
-                const [existingEmployeeIdRows]: [any[], any] = await conn.execute(
-                    "SELECT id FROM employee WHERE employee_cmdt_id = ?",
-                    [employeeId]
-                );
-    
-                if (existingEmployeeIdRows.length > 0) {
-                    await conn.rollback();
-                    return {
-                        success: false,
-                        message: "Cet identifiant CMDT est déjà utilisé",
-                        field: "employeeId",
-                        userId: this.id
-                    };
-                }
+            if (existingRows.length > 0) {
+                const existingEmail = existingRows.find(r => r.email === email);
+                if (existingEmail) return { success: false, message: "Cet email est déjà utilisé", field: "email" };
+                const existingEmp = existingRows.find(r => r.employee_cmdt_id === employeeId);
+                if (existingEmp) return { success: false, message: "Cet identifiant CMDT est déjà utilisé", field: "employeeId" };
             }
     
-            // ✅ Insertion avant l'envoi d'email (pour avoir l'ID)
-            await conn.execute(
-                "INSERT INTO employee(id, firstname, lastname, email, password, employee_cmdt_id, role, phone) VALUES(?,?,?,?,?,?,?,?)",
-                [this.id, this.firstName, this.lastName, this.email, this.hash, this.employeeId, this.role, this.phone]
-            );
-    
-            // ✅ COMMIT IMMÉDIAT pour libérer le lock
-            await conn.commit();
-    
-            // ✅ Envoi d'email APRÈS le commit
+            // 3️⃣ Envoi de l'email avant insertion
             const emailResult = await this.sendVerificationEmail();
-            
+    
             if (!emailResult.success) {
-                const cleanupSuccess = await this.cleanupUserAfterEmailFailure(this.id as string);
-                
-                if (!cleanupSuccess) {
-                    // Fallback: marquer comme inactif
-                    try {
-                        await database.execute(
-                            "UPDATE employee SET isVerified = 0, isActive = 0 WHERE id = ?",
-                            [this.id]
-                        );
-                        logger.warn("Utilisateur marqué comme inactif après échec nettoyage", {
-                            userId: this.id
-                        });
-                    } catch (fallbackError) {
-                        logger.error("Échec marquage utilisateur inactif", {
-                            userId: this.id,
-                            error: fallbackError instanceof Error ? fallbackError.message : 'Unknown error'
-                        });
-                    }
-                }
-                
+                logger.warn("Échec envoi email avant insertion utilisateur", { email, error: emailResult.error });
                 return {
                     success: false,
                     message: `Échec de l'envoi de l'email de vérification: ${emailResult.error}`,
@@ -281,7 +169,16 @@ export class UserModel {
                 };
             }
     
-            // ✅ Audit log (hors transaction)
+            // 4️⃣ Insertion dans la base après email réussi
+            await conn.execute(
+                "INSERT INTO employee(id, firstname, lastname, email, password, employee_cmdt_id, role, phone) VALUES(?,?,?,?,?,?,?,?)",
+                [this.id, this.firstName, this.lastName, this.email, this.hash, this.employeeId, this.role, this.phone]
+            );
+    
+            await conn.commit();
+            logger.info("Utilisateur créé et email envoyé avec succès", { userId: this.id, email: this.email });
+    
+            // 5️⃣ Audit log hors transaction
             try {
                 await auditLog({
                     action: 'INSERT',
@@ -291,45 +188,21 @@ export class UserModel {
                     performed_by: this.id,
                 });
             } catch (auditError) {
-                logger.warn("Échec audit log après création utilisateur", {
-                    userId: this.id,
-                    error: auditError instanceof Error ? auditError.message : 'Unknown error'
-                });
+                logger.warn("Échec audit log après création utilisateur", { userId: this.id, error: auditError instanceof Error ? auditError.message : auditError });
             }
     
-            logger.info('Utilisateur créé avec succès', {
-                userId: this.id,
-                email: this.email,
-                role: this.role
-            });
+            return { success: true, message: "Utilisateur créé et email de vérification envoyé avec succès.", userId: this.id };
     
-            return {
-                success: true,
-                message: "Utilisateur créé et email de vérification envoyé avec succès.",
-                userId: this.id
-            };
-            
         } catch (error) {
             await conn.rollback();
-            
             const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-            
-            logger.error("Erreur lors de la création de l'utilisateur", {
-                firstName: this.firstName,
-                lastName: this.lastName,
-                email: this.email,
-                employeeId: this.employeeId,
-                error: errorMessage
-            });
-    
-            return {
-                success: false,
-                message: "Une erreur interne est survenue. Veuillez réessayer plus tard."
-            };
+            logger.error("Erreur lors de la création sécurisée de l'utilisateur", { email: userData.email, error: errorMessage });
+            return { success: false, message: "Une erreur interne est survenue. Veuillez réessayer plus tard." };
         } finally {
             await conn.release();
         }
     }
+    
 
     async findUser(target: string, findType: 'email' | 'id' = 'id'): Promise<User[]> {
         try {

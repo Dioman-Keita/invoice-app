@@ -25,5 +25,5 @@ export function verifyUserToken(playload: string): TokenPlayload {
 
 
 export function generateRefreshToken(playload: { id: string }): string {
-    return jwt.sign(playload, JWT_SECRET, { expiresIn: '1d' });
+    return jwt.sign(playload, JWT_SECRET, { expiresIn: '7d'});
 }

@@ -133,7 +133,7 @@ const finalizeRegister = useCallback(async (token) => {
             return { 
                 success: true, 
                 message: response.message,
-                user: response.data?.user 
+                user: response.user 
             };
         } else {
             return { 
@@ -163,7 +163,7 @@ const finalizeRegister = useCallback(async (token) => {
             
             if (response?.success === true) {
                 await checkAuthStatus();
-                return { success: true, message: response.message || "Connexion réussie" };
+                return { success: true, message: response.message || "Connexion réussie", role: authState.user?.role };
             } else {
                 return { success: false, message: response?.message };
             }
@@ -188,7 +188,7 @@ const finalizeRegister = useCallback(async (token) => {
             });
             navigate('/login', { replace: true });
         }
-    }, [success, navigate]);
+    }, [checkAuthStatus]);
 
     return useMemo(() => ({
         isAuthenticated: authState.isAuthenticated,

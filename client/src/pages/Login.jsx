@@ -15,7 +15,7 @@ function Login() {
   const [role, setRole] = useState('dfc_agent');
   const { filterEmail, filterPassword } = useInputFilters();
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const { success, error } = useToastFeedback();
   const navigate = useNavigate();
   const { register, formState: { errors }, handleSubmit, setValue } = useForm({
@@ -43,10 +43,10 @@ function Login() {
 
       if (result.success) {
         success(result.message || 'Connexion réussie');
-        setTimeout(() => {
-          navigate('/facture', { replace: true });
-        }, 3000)
-      } else {
+          setTimeout(() => {
+            navigate('/', { replace: true });
+          }, 4000);
+        } else {
         error(result.message || 'Une erreur interne est survenue');
       }
       console.log('Donnees soumises : ', data);

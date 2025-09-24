@@ -20,6 +20,7 @@ import UnauthorizedPage from "../pages/Unauthorized";
 import Dashboard from "../pages/Dashboard";
 import Users from "../pages/Users";
 import StatsSimple from "../pages/StatsSimple";
+import Profile from "../pages/Profile";
 
 function AppRoutes() {
     return (
@@ -48,6 +49,11 @@ function AppRoutes() {
             <Route path="/search" element={
                 <PrivateRoute requiredRoles={['admin', 'invoice_manager', 'dfc_agent']}>
                     <Search />
+                </PrivateRoute>
+            } />
+            <Route path="/profile" element={
+                <PrivateRoute requiredRoles={['admin', 'invoice_manager', 'dfc_agent']}>
+                    <Profile />
                 </PrivateRoute>
             } />
             <Route path="/stats" element={

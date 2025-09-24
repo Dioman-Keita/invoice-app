@@ -1,13 +1,23 @@
+import { useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import useTostFeedBack from "../hooks/useToastFeedback";
 
 function ValidateDateInput({ label, placeholder, name, type="text"}) {
     const {register, formState: {errors}, setValue} = useFormContext();
     const {error} = useTostFeedBack();
+    const hasWarnedRef = useRef(false);
     const handleInput = (e) => {
 
         const raw = e.target.value.replace(/\D/g, '');
-        if (raw.length > 8) error("Format JJ/MM/AAAA — 8 chiffres max");
+        if (raw.length > 8) {
+            if (!hasWarnedRef.current) {
+                error("Format JJ/MM/AAAA — 8 chiffres max");
+                hasWarnedRef.current = true;
+            }
+        } else {
+            // Reset when user goes back under the limit
+            hasWarnedRef.current = false;
+        }
         const digits = raw.slice(0, 8);
         const dd = digits.slice(0, 2) 
         const mm = digits.slice(2, 4);

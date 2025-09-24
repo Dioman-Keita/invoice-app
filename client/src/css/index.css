@@ -58,7 +58,8 @@ input[type=number]::-webkit-out-spin-button {
 .bg-settings,
 .bg-verify,
 .bg-help,
-.bg-admin {
+.bg-admin,
+.bg-unauthorized {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -117,4 +118,7 @@ input[type=number]::-webkit-out-spin-button {
 }
 .bg-admin {
   background-image: url('client/public/image-coton-5.jpg');
+}
+.bg-unauthorized {
+  background-image: url('client/public/image-coton-9.jpg');
 }

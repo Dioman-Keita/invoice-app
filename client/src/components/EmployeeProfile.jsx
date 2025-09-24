@@ -1,15 +1,10 @@
-import { useState } from 'react';
-import UserProfilePanel from './UserProfilePanel';
+import { useNavigate } from 'react-router-dom';
 
 function EmployeeProfile({ name = 'Mon profil', photoSrc = 'client/public/image-coton-1.jpg', userName = 'user003^#&7' }) {
-	const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const navigate = useNavigate();
 
 	const handleProfileClick = () => {
-		setIsPanelOpen(true);
-	};
-
-	const handleClosePanel = () => {
-		setIsPanelOpen(false);
+		navigate('/profile');
 	};
 
 	return (
@@ -20,13 +15,6 @@ function EmployeeProfile({ name = 'Mon profil', photoSrc = 'client/public/image-
 					<span className="employee-name">{name}</span>
 				</div>
 			</div>
-
-			<UserProfilePanel 
-				isOpen={isPanelOpen}
-				onClose={handleClosePanel}
-				userName={userName}
-				userPhoto={photoSrc}
-			/>
 		</>
 	);
 }

@@ -13,7 +13,7 @@ import {
 import useBackground from '../hooks/useBackground';
 
 function DFCFormular() {
-  useTitle('CMDT — Traitement des factures DFC');
+  useTitle('CMDT - Traitement des factures DFC');
   useBackground('bg-dfc-formular');
   
   const [currentInvoice, setCurrentInvoice] = useState(null);
@@ -78,7 +78,7 @@ function DFCFormular() {
 
   return (
     <>
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen">
       {/* Navbar */}
       <Navbar />
       <div className="max-w-7xl mx-auto">
@@ -87,7 +87,7 @@ function DFCFormular() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Traitement des factures DFC</h1>
-              <p className="text-gray-600">Validation et traitement des factures fournisseurs</p>
+              <p className="text-gray-900">Validation et traitement des factures fournisseurs</p>
             </div>
             <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg">
               <span className="font-medium">{pendingInvoices.length}</span> factures en attente

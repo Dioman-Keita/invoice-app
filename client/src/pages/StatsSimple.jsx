@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import useTitle from '../hooks/useTitle';
-import useBackground from '../hooks/useBackground';
-import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
 import Header from '../components/Header';
 
@@ -27,8 +25,9 @@ function StatsSimple() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-100">
+      <div className="min-h-screen bg-stats">
         <Header />
+        <Navbar />
         
         <div className="container mx-auto px-4 py-8">
           {/* En-tête */}
@@ -36,7 +35,7 @@ function StatsSimple() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">Mes Statistiques</h1>
-                <p className="text-gray-600">Vue d'ensemble de mon activité</p>
+                <p className="text-gray-900">Vue d'ensemble de mon activité</p>
               </div>
               <div className="flex gap-2">
                 {['week', 'month', 'year'].map((range) => (

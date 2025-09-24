@@ -127,7 +127,7 @@ function Home() {
           </div>
           <div className="text-center mt-10">
             <button className="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
-              Voir toutes les actualités
+              <a href='https://www.cmdt-mali.net/' target='_blank'>Voir toutes les actualités</a>
             </button>
           </div>
         </section>

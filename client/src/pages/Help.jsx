@@ -15,11 +15,12 @@ import {
   ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 import Navbar from '../components/Navbar';
+import useTitle from '../hooks/useTitle';
 
 function Help() {
   const [activeSection, setActiveSection] = useState('faq');
   const [searchQuery, setSearchQuery] = useState('');
-
+  useTitle('CMDT - Aide & Support')
   const faqData = [
     {
       category: 'Général',

@@ -15,6 +15,7 @@ import {
   CheckCircleIcon,
   ClockIcon
 } from '@heroicons/react/24/outline';
+import Navbar from '../components/Navbar';
 
 function Users({ requireAuth = false }) {
   const { user } = useAuth();
@@ -231,7 +232,7 @@ function Users({ requireAuth = false }) {
   return (
     <div className="min-h-screen bg-admin">
       <Header />
-      
+      <Navbar />
       <div className="container mx-auto px-4 py-8">
         {/* En-tête */}
         <div className="mb-8">

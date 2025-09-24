@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../services/useAuth';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
+import Navbar from '../components/Navbar';
 import {
   ChartBarIcon,
   UserGroupIcon,
@@ -10,7 +11,6 @@ import {
   ClockIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
-  XCircleIcon
 } from '@heroicons/react/24/outline';
 
 function Dashboard({ requireAuth = false }) {
@@ -129,7 +129,7 @@ function Dashboard({ requireAuth = false }) {
   return (
     <div className="min-h-screen bg-admin">
       <Header />
-      
+      <Navbar />
       <div className="container mx-auto px-4 py-8">
         {/* En-tête */}
         <div className="mb-8">
