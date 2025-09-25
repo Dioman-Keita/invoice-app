@@ -1,5 +1,4 @@
-// hooks/useAuth.ts
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useToastFeedback from '../hooks/useToastFeedback';
 import api from './api';
@@ -9,50 +8,332 @@ export function useAuth() {
         isAuthenticated: false,
         user: null,
         isLoading: true,
-        isInitialized: false
+        isInitialized: false,
+        shouldRefresh: false,
+        expiresIn: null,
+        rememberMe: false
     });
     
     const { success, error } = useToastFeedback();
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Vérification légère du statut d'authentification
-    const checkAuthStatus = useCallback(async () => {
+    // Références pour gérer les intervalles et états
+    const checkIntervalRef = useRef(null);
+    const isCheckingRef = useRef(false);
+    const lastCheckRef = useRef(0);
+    const activityMonitorRef = useRef(null);
+
+    // Configuration modifiable
+    const CHECK_INTERVAL = 2 * 60 * 1000; // 2 minutes entre les checks
+    const MIN_CHECK_INTERVAL = 30 * 1000; // 30s minimum entre checks forcés
+    const REFRESH_THRESHOLD = 15 * 60 * 1000; // 15 minutes avant expiration
+
+    // Détection d'activité utilisateur
+    const setupActivityMonitoring = useCallback(() => {
+        const events = ['click', 'keypress', 'scroll', 'mousemove', 'touchstart'];
+        
+        const handleActivity = () => {
+            lastCheckRef.current = Date.now();
+        };
+
+        events.forEach(event => {
+            document.addEventListener(event, handleActivity, { passive: true });
+        });
+
+        return () => {
+            events.forEach(event => {
+                document.removeEventListener(event, handleActivity);
+            });
+        };
+    }, []);
+
+    // Vérification intelligente du statut d'authentification
+    const checkAuthStatus = useCallback(async (forceCheck = false) => {
+        if (isCheckingRef.current && !forceCheck) {
+            console.log('🔐 Check déjà en cours, skip...');
+            return authState.isAuthenticated;
+        }
+
+        const now = Date.now();
+        if (!forceCheck && (now - lastCheckRef.current < MIN_CHECK_INTERVAL)) {
+            console.log('🔐 Check trop rapproché, skip...');
+            return authState.isAuthenticated;
+        }
+
+        isCheckingRef.current = true;
+        lastCheckRef.current = now;
+
         try {
             const response = await api.get('/auth/status');
             console.log('🔐 checkAuthStatus response:', response);
-            
-            // Vérifiez la structure de réponse
+
             if (response?.success === true && response.data?.isAuthenticated) {
-                setAuthState({
+                setAuthState(prev => ({
+                    ...prev,
                     isAuthenticated: true,
-                    user: response.data.user, // response.data.user et non response.user
+                    user: response.data.user,
                     isLoading: false,
-                    isInitialized: true
-                });
+                    isInitialized: true,
+                    shouldRefresh: response.data.shouldRefresh || false,
+                    expiresIn: response.data.expiresIn,
+                    rememberMe: response.data.rememberMe || false
+                }));
                 return true;
             } else {
-                setAuthState({
+                setAuthState(prev => ({
+                    ...prev,
                     isAuthenticated: false,
                     user: null,
                     isLoading: false,
-                    isInitialized: true
-                });
+                    isInitialized: true,
+                    shouldRefresh: false,
+                    expiresIn: null,
+                    rememberMe: false
+                }));
                 return false;
             }
-        } catch (err) {
-            console.error('🔐 Auth status error:', err);
-            setAuthState({
+        } catch (error) {
+            console.error('🔐 Auth status error:', error);
+            setAuthState(prev => ({
+                ...prev,
                 isAuthenticated: false,
                 user: null,
                 isLoading: false,
-                isInitialized: true
-            });
+                isInitialized: true,
+                shouldRefresh: false,
+                expiresIn: null,
+                rememberMe: false
+            }));
+            return false;
+        } finally {
+            isCheckingRef.current = false;
+        }
+    }, [authState.isAuthenticated]);
+
+    // Renouvellement silencieux intelligent
+    const silentRefresh = useCallback(async () => {
+        try {
+            const response = await api.post('/auth/silent-refresh');
+            
+            if (response?.success === true && response.data?.renewed) {
+                setAuthState(prev => ({
+                    ...prev,
+                    shouldRefresh: false,
+                    expiresIn: response.data.expiresIn,
+                    rememberMe: response.data.rememberMe
+                }));
+                
+                console.log('🔄 Token renouvelé silencieusement');
+                return true;
+            }
+            return false;
+        } catch (err) {
+            console.error('🔐 Silent refresh error:', err);
             return false;
         }
     }, []);
 
-    // Chargement complet du profil (seulement quand nécessaire)
+    // Démarrage de la surveillance périodique améliorée
+    const startPeriodicCheck = useCallback(() => {
+        if (checkIntervalRef.current) {
+            clearInterval(checkIntervalRef.current);
+        }
+
+        if (authState.isAuthenticated) {
+            checkIntervalRef.current = setInterval(async () => {
+                const isStillAuthenticated = await checkAuthStatus();
+                
+                if (isStillAuthenticated && authState.shouldRefresh) {
+                    console.log('🔄 Refresh nécessaire, tentative silencieuse...');
+                    await silentRefresh();
+                }
+            }, CHECK_INTERVAL);
+
+            console.log('🔐 Surveillance intelligente démarrée');
+        }
+    }, [authState.isAuthenticated, authState.shouldRefresh, checkAuthStatus, silentRefresh]);
+
+    // Arrêt de la surveillance
+    const stopPeriodicCheck = useCallback(() => {
+        if (checkIntervalRef.current) {
+            clearInterval(checkIntervalRef.current);
+            checkIntervalRef.current = null;
+            console.log('🔐 Surveillance arrêtée');
+        }
+    }, []);
+
+    // Vérification proactive avant expiration
+    const startProactiveRefresh = useCallback(() => {
+        if (!authState.expiresIn || authState.expiresIn <= 0) return;
+
+        const refreshTime = Math.max(authState.expiresIn - 5 * 60 * 1000, 5000);
+        
+        console.log(`🔄 Refresh planifié dans ${refreshTime}ms`);
+        
+        const timeoutId = setTimeout(async () => {
+            if (authState.isAuthenticated) {
+                await silentRefresh();
+            }
+        }, refreshTime);
+
+        return () => clearTimeout(timeoutId);
+    }, [authState.expiresIn, authState.isAuthenticated, silentRefresh]);
+
+    // Gestion automatique de la surveillance
+    useEffect(() => {
+        if (authState.isInitialized) {
+            if (authState.isAuthenticated) {
+                startPeriodicCheck();
+                const cleanupActivity = setupActivityMonitoring();
+                
+                return () => {
+                    stopPeriodicCheck();
+                    cleanupActivity();
+                };
+            } else {
+                stopPeriodicCheck();
+            }
+        }
+    }, [authState.isAuthenticated, authState.isInitialized, startPeriodicCheck, stopPeriodicCheck, setupActivityMonitoring]);
+
+    // Refresh proactive basé sur l'expiration
+    useEffect(() => {
+        if (authState.isAuthenticated && authState.expiresIn) {
+            const cleanup = startProactiveRefresh();
+            return cleanup;
+        }
+    }, [authState.isAuthenticated, authState.expiresIn, startProactiveRefresh]);
+
+    // Vérification initiale au chargement
+    useEffect(() => {
+        const publicPage = ['/register', '/login', '/verify', '/forgot-password', '/reset-password'];
+        const isPublicPage = publicPage.some(page => location.pathname.startsWith(page));
+
+        if (isPublicPage) {
+            setAuthState(prev => ({
+                ...prev,
+                isLoading: false,
+                isInitialized: true,
+            }));
+            return;
+        }
+        checkAuthStatus(true);
+    }, [location.pathname, checkAuthStatus]);
+
+    // ✅ register - CONSERVÉ
+    const register = useCallback(async (payload) => {
+        try {
+            const response = await api.post('/auth/register', payload);
+    
+            if (response.success !== true) {
+                return {
+                    success: false,
+                    message: response.message,
+                };
+            }
+
+            return {
+                success: true,
+                userId: response.userId,
+                email: payload.email
+            };
+        } catch (err) {
+            let message = "Erreur lors de l'inscription";
+            let field = undefined;
+            
+            if (err?.response?.data) {
+                message = err.response.data.message || message;
+                field = err.response.data?.field;
+            } else if (err.message) {
+                message = err.message;
+            }
+            return {
+                success: false,
+                message,
+            };
+        }
+    }, []);
+
+    // ✅ finalizeRegister - CONSERVÉ
+    const finalizeRegister = useCallback(async (token) => {
+        try {
+            const response = await api.post('/auth/verify-registration-token', { token });
+
+            if (response?.success === true) {
+                await checkAuthStatus();
+                return { 
+                    success: true, 
+                    message: response.message,
+                    user: response.user 
+                };
+            } else {
+                return { 
+                    success: false, 
+                    message: response?.message 
+                };
+            }
+        } catch (err) {
+            let message = "Erreur lors de la vérification";
+            
+            if (err?.response?.data?.message) {
+                message = err.response.data.message;
+            } else if (err.message) {
+                message = err.message;
+            }
+            
+            return { 
+                success: false, 
+                message 
+            };
+        }
+    }, [success, error, checkAuthStatus]);
+
+    // Login amélioré avec gestion rememberMe
+    const login = useCallback(async (credentials) => {
+        try {
+            const response = await api.post('/auth/login', credentials);
+            
+            if (response?.success === true) {
+                await checkAuthStatus(true);
+                return { 
+                    success: true, 
+                    message: response.message || "Connexion réussie",
+                    rememberMe: credentials.rememberMe,
+                    role: response.role,
+                };
+            } else {
+                return { success: false, message: response?.message };
+            }
+        } catch (err) {
+            const message = err?.response?.data?.message || "Échec de la connexion";
+            return { success: false, message };
+        }
+    }, [checkAuthStatus]);
+
+    // Logout amélioré
+    const logout = useCallback(async () => {
+        stopPeriodicCheck();
+        try {
+            await api.post('/auth/logout');
+            success('Déconnexion réussie');
+        } catch (err) {
+            console.error('Erreur lors de la déconnexion:', err);
+        } finally {
+            setAuthState({
+                isAuthenticated: false,
+                user: null,
+                isLoading: false,
+                isInitialized: true,
+                shouldRefresh: false,
+                expiresIn: null,
+                rememberMe: false
+            });
+            navigate('/login', { replace: true });
+        }
+    }, [navigate, success, stopPeriodicCheck]);
+
+    // Chargement complet du profil (seulement quand nécessaire) - CONSERVÉ
     const fetchUserProfile = useCallback(async () => {
         try {
             const response = await api.get('/auth/profile');
@@ -71,135 +352,42 @@ export function useAuth() {
         }
     }, []);
 
-    // Vérification initiale
-    useEffect(() => {
-        const publicPages = ['/register', '/login', '/verify', '/forgot-password'];
-        const isPublicPage = publicPages.some(page => location.pathname.startsWith(page));
-
-        if (isPublicPage) {
-            setAuthState(prev => ({ ...prev, isLoading: false, isInitialized: true }));
-            return;
-        }
-
-        checkAuthStatus();
-    }, [location.pathname, checkAuthStatus]);
-
-    const register = useCallback(async (payload) => {
-
-        try {
-
-            const response = await api.post('/auth/register', payload);
-    
-            if (response.success !== true) {
-                return {
-                    success: false,
-                    message: response.message,
-                };
-            }
-
-            return {
-                success: true,
-                userId: response.userId,
-                email: payload.email
-            };
-    
-        } catch (err) {
-            let message = "Erreur lors de l'inscription";
-            let field = undefined;
-            
-            // Gestion d'erreur structurée
-            if (err?.response?.data) {
-                message = err.response.data.message || message;
-                field = err.response.data?.field;
-            } else if (err.message) {
-                message = err.message;
-            }
-            return {
-                success: false,
-                message,
-            };
-        }
-    }, []);
-
-// hooks/useAuth.ts - Correction de finalizeRegister
-const finalizeRegister = useCallback(async (token) => {
-    try {
-        const response = await api.post('/auth/verify-registration-token', { token });
-
-        if (response?.success === true) {
-            // FORCER la vérification du statut d'authentification
-            await checkAuthStatus();
-                        
-            return { 
-                success: true, 
-                message: response.message,
-                user: response.user 
-            };
-        } else {
-            return { 
-                success: false, 
-                message: response?.message 
-            };
-        }
-    } catch (err) {
-        let message = "Erreur lors de la vérification";
-        
-        if (err?.response?.data?.message) {
-            message = err.response.data.message;
-        } else if (err.message) {
-            message = err.message;
-        }
-        
-        return { 
-            success: false, 
-            message 
-        };
-    }
-}, [success, error, checkAuthStatus]); // Ajouter checkAuthStatus aux dépendances
-
-    const login = useCallback(async (credentials) => {
-        try {
-            const response = await api.post('/auth/login', credentials);
-            
-            if (response?.success === true) {
-                await checkAuthStatus();
-                return { success: true, message: response.message || "Connexion réussie", role: authState.user?.role };
-            } else {
-                return { success: false, message: response?.message };
-            }
-        } catch (err) {
-            const message = err?.response?.data?.message || "Échec de la connexion";
-            return { success: false, message };
-        }
-    }, [navigate, checkAuthStatus]);
-
-    const logout = useCallback(async () => {
-        try {
-            await api.post('/auth/logout');
-            success('Déconnexion réussie');
-        } catch (err) {
-            console.error('Erreur lors de la déconnexion:', err);
-        } finally {
-            setAuthState({
-                isAuthenticated: false,
-                user: null,
-                isLoading: false,
-                isInitialized: true
-            });
-            navigate('/login', { replace: true });
-        }
+    // Refresh manuel pour les composants
+    const refreshAuth = useCallback(async () => {
+        return await checkAuthStatus(true);
     }, [checkAuthStatus]);
 
     return useMemo(() => ({
-        isAuthenticated: authState.isAuthenticated,
-        user: authState.user,
-        isLoading: authState.isLoading,
-        isInitialized: authState.isInitialized,
+        // État étendu
+        ...authState,
+        
+        // Actions originales - CONSERVÉES
         login,
         logout,
         register,
         finalizeRegister,
-        checkAuthStatus,
-        fetchUserProfile
-    }), [authState, login, logout, register, finalizeRegister, checkAuthStatus, fetchUserProfile]);
+        checkAuthStatus: refreshAuth,
+        fetchUserProfile,
+        startPeriodicCheck,
+        stopPeriodicCheck,
+        
+        // Nouvelles actions intelligentes
+        silentRefresh,
+        
+        // Utilitaires avancés
+        hasSession: authState.isAuthenticated && authState.expiresIn !== null,
+        willExpireSoon: authState.expiresIn ? authState.expiresIn < REFRESH_THRESHOLD : false,
+        isSessionPersistent: authState.rememberMe
+    }), [
+        authState,
+        login,
+        logout,
+        register,
+        finalizeRegister,
+        refreshAuth,
+        fetchUserProfile,
+        startPeriodicCheck,
+        stopPeriodicCheck,
+        silentRefresh
+    ]);
 }

@@ -1,6 +1,6 @@
 import express from "express";
 import { isValidEmail, isValidPassword } from "../middleware/validator";
-import { createUser, login, getCurrentToken, verifyResetToken, forgotPassword, logout, resetUserPassword, verifyRegistrationToken, getUserProfil } from "../controllers/user.controller";
+import { createUser, login, getCurrentToken, verifyResetToken, forgotPassword, logout, resetUserPassword, verifyRegistrationToken, getUserProfil, silentRefresh } from "../controllers/user.controller";
 import authGuard from "../middleware/authGuard";
 import { requireAdmin } from "../middleware/roleGuard";
 import ApiResponder from "../utils/ApiResponder";
@@ -25,6 +25,7 @@ router.post('/auth/forgot-password', forgotPassword);
 router.post('/auth/reset-password', resetUserPassword);
 router.post('/auth/logout', logout);
 router.post('/auth/verify-registration-token', verifyRegistrationToken);
+router.post('/auth/silent-refresh', silentRefresh);
 router.get('/auth/verify-user-reset-token', verifyResetToken);
 router.get('/auth/token', getCurrentToken);
 router.get('/auth/profil', authGuard, authGuard, getUserProfil);

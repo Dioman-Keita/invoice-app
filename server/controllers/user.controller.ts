@@ -1,14 +1,15 @@
 import ApiResponder from "../utils/ApiResponder";
 import { GmailEmailSender } from "../services/emailService";
 import { NotificationFactory } from "../services/notificationFactory";
-import Users, {UserType, User, UserModel} from "../models/User";
-import { generateUserToken, verifyUserToken } from "../services/userToken";
+import Users, { UserType, User } from "../models/User";
+import { generateRefreshToken, generateUserToken, verifyUserToken } from "../services/userToken";
 import type { Response, Request } from "express";
 import { isValidEmail, isValidPassword, isValidPasswordStrength } from "../middleware/validator";
 import database from "../config/database";
 import logger from "../utils/Logger";
 import { auditLog } from "../utils/auditLogger";
 import { BcryptHasher } from "../utils/PasswordHasher";
+import { cleanupUserActivity, getUserLastActivity } from "../middleware/activityTracker";
 
 export async function createUser(req: Request<unknown, unknown, UserType>, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
@@ -77,30 +78,47 @@ export async function login(req: Request, res: Response): Promise<Response> {
             return ApiResponder.unauthorized(res, "Identifiants invalides");
         }
 
-        const token = generateUserToken({
+        const accessToken = generateUserToken({
             sup: authUser.id,
             email: authUser.email,
             role: authUser.role,
-        });
+        }, { expiresIn: rememberMe ? '2h' : '1h' });
 
-        const oneDay = 24 * 60 * 60 * 1000; // 1 jour en ms;
-        const sevenDays = 7 * oneDay;
+        const refreshToken = generateRefreshToken({ id: authUser.id });
 
-        res.cookie('auth_token', token, {
+        res.cookie('auth_token', accessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            maxAge: rememberMe ? sevenDays : oneDay,
-            domain: process.env.COOKIE_DOMAINE,
+            maxAge: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000, // 2h vs 1h
+            domain: process.env.COOKIE_DOMAIN,
             path: '/',
         });
+
+        res.cookie('refresh_token', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000, // 7j vs 24h
+            domain: process.env.COOKIE_DOMAIN,
+            path: '/',
+        });
+
+        res.cookie('rememberMe', rememberMe ? 'true' : 'false', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jrs,
+            domain: process.env.COOKIE_DOMAIN,
+            path: '/',
+        })
         
         logger.info(`[${requestId}] Connexion réussie`, { 
             userId: authUser.id, 
             email: authUser.email, 
-            role: authUser.role 
+            role: authUser.role
         });
-        return ApiResponder.success(res, { user: authUser }, "Connecté");
+        return ApiResponder.success(res, { userId: authUser.id, role: authUser.role }, "Connecté");
     } catch (error) {
         logger.error(`[${requestId}] Erreur lors de la connexion`, { 
             email, 
@@ -134,12 +152,36 @@ export function logout(req: Request, res: Response): Response {
         return ApiResponder.badRequest(res, 'Tentative de deconnexion d\'un utilisateur non connecté');
     } 
     
+    const baseOptions = {
+        secure: process.env.NODE_ENV === 'production',
+        samsSite: process.env.NODE_ENV === 'production' ? 'none' : 'laxe',
+        domaine: process.env.COOKIE_DOMAIN,
+        path: '/',
+    }
     res.clearCookie('auth_token', {
+        ...baseOptions,
         httpOnly: true,
-        sameSite: 'none',
-        secure: process.env.NODE_ENV === 'production'
     });
-    logger.debug(`[${requestId}] Utilisateur déconecté`, {id: user.sup, email: user.email, role: user.role});
+    
+    res.clearCookie('refresh_token', {
+        ...baseOptions,
+        httpOnly: true,
+    });
+
+    res.clearCookie('rememberMe', {
+        ...baseOptions,
+        httpOnly: true,
+    });
+
+    const activityCleaned = cleanupUserActivity(user.sup);
+
+    if(activityCleaned) {
+        logger.debug(`[${requestId}] Utilisateur déconecté`, {
+            id: user.sup, 
+            email: user.email, 
+            role: user.role
+        });
+    }
     return ApiResponder.success(res, null, 'Déconnecté');
 }
 
@@ -338,6 +380,7 @@ export async function verifyRegistrationToken(req: Request, res: Response): Prom
             usersCount: users.length,
             userFound: users.length > 0 
         });
+
         console.log('🔐 verifyRegistrationToken - Résultat findUser:', {
             nombreUtilisateurs: users.length,
             utilisateurs: users
@@ -351,6 +394,14 @@ export async function verifyRegistrationToken(req: Request, res: Response): Prom
         }
 
         const user = users[0];
+
+        // ✅ Vérification que user existe et a les propriétés nécessaires
+        if (!user || typeof user !== 'object') {
+            logger.warn(`[${requestId}] Format de données utilisateur invalide`, { userId });
+            console.log('❌ Format utilisateur invalide');
+            return ApiResponder.unauthorized(res, 'Données utilisateur invalides');
+        }
+
         logger.info(`[${requestId}] Utilisateur trouvé`, { 
             userId: user.id, 
             email: user.email,
@@ -358,13 +409,6 @@ export async function verifyRegistrationToken(req: Request, res: Response): Prom
             isVerified: user.isVerified 
         });
         console.log('🔐 Utilisateur trouvé:', user);
-        
-        // ✅ Vérification que user existe et a les propriétés nécessaires
-        if (!user || typeof user !== 'object') {
-            logger.warn(`[${requestId}] Format de données utilisateur invalide`, { userId });
-            console.log('❌ Format utilisateur invalide');
-            return ApiResponder.unauthorized(res, 'Données utilisateur invalides');
-        }
 
         // ✅ Vérification de isVerified
         if (user.isVerified === undefined || user.isVerified === null) {
@@ -395,22 +439,50 @@ export async function verifyRegistrationToken(req: Request, res: Response): Prom
             description: `Activation du compte utilisateur via lien de vérification`
         });
 
-        const token = generateUserToken({
+        const rememberMe = false;
+        const tokenDuration = rememberMe ? '2h' : '1h';
+
+        const accessToken = generateUserToken({
             sup: user.id,
             email: user.email,
             role: user.role,
-        });
+        }, { expiresIn: tokenDuration });
 
-        res.cookie('auth_token', token, {
+        const refreshToken = generateRefreshToken({ id: user.id });
+
+        res.cookie('auth_token', accessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            domain: process.env.COOKIE_DOMAINE,
-            maxAge: 24 * 60 * 60 * 1000,
-            path: '/'
+            domain: process.env.COOKIE_DOMAIN,
+            maxAge: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000, // 1h pour l'inscription
+            path: '/',
         });
 
-        logger.info(`[${requestId}] Vérification réussie et utilisateur connecté`, { userId });
+        res.cookie('refresh_token', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000, // 24h pour inscription
+            domain: process.env.COOKIE_DOMAIN,
+            path: '/',
+        });
+
+        res.cookie('rememberMe', 'false', {
+            httpOnly: false,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours
+            domain: process.env.COOKIE_DOMAIN,
+            path: '/'
+        })
+
+        logger.info(`[${requestId}] Vérification réussie et utilisateur connecté`, { 
+            userId,
+            sessionType: 'standard',
+            silentRefresh: true,
+            rememberMe: false, 
+        });
         console.log('✅ Vérification réussie et utilisateur connecté');
         
         return ApiResponder.success(res, {
@@ -418,6 +490,12 @@ export async function verifyRegistrationToken(req: Request, res: Response): Prom
                 id: user.id,
                 email: user.email,
                 role: user.role,
+            },
+            sessionInfo: {
+                isRegistration: true,
+                hasSilentRefresh: true,
+                rememberMe: false,
+                expiresIn: 60 * 60 * 1000 // 1 heure
             }
         }, 'Compte vérifié et utilisateur connecté');
 
@@ -428,5 +506,86 @@ export async function verifyRegistrationToken(req: Request, res: Response): Prom
         });
         console.error('❌ verifyRegistrationToken - Erreur:', error);
         return ApiResponder.unauthorized(res, 'Token invalide ou expiré');
+    }
+}
+
+export async function silentRefresh(req: Request, res: Response): Promise<Response> {
+    const requestId = req.headers['x-request-id'] || 'unknow';
+    const user = (req as any).user;
+    const rememberMe = req.cookies.rememberMe === 'true';
+
+    try {
+        if (!user) {
+            logger.warn(`[${requestId}] Utilisateur non authentifié`, { details: 'Utilisateur non renseigné dans req.user' });
+            return ApiResponder.unauthorized(res, 'Accès interdit');
+        }
+
+        const lastActivity = getUserLastActivity(user.sup);
+        const now = Date.now();
+        const maxInactivity = rememberMe ? 30 * 60 * 1000 : 5 * 60 * 1000; // 30 min vs 5 min
+
+        if(lastActivity && (now - lastActivity > maxInactivity)) {
+            logger.warn(`[${requestId}] Inactivité détectée`, {
+                id: user.sup,
+                email: user.email,
+                role: user.role,
+                maxInactivityOfUser: now - lastActivity,
+            })
+            return ApiResponder.badRequest(res, 'Inactivité détectée');
+        }
+
+        const tokenPayload = {
+            sup: user.sup,
+            email: user.email,
+            role: user.userRole
+        }
+
+        const tokenDuration = rememberMe ? '2h' : '1h';
+        const newAccessToken = generateUserToken(tokenPayload, { expiresIn: tokenDuration});
+
+        let newRefreshToken;
+        if(rememberMe) {
+            newRefreshToken = generateRefreshToken({ id: user.sup });
+        }
+
+        res.cookie('auth_token', newAccessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            domain: process.env.COOKIE_DOMAIN,
+            maxAge: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000, // 2h vs 1h
+            path: '/',
+        });
+
+        if(newRefreshToken) {
+            res.cookie('refresh_token', newRefreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+                domain: process.env.COOKIE_ENV,
+                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jrs
+                path: '/',
+            });
+        }
+
+        logger.info(`[${requestId}] Token renouvelé avec succès pour l'utiliseur ${user.sup}`, {
+            role: user.role,
+            email: user.email,
+            renewed: true,
+            expiresIn: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000,
+            rememberMe: rememberMe
+        });
+
+        return ApiResponder.success(res, {
+            renewed: true,
+            expiresIn: rememberMe ? 2 * 60 * 1000 : 60 * 60 * 1000, // 2h vs  1h
+            rememberMe: rememberMe
+        }, 'Token renouvelé avec succès');
+    } catch (error) {
+        logger.error(`[${requestId}] Une erreur est survenue lors du renouvellement de token pour l'utilisateur ${user.email}`, {
+            errorMessage: error instanceof Error ? error.message : 'unknow error',
+            stack: error instanceof Error ? error.stack : 'unknow stack'
+        })
+        return ApiResponder.error(res, error);
     }
 }

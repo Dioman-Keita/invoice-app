@@ -1,11 +1,12 @@
 // controllers/authController.ts
 import type { Response, Request } from "express";
 import ApiResponder from "../utils/ApiResponder";
+import { getTimeUntilExpirity } from "../middleware/activityTracker";
 
 export async function checkAuthStatus(req: Request, res: Response): Promise<Response> {
     try {
         const user = (req as any).user;
-        
+        const rememberMe = req.cookies.rememberMe === 'true'
         console.log('🔐 checkAuthStatus - user object:', user); // Debug
         
         if (!user) {
@@ -16,7 +17,7 @@ export async function checkAuthStatus(req: Request, res: Response): Promise<Resp
         }
 
         // Vérifiez la structure de l'objet user
-        const userId = user.sup || user.id || user.userId;
+        const userId = user.sup;
         const userEmail = user.email;
         const userRole = user.role;
 
@@ -28,13 +29,19 @@ export async function checkAuthStatus(req: Request, res: Response): Promise<Resp
             }, 'Données utilisateur incomplètes');
         }
 
+        const timeUntilExpirity = getTimeUntilExpirity(userId, rememberMe);
+        const shouldRefresh = timeUntilExpirity !== null && timeUntilExpirity < 15 * 60 * 1000 // 15 min
+
         return ApiResponder.success(res, {
             isAuthenticated: true,
             user: {
                 id: userId,
                 email: userEmail,
                 role: userRole
-            }
+            },
+            shouldRefresh: shouldRefresh,
+            expiresIn: timeUntilExpirity,
+            rememberMe: rememberMe,
         }, 'Utilisateur authentifié');
 
     } catch (error) {
