@@ -5,10 +5,12 @@ import useTitle from '../hooks/useTitle';
 import useBackground from '../hooks/useBackground';
 import Footer from '../components/Footer';
 import Banner from '../components/Banner';
+import { useAuth } from '../services/useAuth';
 
 function Home() {
   useTitle('CMDT - Accueil');
   useBackground('bg-home', 'body');
+  const { isAuthenticated, user } = useAuth();
   
   const [stats, setStats] = useState([
     { value: 0, target: 200, label: "Producteurs accompagnés", suffix: "k+" },
@@ -39,7 +41,7 @@ function Home() {
       <Navbar />
 
       {/* Header avec bannière */}
-      <Banner isConnected={false}/>
+      <Banner isConnected={isAuthenticated}/>
 
       {/* Contenu principal */}
       <main className="flex-1 px-4 sm:px-6 lg:px-8 py-12 space-y-16">
@@ -134,25 +136,37 @@ function Home() {
 
         {/* CTA Section */}
         <section className="bg-gradient-to-r from-green-600 to-green-800 rounded-3xl p-10 text-center text-white">
-          <h2 className="text-3xl font-bold mb-4">Rejoignez la communauté CMDT</h2>
-          <p className="text-lg mb-8 max-w-2xl mx-auto">
-            Découvrez comment nous travaillons ensemble pour développer la filière cotonnière malienne
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-          <button
-            className="px-6 py-3 bg-white/90 backdrop-blur-md text-green-700 font-medium rounded-lg hover:bg-white/70 focus:bg-white/80 transition-colors duration-200"
-            onClick={() => navigate('/login')}
-          >
-            Se connecter ?
-          </button>
+          {isAuthenticated ? (
+            <>
+              <h2 className="text-3xl font-bold mb-4">Heureux de vous compter parmi nous !</h2>
+              <p className="text-lg mb-8 max-w-2xl mx-auto">
+                Bienvenue dans la communauté CMDT. Nous sommes ravis de vous accompagner dans le développement de la filière cotonnière malienne.
+              </p>
+              <div className="text-6xl mb-4">🌱</div>
+            </>
+          ) : (
+            <>
+              <h2 className="text-3xl font-bold mb-4">Rejoignez la communauté CMDT</h2>
+              <p className="text-lg mb-8 max-w-2xl mx-auto">
+                Découvrez comment nous travaillons ensemble pour développer la filière cotonnière malienne
+              </p>
+              <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <button
+                  className="px-6 py-3 bg-white/90 backdrop-blur-md text-green-700 font-medium rounded-lg hover:bg-white/70 focus:bg-white/80 transition-colors duration-200"
+                  onClick={() => navigate('/login')}
+                >
+                  Se connecter
+                </button>
 
-          <button
-            className="px-6 py-3 bg-transparent border-2 border-white text-white font-medium rounded-lg hover:bg-white/10 focus:bg-white/20 transition-colors duration-200"
-            onClick={() => navigate('/register')}
-          >
-            Créer un compte
-          </button>
-        </div>
+                <button
+                  className="px-6 py-3 bg-transparent border-2 border-white text-white font-medium rounded-lg hover:bg-white/10 focus:bg-white/20 transition-colors duration-200"
+                  onClick={() => navigate('/register')}
+                >
+                  Créer un compte
+                </button>
+              </div>
+            </>
+          )}
         </section>
       </main>
 

@@ -15,7 +15,12 @@ export async function createInvoice(
     const user = (req as any).user;
     
     if (!user) {
-      logger.warn(`[${requestId}] Tentative de création de facture sans utilisateur authentifié`);
+      logger.warn(`[${requestId}] Tentative de création de facture sans utilisateur authentifié`, {
+        userId: user.sup,
+        email: user.email,
+        role: user.role,
+        activity: user.activity,
+      });
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     }
 
@@ -49,7 +54,8 @@ export async function createInvoice(
     logger.info(`[${requestId}] Création de facture`, { 
       userId: user.sup, 
       email: user.email,
-      role: user.role 
+      role: user.role,
+      activity: user.activity 
     });
     return ApiResponder.created(res, result, 'Facture créée');
   } catch (err) {

@@ -2,6 +2,8 @@ import mysql from 'mysql2/promise';
 import type { PoolConnection, Pool } from 'mysql2/promise';
 import logger from '../utils/Logger';
 
+export  type DatabaseInstance = Database;
+
 class Database {
     private pool: Pool | null = null;
     private connection: PoolConnection | null = null;

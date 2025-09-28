@@ -3,7 +3,8 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import AsyncSubmitBtn from '../components/AsyncSubmitBtn';
-import useToastFeedback from '../hooks/useToastFeedBack';
+import useToastFeedback from '../hooks/useToastFeedback';
+import { Link } from 'react-router-dom';
 
 const schema = z.object({
   email: z.string().min(1, 'Email requis').email('Email invalide'),
@@ -32,41 +33,59 @@ function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-login p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow p-8">
-        <h1 className="text-2xl font-bold text-green-800 mb-2">Mot de passe oublié</h1>
-        <p className="text-gray-600 mb-6">Entrez votre adresse email pour recevoir un lien de réinitialisation.</p>
-        <form onSubmit={handleSubmit(onSubmit)} noValidate>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input
-            id="email"
-            type="email"
-            {...register('email')}
-            className={`w-full px-4 py-3 border rounded-lg focus:outline-none mb-1 ${errors.email ? 'border-red-500 focus:border-red-600' : 'border-gray-300 focus:border-gray-600'}`}
-            placeholder="vous@domaine.com"
-          />
-          {errors.email && (
-            <p className="text-red-600 text-sm mb-3">{errors.email.message}</p>
-          )}
+    <div className="min-h-screen flex items-center justify-center bg-verify p-4">
+      <div className="w-full max-w-md bg-white rounded-md shadow p-6">
+        <h1 className="text-xl font-semibold mb-1">Mot de passe oublié</h1>
+        <p className="text-sm text-gray-600 mb-6">
+          Entrez votre adresse email pour recevoir un lien de réinitialisation.
+        </p>
+        
+        <form onSubmit={handleSubmit(onSubmit)} method='post'>
+          <div className="mb-4">
+            <label className="block text-sm mb-1">Adresse email</label>
+            <input
+              type="email"
+              {...register('email')}
+              className={`w-full border rounded px-3 py-2 outline-none focus:ring ${
+                errors.email ? 'border-red-500 focus:ring-red-200' : 'focus:ring-blue-200'
+              }`}
+              placeholder="vous@domaine.com"
+            />
+            {errors.email && (
+              <div className="mt-1 text-sm text-red-600">{errors.email.message}</div>
+            )}
+          </div>
+
           <AsyncSubmitBtn
-            className="mt-4"
-            fullWidth
             loading={status === 'loading'}
-            loadingLabel="Envoi en cours..."
+            loadingLabel="Envoi"
             label="Envoyer le lien"
+            className="w-full"
           />
+
           {status === 'success' && (
-            <p className="text-green-700 text-sm mt-3">Si un compte existe pour cet email, un lien a été envoyé.</p>
+            <div className="mt-4 text-sm text-green-600">
+              Si un compte existe pour cet email, un lien a été envoyé.
+            </div>
           )}
           {status === 'error' && (
-            <p className="text-red-600 text-sm mt-3">Une erreur est survenue. Réessayez.</p>
+            <div className="mt-4 text-sm text-red-600">
+              Une erreur est survenue. Réessayez.
+            </div>
           )}
         </form>
+
+        <div className="mt-6 pt-4 border-t border-gray-200 text-center">
+          <Link 
+            to="/login" 
+            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+          >
+            ← Retour à la connexion
+          </Link>
+        </div>
       </div>
     </div>
   );
 }
 
 export default ForgotPassword;
-
-

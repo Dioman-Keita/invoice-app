@@ -22,6 +22,7 @@ export type UserType = {
 export type LoginType = {
     email: string,
     password: string,
+    role: string,
 }
 export type User = UserType & { id: string, create_at: string, update_at: string, isVerified: 0 | 1, isActive: 0 | 1 };
 export type UserRole = 'invoice_manager' | 'admin' | 'dfc_agent';
@@ -35,6 +36,7 @@ export class UserModel {
     private employeeId: string | null = null;
     private role: UserRole | null = null;
     private phone: string | null = null;
+    private department: string | null = null;
     private entity: EntityType;
 
     constructor(entity: EntityType) {
@@ -51,6 +53,7 @@ export class UserModel {
             sup: this.id as string,
             email: this.email,
             role: this.role as UserRole,
+            activity: 'SIGN_UP'
         });
     
         const verifyLinkBase = process.env.APP_URL || "http://localhost:5173";
@@ -123,7 +126,7 @@ export class UserModel {
         try {
             await conn.beginTransaction();
     
-            const { firstName, lastName, email, password, employeeId, role, phone } = userData;
+            const { firstName, lastName, email, password, employeeId, role, phone, department } = userData;
     
             // ✅ Validation rapide
             if (!isValidEmail(email)) {
@@ -139,6 +142,7 @@ export class UserModel {
             this.firstName = firstName;
             this.lastName = lastName;
             this.email = email;
+            this.department = department;
             this.hash = await BcryptHasher.hash(password);
             this.employeeId = employeeId;
             this.role = role || 'invoice_manager';
@@ -171,8 +175,8 @@ export class UserModel {
     
             // 4️⃣ Insertion dans la base après email réussi
             await conn.execute(
-                "INSERT INTO employee(id, firstname, lastname, email, password, employee_cmdt_id, role, phone) VALUES(?,?,?,?,?,?,?,?)",
-                [this.id, this.firstName, this.lastName, this.email, this.hash, this.employeeId, this.role, this.phone]
+                "INSERT INTO employee(id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department) VALUES(?,?,?,?,?,?,?,?,?)",
+                [this.id, this.firstName, this.lastName, this.email, this.hash, this.employeeId, this.role, this.phone, this.department]
             );
     
             await conn.commit();
@@ -260,8 +264,8 @@ export class UserModel {
     
             // Requête sécurisée - comparaison insensible à la casse
             const [rows]: [any[], any] = await database.execute(
-                "SELECT id, email, password, role, isVerified FROM employee WHERE LOWER(email) = LOWER(?) AND isVerified = 1 AND isActive = 1 LIMIT 1",
-                [data.email.trim()]
+                "SELECT id, email, password, role, isVerified FROM employee WHERE LOWER(email) = LOWER(?) AND isVerified = 1 AND isActive = 1 AND role = ? LIMIT 1",
+                [data.email.trim(), data.role]
             );
             
             // Convertir l'objet en tableau si nécessaire

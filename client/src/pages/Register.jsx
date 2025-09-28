@@ -250,17 +250,17 @@ function Register() {
                 {role === 'dfc_agent' ? (
                   <>
                     <option value="">Sélectionnez votre département</option>
-                    <option value="finance">Finance</option>
-                    <option value="comptabilité">Comptabilité</option>
-                    <option value="contrôle_de_gestion">Contrôle de gestion</option>
-                    <option value="audit_interne">Audit interne</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Comptabilité">Comptabilité</option>
+                    <option value="Contrôle de gestion">Contrôle de gestion</option>
+                    <option value="Audit interne">Audit interne</option>
                   </>
                 ) : (
                  <>
                   <option value="">Sélectionnez votre département</option>
-                  <option value="facturation">Facturation</option>
-                  <option value="comptabilité_client">Comptabilité Client</option>
-                  <option value="gestion_factures">Gestion des Factures</option>
+                  <option value="Facturation">Facturation</option>
+                  <option value="Comptabilité Client">Comptabilité Client</option>
+                  <option value="Gestion des factures">Gestion des Factures</option>
                 </>
                 )}
                 </select>

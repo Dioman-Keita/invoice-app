@@ -10,8 +10,6 @@ import { debugCookies } from './middleware/debugCookie';
 import logger from './utils/Logger';
 import ApiResponder from './utils/ApiResponder';
 import type { Response, Request, NextFunction } from 'express';
-import { trackUserActivity } from './middleware/activityTracker';
-
 const app = express();
 
 // Configuration CORS
@@ -43,7 +41,6 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(requestIdMiddleware);
-app.use(trackUserActivity);
 
 // Debug en développement
 if (process.env.NODE_ENV === 'development') {

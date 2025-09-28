@@ -1,9 +1,9 @@
 # Utilisation du roleGuard mis à jour
 
 ## 🎯 **Rôles disponibles**
-- `admin` : Accès complet à toutes les fonctionnalités
-- `invoice_manager` : Gestion des factures et utilisateurs
-- `dfc_agent` : Agent DFC avec accès limité
+- `admin` : Accès complet à toutes les fonctionnalités + gestion des utilisateurs
+- `invoice_manager` : Gestion des factures et accès aux données DFC
+- `dfc_agent` : Agent DFC avec accès limité aux factures et profil
 
 ## 🛡️ **Middlewares de protection**
 
@@ -48,11 +48,16 @@ export async function maFonction(req: Request, res: Response) {
 
 ## 📊 **Hiérarchie des permissions**
 
-| Rôle | Créer factures | Voir toutes factures | Gérer utilisateurs | Accès DFC |
-|------|----------------|---------------------|-------------------|-----------|
-| `admin` | ✅ | ✅ | ✅ | ✅ |
-| `invoice_manager` | ✅ | ✅ | ❌ | ✅ |
-| `dfc_agent` | ✅ | ❌ | ❌ | ✅ |
+| Rôle | Créer factures | Voir toutes factures | Gérer utilisateurs | Accès DFC | Tracking activité |
+|------|----------------|---------------------|-------------------|-----------|------------------|
+| `admin` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `invoice_manager` | ✅ | ✅ | ❌ | ✅ | ✅ |
+| `dfc_agent` | ✅ | ❌ | ❌ | ✅ | ✅ |
+
+### **Gestion d'inactivité par rôle**
+- **Tous les rôles** : Déconnexion automatique après 5 minutes d'inactivité
+- **Avec "Se souvenir de moi"** : 30 minutes d'inactivité pour tous les rôles
+- **Tracking automatique** : Toutes les actions sont enregistrées dans `user_activity`
 
 ## 🚀 **Exemples concrets**
 
@@ -87,3 +92,6 @@ export async function getInvoice(req: Request, res: Response) {
 2. **Utiliser les fonctions utilitaires** pour des vérifications complexes
 3. **Logger les tentatives d'accès** non autorisées
 4. **Tester les permissions** dans les tests unitaires
+5. **Utiliser le tracking d'activité** pour l'audit et la sécurité
+6. **Gérer l'inactivité** avec les seuils appropriés selon le rôle
+7. **Implémenter le rafraîchissement silencieux** pour une meilleure UX

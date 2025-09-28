@@ -45,13 +45,22 @@ npm start
 # Test de santé
 curl http://localhost:3000/api/health
 
-# Test d'authentification (après création d'un utilisateur)
+# Test d'inscription
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@cmdt.com","password":"motdepasse","firstName":"Test","lastName":"User","role":"dfc_agent","terms":true}'
+
+# Test de connexion
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@cmdt.com","password":"motdepasse"}'
+  -d '{"email":"test@cmdt.com","password":"motdepasse","role":"dfc_agent","rememberMe":false}'
+
+# Test du statut d'authentification
+curl http://localhost:3000/api/auth/status \
+  -H "Cookie: auth_token=VOTRE_TOKEN_ICI"
 
 # Test du profil (avec cookie)
-curl http://localhost:3000/api/auth/me \
+curl http://localhost:3000/api/auth/profile \
   -H "Cookie: auth_token=VOTRE_TOKEN_ICI"
 ```
 
@@ -59,15 +68,19 @@ curl http://localhost:3000/api/auth/me \
 ```
 http://localhost:3000/api/
 ├── auth/
-│   ├── login          (POST)
-│   ├── me             (GET) - protégé
-│   ├── token          (GET)
-│   ├── logout         (POST)
-│   ├── register       (POST)
-│   └── admin/create-user (POST) - admin seulement
+│   ├── login              (POST) - Connexion avec gestion rememberMe
+│   ├── register           (POST) - Inscription avec validation
+│   ├── forgot-password   (POST) - Demande de réinitialisation
+│   ├── reset-password     (POST) - Réinitialisation avec token
+│   ├── status            (GET) - Statut avec gestion d'inactivité
+│   ├── silent-refresh    (POST) - Rafraîchissement silencieux
+│   ├── profile           (GET) - Profil utilisateur (protégé)
+│   ├── logout            (POST) - Déconnexion avec nettoyage
+│   ├── token             (GET) - Vérification token
+│   └── admin/create-user (POST) - Création utilisateur (admin)
 ├── invoices/
-│   ├── /              (GET, POST) - protégé
-│   └── /:id           (GET) - protégé
+│   ├── /              (GET, POST) - protégé avec traçabilité
+│   └── /:id           (GET) - protégé avec vérification permissions
 ├── protected          (GET) - test auth
 └── health             (GET) - test serveur
 ```
@@ -92,14 +105,22 @@ cd client && npm run dev
 - Vérifier les credentials dans `.env`
 - S'assurer que MySQL est démarré
 - Vérifier que la base `cmdt_invoice_db` existe
+- Exécuter les scripts SQL dans l'ordre : `cmdt_invoice_db.sql` puis `add_user_tracking_to_invoice.sql`
 
 ### **Erreur CORS**
 - Vérifier que l'origine frontend est `http://localhost:5173`
 - S'assurer que `credentials: true` est configuré
+- Vérifier la configuration CORS dans `app.ts`
 
 ### **Erreur d'authentification**
 - Vérifier que `JWT_SECRET_KEY` est défini
 - S'assurer que les cookies sont envoyés avec `withCredentials: true`
+- Vérifier la table `user_activity` pour le tracking d'inactivité
+
+### **Erreur de déconnexion automatique**
+- Vérifier que la table `user_activity` existe
+- S'assurer que les activités sont bien trackées
+- Vérifier les seuils d'inactivité (5min/30min)
 
 ## **📚 Documentation**
 - Routes API : `server/docs/API_ROUTES.md`

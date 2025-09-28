@@ -9,7 +9,7 @@ import database from "../config/database";
 import logger from "../utils/Logger";
 import { auditLog } from "../utils/auditLogger";
 import { BcryptHasher } from "../utils/PasswordHasher";
-import { cleanupUserActivity, getUserLastActivity } from "../middleware/activityTracker";
+import activityTracker, { ActivityTracker } from "../utils/ActivityTracker";
 
 export async function createUser(req: Request<unknown, unknown, UserType>, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
@@ -59,7 +59,7 @@ export async function login(req: Request, res: Response): Promise<Response> {
     try {
         logger.info(`[${requestId}] Tentative de connexion`, { email });
         
-        const authUser = await Users.verifyCredentials({ email, password: req.body.password });
+        const authUser = await Users.verifyCredentials({ email, password: req.body.password, role: req.body.role });
         
         console.log('🔧 DEBUG - authUser reçu:', authUser);
         console.log('🔧 DEBUG - Type de authUser:', typeof authUser);
@@ -82,6 +82,7 @@ export async function login(req: Request, res: Response): Promise<Response> {
             sup: authUser.id,
             email: authUser.email,
             role: authUser.role,
+            activity: 'LOGIN'
         }, { expiresIn: rememberMe ? '2h' : '1h' });
 
         const refreshToken = generateRefreshToken({ id: authUser.id });
@@ -104,7 +105,7 @@ export async function login(req: Request, res: Response): Promise<Response> {
             path: '/',
         });
 
-        res.cookie('rememberMe', rememberMe ? 'true' : 'false', {
+        res.cookie('rememberMe', Boolean(rememberMe) ? 'true' : 'false', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
@@ -118,7 +119,18 @@ export async function login(req: Request, res: Response): Promise<Response> {
             email: authUser.email, 
             role: authUser.role
         });
-        return ApiResponder.success(res, { userId: authUser.id, role: authUser.role }, "Connecté");
+        const isTrack = await activityTracker.track('LOGIN', authUser.id);
+        if (isTrack) {
+            return ApiResponder.success(res, { userId: authUser.id, role: authUser.role }, "Connecté");
+        } else {
+            logger.warn(`[${requestId}] Une erreur est survenue lors du suivit de l'utilisateur`, {
+                userId: authUser.id,
+                role: authUser.role,
+                email: authUser.email,
+                userActivity: 'LOGIN'
+            })
+            return ApiResponder.badRequest(res, 'Erreur lors de la connexion (SUIVIT IMPOSSIBLE)');
+        }
     } catch (error) {
         logger.error(`[${requestId}] Erreur lors de la connexion`, { 
             email, 
@@ -144,45 +156,69 @@ export async function getCurrentToken(req: Request, res: Response): Promise<Resp
     }
 }
 
-export function logout(req: Request, res: Response): Response {
-    const user = (req as any).user;
-    const requestId = req.headers['x-request-id'] || 'unknown';
-    if(!user) {
-        logger.warn(`[${requestId}] Tentative de déconnexion invalide`, {id: user.sup, email: user.email, role: user.role})
-        return ApiResponder.badRequest(res, 'Tentative de deconnexion d\'un utilisateur non connecté');
-    } 
-    
-    const baseOptions = {
-        secure: process.env.NODE_ENV === 'production',
-        samsSite: process.env.NODE_ENV === 'production' ? 'none' : 'laxe',
-        domaine: process.env.COOKIE_DOMAIN,
+function clearAllCookies(res: Response): void {
+    const options = {
         path: '/',
-    }
-    res.clearCookie('auth_token', {
-        ...baseOptions,
-        httpOnly: true,
-    });
-    
-    res.clearCookie('refresh_token', {
-        ...baseOptions,
-        httpOnly: true,
-    });
+        domain: process.env.COOKIE_DOMAIN,
+    };
 
-    res.clearCookie('rememberMe', {
-        ...baseOptions,
-        httpOnly: true,
-    });
+    res.clearCookie('auth_token', options);
+    res.clearCookie('refresh_token', options);
+    res.clearCookie('rememberMe', options);
+}
+export async function logout(req: Request, res: Response): Promise<Response> {
+    const user = (req as any).user || undefined;
+    const requestId = req.headers['x-request-id'] as string || 'unknown';
+    try {
+        
+        const cookieOptions = {
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax' | 'strict', // or as const
+            domain: process.env.COOKIE_DOMAIN,
+            path: '/',
+        }
+        
+        res.clearCookie('auth_token', { ...cookieOptions, httpOnly: true });
+        res.clearCookie('refresh_token', { ...cookieOptions, httpOnly: true});
+        res.clearCookie('rememberMe', { ...cookieOptions, httpOnly: true });
+        
+        if (user && user.sup) {
+            try {
+                await activityTracker.deleteUserActivity(user.sup);
+                logger.debug(`[${requestId}] Utilisateur déconnecté`, {
+                    id: user.sup, 
+                    email: user.email, 
+                    role: user.role
+                });
+            } catch (cleanupError) {
+                logger.warn(`[${requestId}]  Erreur lors du nettoyage de l'activité`, {
+                    error: cleanupError
+                });
+            }
+        } else {
+            logger.debug(`[${requestId}] Cookies nettoyés (utilisateur non authentifié)`, {
+                ip: req.ip,
+                userAgent: req.get('User-Agent')
+            });
+        }
 
-    const activityCleaned = cleanupUserActivity(user.sup);
-
-    if(activityCleaned) {
-        logger.debug(`[${requestId}] Utilisateur déconecté`, {
-            id: user.sup, 
-            email: user.email, 
-            role: user.role
+        return ApiResponder.success(res, null, 'Déconnecté');
+    } catch (error) {
+        logger.error(`[${requestId}] Echec critique de la deconexion`, {
+            errorMessage: error instanceof Error ? error.message : 'unknow error',
+            stack: error instanceof Error ? error.stack : 'unknow_stack'
         });
+
+        try {
+            clearAllCookies(res);
+        } catch (cookieError) {
+            logger.error(`[${requestId}] Impossible de nettoyer les cookies`, {
+                errorMessage: cookieError instanceof Error ? cookieError.message : 'unknow error',
+                error: cookieError
+            })
+        }
+        return ApiResponder.success(res, null, 'Déconnecté (avec erreur de nettoyage)');
     }
-    return ApiResponder.success(res, null, 'Déconnecté');
 }
 
 // Endpoint pour récupérer le profil de l'utilisateur connecté
@@ -194,12 +230,12 @@ export async function getUserProfil(req: Request, res: Response): Promise<Respon
         const user = (req as any).user;
         
         if (!user) {
-            logger.warn(`[${requestId}] Tentative d'accès au profil sans utilisateur authentifié`);
+            logger.warn(`[${requestId}] Tentative d'accès au profile sans utilisateur authentifié`);
             return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
         }
 
         // Récupérer les informations complètes de l'utilisateur depuis la base
-        const userDetails = await Users.findUser(user.sup, 'id') as UserType[];
+        const userDetails = await Users.findUser(user.sup, 'id') as User[];
         
         if (!userDetails || userDetails.length === 0) {
             logger.warn(`[${requestId}] Utilisateur introuvable en base`, { userId: user.sup });
@@ -244,6 +280,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<Respo
             sup: user[0].id,
             role: user[0].role,
             email: user[0].email,
+            activity: 'SEND_PASSWORD_RESET_EMAIL'
         });
         
         await database.execute(
@@ -446,6 +483,7 @@ export async function verifyRegistrationToken(req: Request, res: Response): Prom
             sup: user.id,
             email: user.email,
             role: user.role,
+            activity: 'SIGN_UP'
         }, { expiresIn: tokenDuration });
 
         const refreshToken = generateRefreshToken({ id: user.id });
@@ -483,22 +521,32 @@ export async function verifyRegistrationToken(req: Request, res: Response): Prom
             silentRefresh: true,
             rememberMe: false, 
         });
-        console.log('✅ Vérification réussie et utilisateur connecté');
-        
-        return ApiResponder.success(res, {
-            user: {
-                id: user.id,
-                email: user.email,
-                role: user.role,
-            },
-            sessionInfo: {
-                isRegistration: true,
-                hasSilentRefresh: true,
-                rememberMe: false,
-                expiresIn: 60 * 60 * 1000 // 1 heure
-            }
-        }, 'Compte vérifié et utilisateur connecté');
+        const trackResult = await activityTracker.track('SIGN_UP', user.id);
 
+        if (trackResult) {
+
+            console.log('✅ Vérification réussie et utilisateur connecté');
+            
+            return ApiResponder.success(res, {
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    role: user.role,
+                },
+                sessionInfo: {
+                    isRegistration: true,
+                    hasSilentRefresh: true,
+                    rememberMe: false,
+                    expiresIn: 60 * 60 * 1000 // 1 heure
+                }
+            }, 'Compte vérifié et utilisateur connecté');
+        } else {
+            logger.warn(`[${requestId}] Echec du suivit de l'utilisateur ${user.email}`, {
+                details: 'Suivit impossible',
+                isTracked: trackResult
+            });
+            return ApiResponder.badRequest(res, 'Connexion impossible (SUIVIT IMPOSSIBLE)');
+        }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
         logger.error(`[${requestId}] Erreur lors de la vérification du token`, {
@@ -513,76 +561,100 @@ export async function silentRefresh(req: Request, res: Response): Promise<Respon
     const requestId = req.headers['x-request-id'] || 'unknow';
     const user = (req as any).user;
     const rememberMe = req.cookies.rememberMe === 'true';
+    const activityTracker = new ActivityTracker(undefined, rememberMe);
 
     try {
-        if (!user) {
-            logger.warn(`[${requestId}] Utilisateur non authentifié`, { details: 'Utilisateur non renseigné dans req.user' });
-            return ApiResponder.unauthorized(res, 'Accès interdit');
+        if (!user || !user.sup) {
+            logger.warn(`[${requestId}]  Silent refresh sans utilisateur valide`, { details: 'Utilisateur non renseigné dans req.user' });
+            return ApiResponder.unauthorized(res, 'Session invalide');
         }
 
-        const lastActivity = getUserLastActivity(user.sup);
+        const userExists = await Users.findUser(user.sup, 'id');
+
+        if (!userExists || userExists.length === 0 || !userExists[0].isActive) {
+                logger.warn(`[${requestId}] Silent refresh pour utilisateur inexistant/inactif`, {
+                    userId: user.sup
+                });
+                return ApiResponder.unauthorized(res, 'Session expirée');
+        }
+
+
+        const lastActivity = await activityTracker.getUserLastActivity(user.sup);
         const now = Date.now();
         const maxInactivity = rememberMe ? 30 * 60 * 1000 : 5 * 60 * 1000; // 30 min vs 5 min
 
         if(lastActivity && (now - lastActivity > maxInactivity)) {
+            await activityTracker.track('LOGOUT', user.sup);
             logger.warn(`[${requestId}] Inactivité détectée`, {
                 id: user.sup,
                 email: user.email,
                 role: user.role,
                 maxInactivityOfUser: now - lastActivity,
             })
-            return ApiResponder.badRequest(res, 'Inactivité détectée');
-        }
-
-        const tokenPayload = {
-            sup: user.sup,
-            email: user.email,
-            role: user.userRole
+            return ApiResponder.badRequest(res, 'Session expirée pour inactivité');
         }
 
         const tokenDuration = rememberMe ? '2h' : '1h';
-        const newAccessToken = generateUserToken(tokenPayload, { expiresIn: tokenDuration});
+        const newAccessToken = generateUserToken({
+            sup: user.sup,
+            email: user.email,
+            role: user.role,
+            activity: 'REFRESH_SESSION'
+        }, { expiresIn: tokenDuration});
 
         let newRefreshToken;
         if(rememberMe) {
             newRefreshToken = generateRefreshToken({ id: user.sup });
         }
-
-        res.cookie('auth_token', newAccessToken, {
+        
+        const cookieOptions = {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            domain: process.env.COOKIE_DOMAIN,
-            maxAge: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000, // 2h vs 1h
+            samseSite: process.env.NODE_ENV === 'production' ? 'none' : 'laxe' as const,
+            domain: process.env.COOKIE_DOMAIN, 
             path: '/',
+        }
+        res.cookie('auth_token', newAccessToken, {
+            ...cookieOptions,
+            maxAge: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000, // 2h vs 1h
         });
 
         if(newRefreshToken) {
             res.cookie('refresh_token', newRefreshToken, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-                domain: process.env.COOKIE_ENV,
+                ...cookieOptions,
                 maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jrs
-                path: '/',
             });
+        }
+
+        const trackResult = await activityTracker.track('REFRESH_SESSION', user.sup);
+
+        if (!trackResult) {
+            logger.warn(`[${requestId}] Échec du tracking pour le refresh`, {
+                userId: user.sup,
+                activity: 'REFRESH_SESSION'
+            })
         }
 
         logger.info(`[${requestId}] Token renouvelé avec succès pour l'utiliseur ${user.sup}`, {
             role: user.role,
             email: user.email,
             renewed: true,
+            activity: 'REFRESH_SESSION',
             expiresIn: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000,
             rememberMe: rememberMe
         });
 
         return ApiResponder.success(res, {
             renewed: true,
-            expiresIn: rememberMe ? 2 * 60 * 1000 : 60 * 60 * 1000, // 2h vs  1h
-            rememberMe: rememberMe
+            expiresIn: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000, // 2h vs  1h
+            rememberMe: rememberMe,
+            userActivity: 'REFRESH_SESSION',
         }, 'Token renouvelé avec succès');
+
     } catch (error) {
         logger.error(`[${requestId}] Une erreur est survenue lors du renouvellement de token pour l'utilisateur ${user.email}`, {
+            userId: user?.sup,
+            email: user?.email,
             errorMessage: error instanceof Error ? error.message : 'unknow error',
             stack: error instanceof Error ? error.stack : 'unknow stack'
         })

@@ -77,7 +77,7 @@ export const registerSchema = z.object({
 
   // Validation conditionnelle par type d'utilisateur
   if (data.role === 'dfc_agent') {
-    if (!['finance', 'comptabilité', 'contrôle_de_gestion', 'audit_interne'].includes(data.department)) {
+    if (!['Finance', 'Comptabilité', 'Contrôle de gestion', 'Audit interne'].includes(data.department)) {
       ctx.addIssue({ 
         code: 'custom', 
         path: ['department'], 
@@ -85,7 +85,7 @@ export const registerSchema = z.object({
       });
     }
   } else if (data.role === 'invoice_manager') {
-    if (!['facturation', 'comptabilité_client', 'gestion_factures'].includes(data.department)) {
+    if (!['Facturation', 'Comptabilité client', 'Gestion des factures'].includes(data.department)) {
       ctx.addIssue({ 
         code: 'custom', 
         path: ['department'], 

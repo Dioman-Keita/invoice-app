@@ -10,7 +10,13 @@ export default function authGuard(req: Request, res: Response, next: NextFunctio
     const accessToken = req.cookies?.auth_token;
     const refreshToken = req.cookies?.refresh_token;
     const rememberMe = req.cookies?.rememberMe === 'true';
-    console.log('🔐 authGuard - Token found:', !!accessToken && !!refreshToken && !!rememberMe);
+    console.log('🔐 authGuard - Tokens status:', {
+        accessToken: !!accessToken,
+        refreshToken: !!refreshToken,
+        rememberMe: rememberMe, // Affichez la valeur réelle, pas le boolean
+        rememberMeRaw: req.cookies?.rememberMe // Affichez la valeur brute du cookie
+    });
+    
     
     if (!accessToken) {
         console.log('❌ authGuard - No token found');

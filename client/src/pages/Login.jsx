@@ -38,32 +38,16 @@ function Login() {
       await new Promise((res) => setTimeout(res, 2000));
       const result = await login({
         password: data.password,
-        email: data.email
+        email: data.email,
+        role: data.role,
+        rememberMe: data.rememberMe,
       });
 
       if (result.success) {
         success(result.message || 'Connexion réussie');
-        switch(result.role) {
-          case 'invoice_manager':
-            setTimeout(() => {
-              navigate('/facture', { replace: true });
-            }, 4000);
-            break;
-          case 'dfc_agent':
-            setTimeout(() => {
-              navigate('/dfc_traitment', { replace: true });
-            }, 4000);
-            break;
-          case 'admin':
-            setTimeout(() => {
-              navigate('/dashboard', { replace: true });
-            }, 4000);
-            break;
-          default:
             setTimeout(() => {
               navigate('/profile', { replace: true });
             }, 4000);
-        }
       } else {
         error(result.message || 'Une erreur interne est survenue');
       }

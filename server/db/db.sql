@@ -27,6 +27,7 @@ CREATE TABLE employee (
     phone VARCHAR(45),
     department VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     isVerified BOOLEAN DEFAULT FALSE,
     isActive BOOLEAN DEFAULT TRUE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -39,10 +40,34 @@ CREATE TABLE user_settings (
     FOREIGN KEY (user_id) REFERENCES employee(id)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- Tables des activitées utilisateurs
+CREATE TABLE user_activity (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id VARCHAR(50),
+    name ENUM(
+        'SIGN_UP',
+        'LOGIN', 
+        'LOGOUT',
+        'UPDATE_PASSWORD',
+        'RESET_PASSWORD',
+        'SEND_PASSWORD_RESET_EMAIL', 
+        'REFRESH_SESSION',
+        'SUBMIT_INVOICE',
+        'VALIDATE_INVOICE',
+        'UPDATE_EMPLOYEE_ID',
+        'VIEW_PROFILE',
+        'UPDATE_PROFILE',
+        'REFRESH_PROFILE'
+    ) DEFAULT 'LOGIN',
+    created_at BIGINT NULL,
+    update_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES employee(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- Table des départements
 CREATE TABLE department (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    name ENUM('Finance', 'Comptabilité', 'Contrôle de gestion', 'Audit interne') DEFAULT 'Finance',
+    name ENUM('Finance', 'Comptabilité', 'Contrôle de gestion', 'Audit interne', 'Facturation', 'Comptabilité client', 'Gestion des factures') DEFAULT 'Finance',
     employee_id VARCHAR(50) NOT NULL,
     FOREIGN KEY (employee_id) REFERENCES employee(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

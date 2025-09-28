@@ -130,6 +130,9 @@ export function useAuth() {
             return false;
         } catch (err) {
             console.error('🔐 Silent refresh error:', err);
+            if(err?.response?.status === 401) {
+                await checkAuthStatus(true);
+            }
             return false;
         }
     }, []);
@@ -241,16 +244,21 @@ export function useAuth() {
         } catch (err) {
             let message = "Erreur lors de l'inscription";
             let field = undefined;
-            
-            if (err?.response?.data) {
-                message = err.response.data.message || message;
+
+            const isBackendError = err?.response?.status >= 400 &&
+                                   err?.response?.status < 500 &&
+                                   err?.response?.data?.message;
+            if (isBackendError) {
+                message = err.response.data.message;
                 field = err.response.data?.field;
-            } else if (err.message) {
-                message = err.message;
+            } else {
+                message = "Une erreur technique est survenue. Veuillez réessayer.";
             }
+
             return {
                 success: false,
                 message,
+                field
             };
         }
     }, []);
@@ -306,8 +314,24 @@ export function useAuth() {
                 return { success: false, message: response?.message };
             }
         } catch (err) {
-            const message = err?.response?.data?.message || "Échec de la connexion";
-            return { success: false, message };
+            let message = "Erreur lors de l'inscription";
+            let field = undefined;
+
+            const isBackendError = err?.response?.status >= 400 &&
+                                   err?.response?.status < 500 &&
+                                   err?.response?.data?.message;
+            if (isBackendError) {
+                message = err.response.data.message;
+                field = err.response.data?.field;
+            } else {
+                message = "Une erreur technique est survenue. Veuillez réessayer.";
+            }
+
+            return {
+                success: false,
+                message,
+                field
+            };
         }
     }, [checkAuthStatus]);
 
@@ -315,8 +339,11 @@ export function useAuth() {
     const logout = useCallback(async () => {
         stopPeriodicCheck();
         try {
-            await api.post('/auth/logout');
-            success('Déconnexion réussie');
+            const response = await api.post('/auth/logout');
+            if (response.success === 'true') {
+                success('Déconnexion réussie');
+                return;
+            }
         } catch (err) {
             console.error('Erreur lors de la déconnexion:', err);
         } finally {
@@ -338,17 +365,35 @@ export function useAuth() {
         try {
             const response = await api.get('/auth/profile');
             
-            if (response?.success === true && response.user) {
-                setAuthState(prev => ({
-                    ...prev,
-                    user: response.user
-                }));
-                return response.user;
+            if (response?.success === true && response.data?.user) {
+                const user = response.data.user;
+                return {
+                    success: true,
+                    firstName: user.firstname || '',
+                    lastName: user.lastname || '',
+                    email: user.email || '',
+                    hash: user.password || '',
+                    employeeId: user.employeeId || '',
+                    role: user.role || '',
+                    phone: user.phone || '',
+                    department: user.department || '',
+                    userId: user.id,
+                    employeeId: user.employee_cmdt_id || '',
+                    createAt: user.create_at,
+                    updateAt: user.update_at || user.create_at || '',
+                    isVerified: Boolean(user.isVerified),
+                    isActive: Boolean(user.isActive),
+                }
             }
-            return null;
+            return {
+                success: false
+            };
         } catch (err) {
             console.error('Erreur lors du chargement du profil:', err);
-            return null;
+            return {
+                success: false,
+                message: err?.response?.data?.message | 'Une erreur interne est survenue'
+            };
         }
     }, []);
 

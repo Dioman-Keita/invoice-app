@@ -18,13 +18,16 @@ Application de gestion de factures (CMDT) avec un frontend React et un backend N
 ### Aperçu
 - Frontend: React + Vite + Tailwind CSS
 - Backend: Node.js + Express + TypeScript
-- Base de données: via `server/config/database` (driver/config au choix du projet)
+- Base de données: MySQL avec système de traçabilité utilisateur
 - Sécurité: JWT signés côté serveur, stockés en Cookie HttpOnly (SameSite, Secure en prod)
+- Gestion d'inactivité: Déconnexion automatique après 5min (30min avec "Se souvenir de moi")
+- Tracking d'activité: Enregistrement automatique de toutes les actions utilisateur
 
 ### Pile technique
-- Client: React, Vite, React Router, Tailwind
-- Serveur: Express, TypeScript, jsonwebtoken, bcrypt, cors, cookie-parser
-- Outils: ESLint, Prettier, Logger custom
+- **Client**: React, Vite, React Router, Tailwind CSS, React Hook Form, Zod
+- **Serveur**: Express, TypeScript, jsonwebtoken, bcrypt, cors, cookie-parser, MySQL
+- **Sécurité**: JWT HttpOnly, CORS configuré, validation des données, audit trail
+- **Outils**: ESLint, Prettier, Logger custom, ActivityTracker, AuditLogger
 
 ### Architecture du projet
 ```
@@ -133,11 +136,15 @@ npm run preview       # prévisualisation du build
 - **Isolation des données** : Chaque utilisateur voit ses propres données (sauf admins)
 
 ### Endpoints clés (Auth)
-- POST `/auth/login` → credentials `{ email, password }` → set cookie + retourne l'utilisateur (sans hash)
-- GET  `/auth/me` → retourne le profil de l'utilisateur connecté (protégé)
-- GET  `/auth/token` → retourne `{ token, payload }` si cookie présent
-- POST `/auth/logout` → clear du cookie
-- POST `/auth/admin/create-user` → création d'utilisateur (admin seulement)
+- **POST** `/auth/login` → credentials `{ email, password, role, rememberMe }` → set cookie + retourne l'utilisateur
+- **POST** `/auth/register` → inscription avec validation email et termes d'utilisation
+- **POST** `/auth/forgot-password` → demande de réinitialisation de mot de passe
+- **POST** `/auth/reset-password` → réinitialisation avec token
+- **GET** `/auth/status` → statut d'authentification avec gestion d'inactivité
+- **POST** `/auth/silent-refresh` → rafraîchissement silencieux du token
+- **GET** `/auth/profile` → profil de l'utilisateur connecté (protégé)
+- **POST** `/auth/logout` → déconnexion avec nettoyage des activités
+- **POST** `/auth/admin/create-user` → création d'utilisateur (admin seulement)
 
 ### Endpoints Factures (protégés)
 - POST `/invoices` → créer une facture (associée à l'utilisateur connecté)
@@ -162,15 +169,21 @@ npm run lint
 npm run format
 ```
 
+### Nouvelles fonctionnalités récentes
+- [x] **Système de gestion d'inactivité** : Déconnexion automatique après 5min/30min
+- [x] **Tracking d'activité** : Enregistrement automatique de toutes les actions utilisateur
+- [x] **Rafraîchissement silencieux** : Renouvellement automatique des tokens
+- [x] **Validation avancée** : React Hook Form + Zod pour la validation côté client
+- [x] **Interface responsive** : Design moderne avec Tailwind CSS
+- [x] **Gestion des rôles** : admin, invoice_manager, dfc_agent avec permissions granulaires
+- [x] **Audit trail** : Traçabilité complète des actions dans la base de données
+
 ### Roadmap (à compléter)
-- [x] Endpoint `/me` protégé (retourne profil courant via `req.user`)
-- [x] Système d'autorisation basé sur les rôles
-- [x] Traçabilité des actions utilisateur
-- [x] Protection des routes de factures
-- [ ] Rafraîchissement de token (facultatif, si besoin de sessions longues)
-- [ ] Tests d'intégration (auth, invoices)
+- [ ] Tests d'intégration (auth, invoices, activity tracking)
 - [ ] Interface utilisateur pour la gestion des rôles
-- [ ] CI/CD
+- [ ] Export/Import des données
+- [ ] Notifications en temps réel
+- [ ] CI/CD avec tests automatisés
 
 ---
 Documentation vivante: ce README sera mis à jour au fil du projet.
