@@ -272,7 +272,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<Respo
         const user = (await Users.findUser(email, 'email') as User[]);
         if (!user || user.length === 0) {
             logger.info(`[${requestId}] Demande de réinitialisation pour email inexistant`, { email });
-            return ApiResponder.badRequest(res, 'Si un compte existe, un lien a été envoyé.');
+            return ApiResponder.success(res, 'Si un compte existe, un lien a été envoyé.');
         }
     
         const baseLink = process.env.APP_URL || 'http://localhost:5173';
@@ -380,7 +380,7 @@ export async function resetUserPassword(res: Response, req: Request): Promise<Re
             performed_by: payload.sup
         })
         logger.info(`Succès de la réinitialisation du mot de passe de l'utilisateur ${user[0].id}`);
-        return ApiResponder.success(res, null, 'Mot de passe réinitialiser avec succès');
+        return ApiResponder.success(res, null, 'Mot de passe réinitialisé avec succès. Vous allez être redirigé.');
     } catch (error) {
         logger.error('Erreur lors de la réinitialisation du mot de passe', { 
             error: error instanceof Error ? error.message : 'Erreur inconnue',

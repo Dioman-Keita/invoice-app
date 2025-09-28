@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import AsyncSubmitBtn from '../components/AsyncSubmitBtn';
 import useToastFeedback from '../hooks/useToastFeedback';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../services/useAuth';
 
 const schema = z.object({
   email: z.string().min(1, 'Email requis').email('Email invalide'),
@@ -12,7 +13,8 @@ const schema = z.object({
 
 function ForgotPassword() {
   const [status, setStatus] = useState('idle');
-  const { register, handleSubmit, formState: { errors, isValid } } = useForm({
+  const { forgotPassword } = useAuth();
+  const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
     mode: 'onChange',
     defaultValues: { email: '' },
@@ -22,11 +24,15 @@ function ForgotPassword() {
   const onSubmit = async (values) => {
     try {
       setStatus('loading');
-      // TODO: call backend endpoint e.g., POST /auth/forgot-password with { email }
-      await new Promise((r) => setTimeout(r, 1000));
-      setStatus('success');
-      success('Si un compte existe, un lien a été envoyé.');
-    } catch {
+      const result = await forgotPassword({email: values.email});
+      if (result.success) {
+        setStatus('success');
+        success(result.message || 'Si un compte existe, un lien a été envoyé.');
+      } else {
+        setStatus('error');
+        notifyError(result.message || 'Erreur lors de l\'envoi du lien');
+      }
+    } catch (error) {
       setStatus('error');
       notifyError("Une erreur est survenue lors de l'envoi du lien");
     }

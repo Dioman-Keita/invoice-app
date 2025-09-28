@@ -94,17 +94,35 @@ export function useAuth() {
                 return false;
             }
         } catch (error) {
-            console.error('🔐 Auth status error:', error);
-            setAuthState(prev => ({
-                ...prev,
-                isAuthenticated: false,
-                user: null,
-                isLoading: false,
-                isInitialized: true,
-                shouldRefresh: false,
-                expiresIn: null,
-                rememberMe: false
-            }));
+            // Gestion silencieuse des erreurs pour éviter de polluer la console
+            if (error?.response?.status === 401) {
+                // Erreur d'authentification normale - pas de log
+                setAuthState(prev => ({
+                    ...prev,
+                    isAuthenticated: false,
+                    user: null,
+                    isLoading: false,
+                    isInitialized: true,
+                    shouldRefresh: false,
+                    expiresIn: null,
+                    rememberMe: false
+                }));
+            } else {
+                // Autres erreurs - log seulement en mode développement
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('🔐 Auth status error:', error);
+                }
+                setAuthState(prev => ({
+                    ...prev,
+                    isAuthenticated: false,
+                    user: null,
+                    isLoading: false,
+                    isInitialized: true,
+                    shouldRefresh: false,
+                    expiresIn: null,
+                    rememberMe: false
+                }));
+            }
             return false;
         } finally {
             isCheckingRef.current = false;
@@ -129,9 +147,13 @@ export function useAuth() {
             }
             return false;
         } catch (err) {
-            console.error('🔐 Silent refresh error:', err);
-            if(err?.response?.status === 401) {
+            // Gestion silencieuse des erreurs de refresh
+            if (err?.response?.status === 401) {
+                // Token invalide, vérifier le statut silencieusement
                 await checkAuthStatus(true);
+            } else if (process.env.NODE_ENV === 'development') {
+                // Log seulement en mode développement pour les autres erreurs
+                console.error('🔐 Silent refresh error:', err);
             }
             return false;
         }
@@ -397,6 +419,60 @@ export function useAuth() {
         }
     }, []);
 
+    const forgotPassword = useCallback(async (credential) => {
+        try {
+            const response = await api.post('/auth/forgot-password', credential);
+            if (response?.data?.success === true) {
+                return {
+                    success: true,
+                    message: response?.data?.message,
+                }
+            }
+            return {
+                success: false,
+                message: response?.data?.message || 'Erreur lors de l\'envoi du lien'
+            }
+        } catch (error) {
+            if (error?.response?.status >= 400) {
+                return {
+                    success: false,
+                    message: error?.response?.data?.message || 'Erreur lors de l\'envoi du lien'
+                }
+            }
+            return {
+                success: false,
+                message: 'Erreur de connexion'
+            }
+        }
+    }, [])
+
+    const resetPassword = useCallback(async (credentials) => {
+        try {
+            const response = await api.post('/auth/reset-password', credentials);
+            if (response?.data?.success === true) {
+                return {
+                    success: true,
+                    message: response?.data?.message
+                }
+            }
+            return {
+                success: false,
+                message: response?.data?.message || 'Erreur lors de la réinitialisation'
+            }
+        } catch (error) {
+            if (error?.response?.status >= 400) {
+                return {
+                    success: false,
+                    message: error?.response?.data?.message || 'Erreur lors de la réinitialisation'
+                }
+            }
+            return {
+                success: false,
+                message: 'Erreur de connexion'
+            }
+        }
+    }, [])
+
     // Refresh manuel pour les composants
     const refreshAuth = useCallback(async () => {
         return await checkAuthStatus(true);
@@ -411,6 +487,8 @@ export function useAuth() {
         logout,
         register,
         finalizeRegister,
+        forgotPassword,
+        resetPassword,
         checkAuthStatus: refreshAuth,
         fetchUserProfile,
         startPeriodicCheck,
@@ -431,6 +509,8 @@ export function useAuth() {
         finalizeRegister,
         refreshAuth,
         fetchUserProfile,
+        forgotPassword,
+        resetPassword,
         startPeriodicCheck,
         stopPeriodicCheck,
         silentRefresh

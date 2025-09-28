@@ -10,7 +10,12 @@ import { useAuth } from '../services/useAuth';
 function Home() {
   useTitle('CMDT - Accueil');
   useBackground('bg-home', 'body');
-  const { isAuthenticated, user } = useAuth();
+  
+  // Récupération sécurisée de l'état d'authentification
+  const { isAuthenticated, user, isLoading, isInitialized } = useAuth();
+  
+  // État local pour gérer l'affichage
+  const [showContent, setShowContent] = useState(false);
   
   const [stats, setStats] = useState([
     { value: 0, target: 200, label: "Producteurs accompagnés", suffix: "k+" },
@@ -18,8 +23,18 @@ function Home() {
     { value: 0, target: 45, label: "D'expérience dans le coton", suffix: " ans" }
   ]);
 
+  // Gestion de l'affichage avec gestion d'erreur
+  useEffect(() => {
+    // Attendre que l'initialisation soit terminée avant d'afficher le contenu
+    if (isInitialized) {
+      setShowContent(true);
+    }
+  }, [isInitialized]);
+
   // Animation des compteurs
   useEffect(() => {
+    if (!showContent) return; // Ne pas démarrer l'animation si le contenu n'est pas prêt
+    
     const interval = setInterval(() => {
       setStats(prevStats => 
         prevStats.map(stat => ({
@@ -30,13 +45,25 @@ function Home() {
     }, 100);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [showContent]);
 
   // Redirection
   const navigate = useNavigate();
 
+  // Affichage de chargement pendant l'initialisation
+  if (!showContent || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-amber-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex flex-col  from-green-50 via-white to-amber-50 text-gray-800">
+    <div className="min-h-screen flex flex-col from-green-50 via-white to-amber-50 text-gray-800">
       {/* Navbar latéral déclencheur */}
       <Navbar />
 

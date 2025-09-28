@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../services/useAuth";
 
 function useQuery() {
     const { search } = useLocation();
@@ -19,6 +20,7 @@ export default function ResetPassword() {
     const [isSuccess, setIsSuccess] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const { resetPassword } = useAuth();
 
     useEffect(() => {
         if (!token) {
@@ -72,19 +74,21 @@ export default function ResetPassword() {
 
         try {
             setLoading(true);
-            const res = await fetch('/api/auth/reset-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token, password })
+            const res = await resetPassword({
+                token,
+                password,
+                confirm_password: confirm
             });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                throw new Error(data?.message || 'Échec de la réinitialisation.');
+
+            if (res.success) {
+                setMessage(res.message || 'Mot de passe réinitialisé. Vous allez être redirigé.');
+                setIsSuccess(true);
+                window.history.replaceState({}, document.title, window.location.pathname);
+                setTimeout(() => navigate('/login'), 1500);
+            } else {
+                setError(res.message || 'Erreur lors de la réinitialisation');
+                setIsSuccess(false);
             }
-            setMessage('Mot de passe réinitialisé avec succès. Vous allez être redirigé.');
-            setIsSuccess(true);
-            window.history.replaceState({}, document.title, window.location.pathname);
-            setTimeout(() => navigate('/login'), 1500);
         } catch (err) {
             setError(err?.message || 'Une erreur est survenue.');
         } finally {
