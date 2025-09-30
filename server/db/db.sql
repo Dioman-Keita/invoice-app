@@ -105,12 +105,26 @@ CREATE TABLE attachments (
 -- Table des tokens (authentification)
 CREATE TABLE auth_token (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    current_key DATE DEFAULT CURRENT_TIMESTAMP,
     token VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL UNIQUE,
     employee_id VARCHAR(50),
     create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (employee_id) REFERENCES employee(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Table tampon pour gerer les envoies d'emails lors du register 
+CREATE TABLE pending_verification (
+    id VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci PRIMARY KEY NOT NULL,
+    firstname VARCHAR(100) NOT NULL,
+    lastname VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(100) NOT NULL,
+    employee_cmdt_id VARCHAR(100) UNIQUE NOT NULL,
+    role ENUM('dfc_agent', 'invoice_manager', 'admin') DEFAULT 'invoice_manager',
+    phone VARCHAR(45),
+    department VARCHAR(50) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Table de log des exportations

@@ -5,12 +5,12 @@ import Users, { UserType, User } from "../models/User";
 import { generateRefreshToken, generateUserToken, verifyUserToken } from "../services/userToken";
 import type { Response, Request } from "express";
 import { isValidEmail, isValidPassword, isValidPasswordStrength } from "../middleware/validator";
+import { JsonWebTokenError } from "jsonwebtoken";
 import database from "../config/database";
 import logger from "../utils/Logger";
 import { auditLog } from "../utils/auditLogger";
 import { BcryptHasher } from "../utils/PasswordHasher";
 import activityTracker, { ActivityTracker } from "../utils/ActivityTracker";
-
 export async function createUser(req: Request<unknown, unknown, UserType>, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
     const data = req.body as UserType;
@@ -48,7 +48,7 @@ export async function createUser(req: Request<unknown, unknown, UserType>, res: 
             error: error instanceof Error ? error.message : 'Erreur inconnue',
             stack: error instanceof Error ? error.stack : undefined
         });
-        return ApiResponder.error(res, error);
+        return ApiResponder.badRequest(res, "Service temporairement indisponible veuillez reéssayer plus tard");
     }
 }
 
@@ -86,32 +86,27 @@ export async function login(req: Request, res: Response): Promise<Response> {
         }, { expiresIn: rememberMe ? '2h' : '1h' });
 
         const refreshToken = generateRefreshToken({ id: authUser.id });
-
-        res.cookie('auth_token', accessToken, {
+        const coockieConfig = {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            maxAge: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000, // 2h vs 1h
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' as 'none' | 'lax' | 'strict',
             domain: process.env.COOKIE_DOMAIN,
             path: '/',
+        }
+
+        res.cookie('auth_token', accessToken, {
+            ...coockieConfig,
+            maxAge: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000, // 2h vs 1h
         });
 
         res.cookie('refresh_token', refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            ...coockieConfig,
             maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000, // 7j vs 24h
-            domain: process.env.COOKIE_DOMAIN,
-            path: '/',
         });
 
         res.cookie('rememberMe', Boolean(rememberMe) ? 'true' : 'false', {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            ...coockieConfig,
             maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jrs,
-            domain: process.env.COOKIE_DOMAIN,
-            path: '/',
         })
         
         logger.info(`[${requestId}] Connexion réussie`, { 
@@ -136,7 +131,7 @@ export async function login(req: Request, res: Response): Promise<Response> {
             email, 
             error: error instanceof Error ? error.message : 'Erreur inconnue' 
         });
-        return ApiResponder.error(res, error);
+        return ApiResponder.badRequest(res, "Service temporairement indisponible veuillez reéssayer plus tard");
     }
 }
 
@@ -262,6 +257,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<Respo
     
     try {
         logger.info(`[${requestId}] Demande de réinitialisation de mot de passe`, { email });
+        console.log('🔐 [DEBUG] forgotPassword - Email reçu:', email);
         
         const ok = isValidEmail(email);
         if (!ok) {
@@ -270,52 +266,94 @@ export async function forgotPassword(req: Request, res: Response): Promise<Respo
         }
     
         const user = (await Users.findUser(email, 'email') as User[]);
+        console.log('🔐 [DEBUG] forgotPassword - Résultat findUser:', {
+            userTrouvé: !!user,
+            nombreUsers: user?.length,
+            user: user?.[0] ? { id: user[0].id, email: user[0].email } : null
+        });
+
         if (!user || user.length === 0) {
             logger.info(`[${requestId}] Demande de réinitialisation pour email inexistant`, { email });
             return ApiResponder.success(res, 'Si un compte existe, un lien a été envoyé.');
         }
+
+        const currentUser = user[0];
+        console.log('🔐 [DEBUG] forgotPassword - Utilisateur trouvé:', {
+            id: currentUser.id,
+            email: currentUser.email,
+            firstName: currentUser.firstName
+        });
     
         const baseLink = process.env.APP_URL || 'http://localhost:5173';
         const token = generateUserToken({
-            sup: user[0].id,
-            role: user[0].role,
-            email: user[0].email,
+            sup: currentUser.id,
+            role: currentUser.role,
+            email: currentUser.email,
             activity: 'SEND_PASSWORD_RESET_EMAIL'
         });
         
-        await database.execute(
-            "INSERT INTO auth_token(token, employee_id) VALUES (?,?)",
-            [token, user[0].id]
-        )
+        console.log('🔐 [DEBUG] forgotPassword - Token généré:', {
+            tokenDébut: token.substring(0, 20) + '...',
+            tokenLongueur: token.length,
+            employeeId: currentUser.id
+        });
+        
+        try {
+            const insertResult = await database.execute(
+                "INSERT INTO auth_token(token, employee_id) VALUES (?,?)",
+                [token, currentUser.id]
+            );
+
+            console.log('🔐 [DEBUG] forgotPassword - Résultat insertion token:', insertResult);
+            console.log('🔐 [DEBUG] forgotPassword - Token inséré avec succès');
+
+            // Vérifiez que le token est bien en base
+            const verifyToken = await database.execute(
+                "SELECT * FROM auth_token WHERE token = ?",
+                [token]
+            );
+            console.log('🔐 [DEBUG] forgotPassword - Vérification token en base:', {
+                tokensTrouvés: verifyToken.length,
+                tokenExiste: verifyToken.length > 0
+            });
+
+        } catch (insertError) {
+            console.error('🔐 [DEBUG] forgotPassword - ERREUR insertion token:', insertError);
+            throw insertError;
+        }
 
         await auditLog({
             table_name: 'auth_token',
             action: 'INSERT',
-            record_id: user[0].id,
-            performed_by: user[0].id,
+            record_id: currentUser.id,
+            performed_by: currentUser.id,
             description: `Token de réinitialisation généré pour ${email}`
-        })
+        });
         
         const resetPasswordLink = `${baseLink}/reset-password?token=${token}`;
+        console.log('🔐 [DEBUG] forgotPassword - Lien généré:', resetPasswordLink);
     
         const template = NotificationFactory.create('reset', {
-            name: user[0].firstName,
-            email: user[0].email,
+            name: currentUser.firstName,
+            email: currentUser.email,
             link: resetPasswordLink,
         });
     
         const send = new GmailEmailSender();
         await send.send({
-            to: user[0].email as string,
-            name: `${user[0].firstName} ${user[0].lastName}`
+            to: currentUser.email as string,
+            name: `${currentUser.firstName} ${currentUser.lastName}`
         }, template);
 
         logger.info(`[${requestId}] Email de réinitialisation envoyé`, { 
-            userId: user[0].id, 
-            email: user[0].email 
+            userId: currentUser.id, 
+            email: currentUser.email 
         });
+        
+        console.log('🔐 [DEBUG] forgotPassword - Processus terminé avec succès');
         return ApiResponder.success(res, null, 'Si un compte existe, un lien a été envoyé.');
     } catch (error) {
+        console.error('🔐 [DEBUG] forgotPassword - ERREUR FINALE:', error);
         logger.error(`[${requestId}] Erreur lors de la réinitialisation`, { 
             email, 
             error: error instanceof Error ? error.message : 'Erreur inconnue' 
@@ -324,67 +362,198 @@ export async function forgotPassword(req: Request, res: Response): Promise<Respo
     }
 }
 
-export function verifyResetToken(token: string): boolean {
-    try {
-        verifyUserToken(token);
-        return true;
-    } catch(err) {
-        logger.error('Erreur lors de la vérification du token de réinitialisation', { 
-            error: err instanceof Error ? err.message : 'Erreur inconnue' 
-        });
-        return false;
+
+export async function resetUserPassword(req: Request, res: Response): Promise<Response> {
+    const requestId = req.headers['x-request-id'] || 'unknown';
+    const { password, token, confirmPassword } = req.body;
+    const currentToken = token;
+
+    logger.info(`[${requestId}] Réinitialisation du mot de passe`, { 
+        hasToken: !!currentToken,
+        hasPassword: !!password,
+        hasConfirmPassword: !!confirmPassword
+    });
+    console.log('🔐 resetUserPassword - Données reçues:', { 
+        token: currentToken ? `${currentToken.substring(0, 10)}...` : 'none',
+        passwordLength: password?.length || 0,
+        confirmPasswordLength: confirmPassword?.length || 0
+    });
+
+    if (!currentToken) {
+        logger.warn(`[${requestId}] Token manquant dans la requête`);
+        console.log('❌ Token manquant');
+        return ApiResponder.badRequest(res, 'Token de réinitialisation manquant');
     }
-}
 
-export async function resetUserPassword(res: Response, req: Request): Promise<Response> {
-    const { password, token } = req.body;
+    if (!password || !confirmPassword) {
+        logger.warn(`[${requestId}] Données manquantes`, { 
+            hasPassword: !!password, 
+            hasConfirmPassword: !!confirmPassword 
+        });
+        return ApiResponder.badRequest(res, 'Les champs mot de passe et confirmation sont requis');
+    }
 
     try {
-        if (!isValidPassword(req)) return ApiResponder.badRequest(res, 'Les mots de passe ne correspondent pas');
-        if (!isValidPasswordStrength(password)) return ApiResponder.badRequest(res, 'Format du mot de passe invalide');
-        const payload = verifyUserToken(token);
-        const user = await Users.findUser(payload.sup, 'id');
+        // Validation des mots de passe
+        if (!isValidPassword(password, confirmPassword)) {
+            logger.warn(`[${requestId}] Les mots de passe ne correspondent pas`);
+            console.log('❌ Mots de passe différents');
+            return ApiResponder.badRequest(res, 'Les mots de passe ne correspondent pas');
+        }
 
-        if(!user || user.length === 0) {
+        if (!isValidPasswordStrength(password)) {
+            logger.warn(`[${requestId}] Format du mot de passe invalide`);
+            console.log('❌ Force du mot de passe insuffisante');
+            return ApiResponder.badRequest(res, 'Format du mot de passe invalide');
+        }
+
+        // Vérification du token
+        const payload = verifyUserToken(currentToken);
+        
+        logger.info(`[${requestId}] Token décodé`, { 
+            userId: payload?.sup,
+            activity: payload?.activity 
+        });
+        console.log('🔐 resetUserPassword - Payload décodé:', payload);
+
+        if (!payload || payload.activity !== "SEND_PASSWORD_RESET_EMAIL") {
+            logger.warn(`[${requestId}] Token invalide ou activité incorrecte`, { 
+                activity: payload?.activity 
+            });
+            console.log('❌ Token invalide - activité:', payload?.activity);
+            return ApiResponder.badRequest(res, "Token invalide ou expiré");
+        }
+
+        const userId = payload.sup;
+        
+        // Vérification de l'existence de l'utilisateur
+        const users = await Users.findUser(userId, 'id');
+        
+        logger.info(`[${requestId}] Résultat findUser`, { 
+            userId, 
+            usersCount: users.length,
+            userFound: users.length > 0 
+        });
+        console.log('🔐 resetUserPassword - Résultat findUser:', {
+            nombreUtilisateurs: users.length,
+            utilisateurs: users
+        });
+
+        if (!Array.isArray(users) || users.length === 0) {
+            logger.warn(`[${requestId}] Utilisateur introuvable pour le token`, { userId });
+            console.log('❌ Utilisateur non trouvé pour ID:', userId);
             return ApiResponder.notFound(res, 'Utilisateur non trouvé');
         }
 
-        const isUserExist: User[] = await database.execute(
-            "SELECT * FROM auth_token WHERE token = ? AND created_at > DATE_SUB(NOW(), INTERVAL 30 MINUTE)",
-            [token]
+        const user = users[0];
+
+        // Vérification que user existe et a les propriétés nécessaires
+        if (!user || typeof user !== 'object') {
+            logger.warn(`[${requestId}] Format de données utilisateur invalide`, { userId });
+            console.log('❌ Format utilisateur invalide');
+            return ApiResponder.unauthorized(res, 'Données utilisateur invalides');
+        }
+
+        logger.info(`[${requestId}] Utilisateur trouvé`, { 
+            userId: user.id, 
+            email: user.email
+        });
+        console.log('🔐 Utilisateur trouvé:', user);
+
+        // Vérification du token en base de données
+        const tokenRecords: any[] = await database.execute(
+            "SELECT * FROM auth_token WHERE token = ? AND create_at > DATE_SUB(NOW(), INTERVAL 30 MINUTE)",
+            [currentToken]
         );
-        if (!isUserExist || isUserExist.length === 0) {
+
+        logger.info(`[${requestId}] Vérification du token en base`, { 
+            tokenRecordsCount: tokenRecords.length,
+            tokenValide: tokenRecords.length > 0
+        });
+
+        if (!Array.isArray(tokenRecords) || tokenRecords.length === 0) {
+            logger.warn(`[${requestId}] Lien de réinitialisation expiré ou invalide`, { userId });
+            console.log('❌ Token expiré en base de données');
             return ApiResponder.badRequest(res, "Lien de réinitialisation expiré");
         }
 
+        // Hash du nouveau mot de passe
         const hash = await BcryptHasher.hash(password);
+        
+        logger.info(`[${requestId}] Mot de passe hashé avec succès`, { userId });
+
+        // Mise à jour du mot de passe
         await database.execute(
             "UPDATE employee SET password = ? WHERE id = ?",
-            [hash, payload.sup]
-        )
+            [hash, userId]
+        );
+
         await auditLog({
             action: 'UPDATE',
             table_name: 'employee',
-            record_id: payload.sup,
-            performed_by: payload.sup
-        })
+            record_id: userId,
+            performed_by: userId,
+            description: `Réinitialisation du mot de passe utilisateur`
+        });
 
+        // Invalidation du token utilisé
         await database.execute(
-            "UPDATE auth_token SET token = null WHERE token = ?",
-            [token]
-        )
+            "DELETE FROM auth_token WHERE token = ?",
+            [currentToken]
+        );
+
         await auditLog({
             action: 'UPDATE',
             table_name: 'auth_token',
-            record_id: payload.sup,
-            performed_by: payload.sup
-        })
-        logger.info(`Succès de la réinitialisation du mot de passe de l'utilisateur ${user[0].id}`);
-        return ApiResponder.success(res, null, 'Mot de passe réinitialisé avec succès. Vous allez être redirigé.');
-    } catch (error) {
-        logger.error('Erreur lors de la réinitialisation du mot de passe', { 
-            error: error instanceof Error ? error.message : 'Erreur inconnue',
+            record_id: userId,
+            performed_by: userId,
+            description: `Invalidation du token de réinitialisation de mot de passe`
         });
+
+        // Track l'activité
+        const trackResult = await activityTracker.track('RESET_PASSWORD', userId);
+
+        logger.info(`[${requestId}] Réinitialisation du mot de passe réussie`, { 
+            userId,
+            email: user.email,
+            activityTracked: trackResult
+        });
+        console.log('✅ Réinitialisation du mot de passe réussie pour:', user.email);
+
+        if (trackResult) {
+            return ApiResponder.success(res, {
+                resetInfo: {
+                    userId: user.id,
+                    email: user.email,
+                    resetAt: new Date().toISOString()
+                }
+            }, 'Mot de passe réinitialisé avec succès');
+        } else {
+            logger.warn(`[${requestId}] Échec du suivi de l'activité pour l'utilisateur ${user.email}`, {
+                details: 'Suivi impossible',
+                isTracked: trackResult
+            });
+            return ApiResponder.success(res, {
+                resetInfo: {
+                    userId: user.id,
+                    email: user.email,
+                    resetAt: new Date().toISOString()
+                }
+            }, 'Mot de passe réinitialisé avec succès (suivi d\'activité échoué)');
+        }
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+        logger.error(`[${requestId}] Erreur lors de la réinitialisation du mot de passe`, {
+            error: errorMessage,
+            stack: error instanceof Error ? error.stack : undefined
+        });
+        console.error('❌ resetUserPassword - Erreur:', error);
+        
+        if (error instanceof JsonWebTokenError) {
+            return ApiResponder.unauthorized(res, 'Token invalide ou expiré');
+        }
+        
         return ApiResponder.error(res, error);
     }
 }
@@ -404,6 +573,9 @@ export async function verifyRegistrationToken(req: Request, res: Response): Prom
 
     try {
         const payload = verifyUserToken(currentToken);
+        if (payload && payload.activity !== 'SIGN_UP') {
+            return ApiResponder.badRequest(res, "Token expiré ou invalide");
+        }
         const userId = payload.sup;
         
         logger.info(`[${requestId}] Token décodé`, { userId, email: payload.email });
@@ -610,7 +782,7 @@ export async function silentRefresh(req: Request, res: Response): Promise<Respon
         const cookieOptions = {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            samseSite: process.env.NODE_ENV === 'production' ? 'none' : 'laxe' as const,
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' as 'none' | 'lax' | 'strict',
             domain: process.env.COOKIE_DOMAIN, 
             path: '/',
         }

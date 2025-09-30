@@ -6,12 +6,14 @@ import AsyncSubmitBtn from '../components/AsyncSubmitBtn';
 import useToastFeedback from '../hooks/useToastFeedback';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../services/useAuth';
+import useTitle from '../hooks/useTitle';
 
 const schema = z.object({
   email: z.string().min(1, 'Email requis').email('Email invalide'),
 });
 
 function ForgotPassword() {
+  useTitle('CMDT - Mot de passe oublié ?')
   const [status, setStatus] = useState('idle');
   const { forgotPassword } = useAuth();
   const { register, handleSubmit, formState: { errors } } = useForm({
@@ -64,7 +66,7 @@ function ForgotPassword() {
 
           <AsyncSubmitBtn
             loading={status === 'loading'}
-            loadingLabel="Envoi"
+            loadingLabel="Envoi..."
             label="Envoyer le lien"
             className="w-full"
           />

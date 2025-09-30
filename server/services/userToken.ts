@@ -15,7 +15,7 @@ export type ActivityType =
 | 'UPDATE_PROFILE'
 | 'REFRESH_PROFILE';
 
-type TokenPlayload = {
+export type TokenPlayload = {
     sup: string, // identifiant de l'utilisateur
     email: string,
     role: 'invoice_manager' | 'dfc_agent' | 'admin',

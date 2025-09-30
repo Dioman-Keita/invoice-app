@@ -22,7 +22,6 @@ export function useAuth() {
     const checkIntervalRef = useRef(null);
     const isCheckingRef = useRef(false);
     const lastCheckRef = useRef(0);
-    const activityMonitorRef = useRef(null);
 
     // Configuration modifiable
     const CHECK_INTERVAL = 2 * 60 * 1000; // 2 minutes entre les checks
@@ -149,8 +148,15 @@ export function useAuth() {
         } catch (err) {
             // Gestion silencieuse des erreurs de refresh
             if (err?.response?.status === 401) {
-                // Token invalide, vérifier le statut silencieusement
-                await checkAuthStatus(true);
+                console.log('🔄 silentRefresh échoué - vérification statut sans boucle');
+                setAuthState(prev => ({
+                    ...prev,
+                    isAuthenticated: false,
+                    user: null,
+                    shouldRefresh: false,  // ← IMPORTANT : forcer à false
+                    expiresIn: null,
+                    rememberMe: false
+                }));
             } else if (process.env.NODE_ENV === 'development') {
                 // Log seulement en mode développement pour les autres erreurs
                 console.error('🔐 Silent refresh error:', err);
@@ -169,15 +175,14 @@ export function useAuth() {
             checkIntervalRef.current = setInterval(async () => {
                 const isStillAuthenticated = await checkAuthStatus();
                 
-                if (isStillAuthenticated && authState.shouldRefresh) {
-                    console.log('🔄 Refresh nécessaire, tentative silencieuse...');
-                    await silentRefresh();
+                if (isStillAuthenticated) {
+                    console.log('🔐 Statut vérifié - session active');
                 }
             }, CHECK_INTERVAL);
 
             console.log('🔐 Surveillance intelligente démarrée');
         }
-    }, [authState.isAuthenticated, authState.shouldRefresh, checkAuthStatus, silentRefresh]);
+    }, [authState.isAuthenticated, checkAuthStatus]);
 
     // Arrêt de la surveillance
     const stopPeriodicCheck = useCallback(() => {
@@ -268,7 +273,7 @@ export function useAuth() {
             let field = undefined;
 
             const isBackendError = err?.response?.status >= 400 &&
-                                   err?.response?.status < 500 &&
+                                   err?.response?.status <= 500 &&
                                    err?.response?.data?.message;
             if (isBackendError) {
                 message = err.response.data.message;
@@ -340,7 +345,7 @@ export function useAuth() {
             let field = undefined;
 
             const isBackendError = err?.response?.status >= 400 &&
-                                   err?.response?.status < 500 &&
+                                   err?.response?.status <= 500 &&
                                    err?.response?.data?.message;
             if (isBackendError) {
                 message = err.response.data.message;
@@ -362,8 +367,8 @@ export function useAuth() {
         stopPeriodicCheck();
         try {
             const response = await api.post('/auth/logout');
-            if (response.success === 'true') {
-                success('Déconnexion réussie');
+            if (response.success === true) {
+                success(response.message || 'Déconnexion réussie');
                 return;
             }
         } catch (err) {
@@ -414,7 +419,7 @@ export function useAuth() {
             console.error('Erreur lors du chargement du profil:', err);
             return {
                 success: false,
-                message: err?.response?.data?.message | 'Une erreur interne est survenue'
+                message: err?.response?.data?.message || 'Une erreur interne est survenue'
             };
         }
     }, []);
@@ -422,10 +427,10 @@ export function useAuth() {
     const forgotPassword = useCallback(async (credential) => {
         try {
             const response = await api.post('/auth/forgot-password', credential);
-            if (response?.data?.success === true) {
+            if (response?.success === true) {
                 return {
                     success: true,
-                    message: response?.data?.message,
+                    message: response?.message,
                 }
             }
             return {
@@ -433,7 +438,7 @@ export function useAuth() {
                 message: response?.data?.message || 'Erreur lors de l\'envoi du lien'
             }
         } catch (error) {
-            if (error?.response?.status >= 400) {
+            if (error?.response?.status >= 400 && error?.response?.status <= 500) {
                 return {
                     success: false,
                     message: error?.response?.data?.message || 'Erreur lors de l\'envoi du lien'
@@ -449,18 +454,18 @@ export function useAuth() {
     const resetPassword = useCallback(async (credentials) => {
         try {
             const response = await api.post('/auth/reset-password', credentials);
-            if (response?.data?.success === true) {
+            if (response?.success === true) {
                 return {
                     success: true,
-                    message: response?.data?.message
+                    message: response?.message
                 }
             }
             return {
                 success: false,
-                message: response?.data?.message || 'Erreur lors de la réinitialisation'
+                message: response?.message || 'Erreur lors de la réinitialisation'
             }
         } catch (error) {
-            if (error?.response?.status >= 400) {
+            if (error?.response?.status >= 400 && error?.response?.status <= 500) {
                 return {
                     success: false,
                     message: error?.response?.data?.message || 'Erreur lors de la réinitialisation'

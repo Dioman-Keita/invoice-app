@@ -235,7 +235,7 @@ export class NotificationFactory {
 								` : ''}
 								<tr>
 									<td align="center" style="padding:0 40px 20px;font-size:14px;line-height:20px;color:#d93025;background-color:#fce8e6;border-radius:4px;margin:0 40px;border:1px solid #f28b82;" bgcolor="#fce8e6">
-										<p style="margin:15px;text-align:center;">Pour des raisons de sécurité, ce lien expirera dans 24 heures.</p>
+										<p style="margin:15px;text-align:center;">Pour des raisons de sécurité, ce lien expirera dans 30 minutes.</p>
 									</td>
 								</tr>
 								<tr>

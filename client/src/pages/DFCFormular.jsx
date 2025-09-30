@@ -2,6 +2,7 @@ import { useState } from 'react';
 import useTitle from '../hooks/useTitle';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import Header from '../components/Header';
 
 import { 
   DocumentCheckIcon,
@@ -79,6 +80,8 @@ function DFCFormular() {
   return (
     <>
     <div className="min-h-screen">
+      {/* Header */}
+      <Header />
       {/* Navbar */}
       <Navbar />
       <div className="max-w-7xl mx-auto">

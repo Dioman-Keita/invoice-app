@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
+import { useForm } from "react-hook-form";
 import { useAuth } from "../services/useAuth";
 
 function useQuery() {
@@ -11,99 +12,90 @@ export default function ResetPassword() {
     const query = useQuery();
     const navigate = useNavigate();
     const token = query.get('token') || '';
+    const { resetPassword, isLoading: authLoading } = useAuth();
 
-    const [password, setPassword] = useState('');
-    const [confirm, setConfirm] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState('');
-    const [error, setError] = useState('');
-    const [isSuccess, setIsSuccess] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const { resetPassword } = useAuth();
+    const [isSuccess, setIsSuccess] = useState(false);
+    const [backendError, setBackendError] = useState('');
+
+    const {
+        register,
+        handleSubmit,
+        watch,
+        formState: { errors, isSubmitting },
+        setError,
+        clearErrors,
+        setValue,
+        trigger
+    } = useForm({
+        mode: 'onChange',
+        defaultValues: {
+            password: '',
+            confirmPassword: ''
+        }
+    });
+
+    const passwordValue = watch('password');
+    const confirmPasswordValue = watch('confirmPassword');
 
     useEffect(() => {
         if (!token) {
-            setError('Lien invalide ou token manquant.');
+            setError('root', { message: 'Lien invalide ou token manquant.' });
         }
-    }, [token]);
+    }, [token, setError]);
 
     // Validation du mot de passe
-    const validatePassword = (pwd) => {
-        if (pwd.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères.';
-        if (pwd.length > 20) return 'Le mot de passe ne doit pas dépasser 20 caractères.';
-        if (!/[A-Z]/.test(pwd)) return 'Le mot de passe doit contenir au moins une lettre majuscule.';
-        if (!/[@$!%*?&]/.test(pwd)) return 'Le mot de passe doit contenir au moins un caractère spécial (@$!%*?&).';
-        return null;
+    const validatePassword = (password) => {
+        if (password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères.';
+        if (password.length > 20) return 'Le mot de passe ne doit pas dépasser 20 caractères.';
+        if (!/[A-Z]/.test(password)) return 'Le mot de passe doit contenir au moins une lettre majuscule.';
+        if (!/[@$!%*?&]/.test(password)) return 'Le mot de passe doit contenir au moins un caractère spécial (@$!%*?&).';
+        return true;
     };
 
-    const handlePasswordChange = (e) => {
-        const value = e.target.value;
-        if (value.length <= 20) {
-            setPassword(value);
-        }
-    };
-
-    const handleConfirmPasswordChange = (e) => {
-        const value = e.target.value;
-        if (value.length <= 20) {
-            setConfirm(value);
-        }
-    };
-
-    async function handleSubmit(e) {
-        e.preventDefault();
-        setError('');
-        setMessage('');
-        
+    const onSubmit = async (data) => {
         if (!token) {
-            setError('Token manquant.');
+            setError('root', { message: 'Token manquant.' });
             return;
         }
 
-        const passwordError = validatePassword(password);
-        if (passwordError) {
-            setError(passwordError);
-            return;
-        }
-
-        if (password !== confirm) {
-            setError('Les mots de passe ne correspondent pas.');
-            return;
-        }
+        clearErrors();
+        setBackendError('');
 
         try {
-            setLoading(true);
-            const res = await resetPassword({
-                token,
-                password,
-                confirm_password: confirm
-            });
+            // Format correct pour le serveur - inclure confirmPassword
+            const credentials = {
+                token: token,
+                password: data.password,
+                confirmPassword: data.confirmPassword
+            };
 
-            if (res.success) {
-                setMessage(res.message || 'Mot de passe réinitialisé. Vous allez être redirigé.');
+            const result = await resetPassword(credentials);
+
+            if (result.success) {
                 setIsSuccess(true);
+                setBackendError('');
                 window.history.replaceState({}, document.title, window.location.pathname);
-                setTimeout(() => navigate('/login'), 1500);
+                
+                // Timeout pour la redirection
+                setTimeout(() => navigate('/login'), 5000);
             } else {
-                setError(res.message || 'Erreur lors de la réinitialisation');
-                setIsSuccess(false);
+                setBackendError(result.message || 'Échec de la réinitialisation.');
             }
         } catch (err) {
-            setError(err?.message || 'Une erreur est survenue.');
-        } finally {
-            setLoading(false);
+            setBackendError(err?.message || 'Une erreur est survenue.');
         }
-    }
+    };
 
     // Indicateur de force du mot de passe
     const getPasswordStrength = () => {
-        if (password.length === 0) return { strength: 0, color: 'gray' };
+        if (!passwordValue) return { strength: 0, color: 'gray' };
         
         let strength = 0;
-        if (password.length >= 8) strength += 33;
-        if (/[A-Z]/.test(password)) strength += 33;
-        if (/[@$!%*?&]/.test(password)) strength += 34; // total = 100
+        if (passwordValue.length >= 8) strength += 33;
+        if (/[A-Z]/.test(passwordValue)) strength += 33;
+        if (/[@$!%*?&]/.test(passwordValue)) strength += 34;
 
         let color = 'red';
         if (strength >= 75) color = 'green';
@@ -114,6 +106,17 @@ export default function ResetPassword() {
     };
 
     const passwordStrength = getPasswordStrength();
+    const loading = isSubmitting || authLoading;
+
+    // Conditions de désactivation du bouton
+    const isButtonDisabled = 
+        !token || // Token absent
+        isSuccess || // Succès
+        !passwordValue || // Pas de mot de passe saisi
+        !confirmPasswordValue || // Pas de confirmation
+        passwordValue !== confirmPasswordValue || // Mots de passe différents
+        errors.password !== undefined || // Erreur de validation du mot de passe
+        errors.confirmPassword !== undefined; // Erreur de validation de confirmation
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-verify p-4">
@@ -121,18 +124,45 @@ export default function ResetPassword() {
                 <h1 className="text-xl font-semibold mb-1">Réinitialisation du mot de passe</h1>
                 <p className="text-sm text-gray-600 mb-6">Saisissez votre nouveau mot de passe.</p>
                 
-                {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">{error}</div>}
-                {message && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-600">{message}</div>}
+                {errors.root && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">
+                        {errors.root.message}
+                    </div>
+                )}
                 
-                <form onSubmit={handleSubmit} method='post'>
+                {backendError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">
+                        {backendError}
+                    </div>
+                )}
+                
+                {isSuccess && (
+                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-600">
+                        Mot de passe réinitialisé avec succès. Vous allez être redirigé vers la page de connexion...
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit(onSubmit)} method='post'>
                     {/* Nouveau mot de passe */}
                     <div className="mb-4">
                         <label className="block text-sm mb-1">Nouveau mot de passe</label>
                         <div className="relative">
                             <input
                                 type={showPassword ? "text" : "password"}
-                                value={password}
-                                onChange={handlePasswordChange}
+                                {...register('password', {
+                                    required: 'Le mot de passe est requis',
+                                    validate: validatePassword,
+                                    onChange: (e) => {
+                                        const value = e.target.value;
+                                        if (value.length <= 20) {
+                                            setValue('password', value);
+                                            trigger('password');
+                                            if (confirmPasswordValue) {
+                                                trigger('confirmPassword');
+                                            }
+                                        }
+                                    }
+                                })}
                                 className="w-full border rounded px-3 py-2 outline-none focus:ring pr-10"
                                 placeholder="••••••••"
                                 disabled={isSuccess}
@@ -156,7 +186,12 @@ export default function ResetPassword() {
                                 )}
                             </button>
                         </div>
-                        {password.length > 0 && (
+                        
+                        {errors.password && (
+                            <div className="mt-1 text-sm text-red-600">{errors.password.message}</div>
+                        )}
+
+                        {passwordValue && (
                             <div className="mt-2">
                                 <div className="flex justify-between text-xs text-gray-500 mb-1">
                                     <span>Force du mot de passe:</span>
@@ -185,8 +220,18 @@ export default function ResetPassword() {
                         <div className="relative">
                             <input
                                 type={showConfirmPassword ? "text" : "password"}
-                                value={confirm}
-                                onChange={handleConfirmPasswordChange}
+                                {...register('confirmPassword', {
+                                    required: 'La confirmation du mot de passe est requise',
+                                    validate: (value) => 
+                                        value === passwordValue || 'Les mots de passe ne correspondent pas',
+                                    onChange: (e) => {
+                                        const value = e.target.value;
+                                        if (value.length <= 20) {
+                                            setValue('confirmPassword', value);
+                                            trigger('confirmPassword');
+                                        }
+                                    }
+                                })}
                                 className="w-full border rounded px-3 py-2 outline-none focus:ring pr-10"
                                 placeholder="••••••••"
                                 disabled={isSuccess}
@@ -210,20 +255,34 @@ export default function ResetPassword() {
                                 )}
                             </button>
                         </div>
-                        {confirm.length > 0 && password !== confirm && (
-                            <div className="mt-1 text-sm text-red-600">Les mots de passe ne correspondent pas.</div>
+                        
+                        {errors.confirmPassword && (
+                            <div className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</div>
                         )}
-                        {confirm.length > 0 && password === confirm && password.length >= 8 && (
+                        
+                        {confirmPasswordValue && !errors.confirmPassword && passwordValue === confirmPasswordValue && passwordValue.length >= 8 && (
                             <div className="mt-1 text-sm text-green-600">Les mots de passe correspondent.</div>
                         )}
                     </div>
 
                     <button
                         type="submit"
-                        disabled={loading || !token || isSuccess || validatePassword(password) !== null || password !== confirm}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded py-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                        disabled={isButtonDisabled || loading}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded py-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center"
                     >
-                        {loading ? 'Traitement...' : isSuccess ? 'Réinitialisation réussie' : 'Réinitialiser'}
+                        {loading ? (
+                            <>
+                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Traitement...
+                            </>
+                        ) : isSuccess ? (
+                            'Réinitialisation réussie'
+                        ) : (
+                            'Réinitialiser'
+                        )}
                     </button>
                 </form>
 

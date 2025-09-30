@@ -122,90 +122,60 @@ export class UserModel {
 
     async create(userData: UserType): Promise<{ success: boolean; message: string; field?: string; userId?: string }> {
         const conn = await database.getConnection();
-    
         try {
             await conn.beginTransaction();
     
             const { firstName, lastName, email, password, employeeId, role, phone, department } = userData;
-    
-            // ✅ Validation rapide
-            if (!isValidEmail(email)) {
-                return { success: false, message: "Email invalide", field: "email" };
-            }
-    
-            if (!isValidPasswordStrength(password)) {
-                return { success: false, message: "Mot de passe trop faible", field: "password" };
-            }
-    
-            // 1️⃣ Génération de l'ID
-            this.id = await generateId(this.entity);
+
             this.firstName = firstName;
             this.lastName = lastName;
             this.email = email;
-            this.department = department;
-            this.hash = await BcryptHasher.hash(password);
             this.employeeId = employeeId;
-            this.role = role || 'invoice_manager';
+            this.role = role;
             this.phone = phone;
+            this.department = department;
     
-            // 2️⃣ Vérification unicité
-            const [existingRows]: [any[], any] = await conn.execute(
-                "SELECT id FROM employee WHERE email = ? OR employee_cmdt_id = ?",
-                [email, employeeId]
-            );
+            if (!isValidEmail(this.email)) return { success: false, message: "Email invalide", field: "email" };
+            if (!isValidPasswordStrength(password)) return { success: false, message: "Mot de passe trop faible", field: "password" };
     
-            if (existingRows.length > 0) {
-                const existingEmail = existingRows.find(r => r.email === email);
-                if (existingEmail) return { success: false, message: "Cet email est déjà utilisé", field: "email" };
-                const existingEmp = existingRows.find(r => r.employee_cmdt_id === employeeId);
-                if (existingEmp) return { success: false, message: "Cet identifiant CMDT est déjà utilisé", field: "employeeId" };
-            }
+            this.id = await generateId(this.entity);
+            this.hash = await BcryptHasher.hash(password);
     
-            // 3️⃣ Envoi de l'email avant insertion
-            const emailResult = await this.sendVerificationEmail();
-    
-            if (!emailResult.success) {
-                logger.warn("Échec envoi email avant insertion utilisateur", { email, error: emailResult.error });
-                return {
-                    success: false,
-                    message: `Échec de l'envoi de l'email de vérification: ${emailResult.error}`,
-                    field: "email"
-                };
-            }
-    
-            // 4️⃣ Insertion dans la base après email réussi
+            // 1️⃣ Insertion dans pending_verification
             await conn.execute(
-                "INSERT INTO employee(id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department) VALUES(?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO pending_verification(id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department) VALUES(?,?,?,?,?,?,?,?,?)",
                 [this.id, this.firstName, this.lastName, this.email, this.hash, this.employeeId, this.role, this.phone, this.department]
             );
     
-            await conn.commit();
-            logger.info("Utilisateur créé et email envoyé avec succès", { userId: this.id, email: this.email });
-    
-            // 5️⃣ Audit log hors transaction
-            try {
-                await auditLog({
-                    action: 'INSERT',
-                    table_name: 'employee',
-                    record_id: this.id,
-                    description: `Création de l'employé ${this.firstName} ${this.lastName}`,
-                    performed_by: this.id,
-                });
-            } catch (auditError) {
-                logger.warn("Échec audit log après création utilisateur", { userId: this.id, error: auditError instanceof Error ? auditError.message : auditError });
+            // 2️⃣ Envoi de l'email
+            const emailResult = await this.sendVerificationEmail();
+            if (!emailResult.success) {
+                await conn.execute("DELETE FROM pending_verification WHERE id = ?", [this.id]);
+                await conn.commit();
+                return { success: false, message: `Échec de l'envoi de l'email: ${emailResult.error}`, field: "email" };
             }
     
-            return { success: true, message: "Utilisateur créé et email de vérification envoyé avec succès.", userId: this.id };
+            // 3️⃣ Transfert vers employee
+            await conn.execute(`
+                INSERT INTO employee(id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department)
+                SELECT id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department
+                FROM pending_verification WHERE id = ?
+            `, [this.id]);
+    
+            await conn.execute("DELETE FROM pending_verification WHERE id = ?", [this.id]);
+            await conn.commit();
+    
+            return { success: true, message: "Utilisateur créé et email envoyé avec succès.", userId: this.id };
     
         } catch (error) {
             await conn.rollback();
-            const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-            logger.error("Erreur lors de la création sécurisée de l'utilisateur", { email: userData.email, error: errorMessage });
-            return { success: false, message: "Une erreur interne est survenue. Veuillez réessayer plus tard." };
+            logger.error("Erreur création utilisateur", { error });
+            return { success: false, message: "Erreur interne. Veuillez réessayer plus tard." };
         } finally {
             await conn.release();
         }
     }
+    
     
 
     async findUser(target: string, findType: 'email' | 'id' = 'id'): Promise<User[]> {
@@ -232,13 +202,14 @@ export class UserModel {
                     userRows = [];
                 }
             }
-            
-            await auditLog({
-                action: 'SELECT',
-                table_name: 'employee',
-                performed_by: target,
-                record_id: target
-            });
+            if (userRows.length > 0) {
+                await auditLog({
+                    action: 'SELECT',
+                    table_name: 'employee',
+                    performed_by: userRows[0].id,
+                    record_id: userRows[0].id
+                });
+            }
             
             return userRows;
             

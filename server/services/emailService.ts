@@ -27,11 +27,15 @@ export class GmailEmailSender implements EmailSender {
 		}
 		
 		this.transporter = nodemailer.createTransport({
-			service: 'gmail',
+			host: "smtp.gmail.com",
+			port: 465,
+			secure: true,
 			auth: {
 				user: this.gmailUser,
 				pass: this.gmailPass,
 			},
+			connectionTimeout: 60_000,
+			greetingTimeout: 30_0000
 		});
 	}
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../services/useAuth";
 import useTitle from "../hooks/useTitle";
@@ -19,7 +19,7 @@ function Profile() {
     } = useAuth();
     
     const navigate = useNavigate();
-    const { success, error, warning, info } = useToastFeedback();
+    const { error, info } = useToastFeedback();
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [lastUpdate, setLastUpdate] = useState('');
     const [activeTab, setActiveTab] = useState('personal');
@@ -109,7 +109,7 @@ function Profile() {
             if(data.success) {
                 setUserData(data);
                 setLastUpdate(new Date().toLocaleTimeString());
-                success('Profil rafraîchi avec succès');
+                info('Profil rafraîchi avec succès');
             } else {
                 setUserData(null);
                 error(data?.message || 'Une erreur interne est survenue');
@@ -122,9 +122,20 @@ function Profile() {
         }
     };
 
+    const isSilentRefreshingRef = useRef(false);  // ← AJOUTE cette ligne
+
     const handleSilentRefresh = async () => {
+        // 🔒 Vérifier si déjà en cours
+        if (isSilentRefreshingRef.current) {
+            console.log('🔄 silentRefresh déjà en cours dans Profile');
+            return;
+        }
+        
+        isSilentRefreshingRef.current = true;  // 🔒 Activer le verrou
         setIsRefreshing(true);
+        
         try {
+            await new Promise(res => setTimeout(res, 3000));
             await silentRefresh();
             setLastUpdate(new Date().toLocaleTimeString());
             info('Session rafraîchie avec succès');
@@ -132,6 +143,7 @@ function Profile() {
             console.error('Erreur lors du rafraîchissement de session:', err);
             error('Erreur lors du rafraîchissement de la session');
         } finally {
+            isSilentRefreshingRef.current = false;  // 🔒 Désactiver le verrou
             setIsRefreshing(false);
         }
     };
@@ -680,26 +692,13 @@ function Profile() {
             
             {/* Session Alert */}
             {willExpireSoon && (
-                <div className="bg-gradient-to-r from-amber-400 to-orange-400 text-white">
+                <div className="bg-gradient-to-r from-amber-400 to-orange-400 text-white mt-4">
                     <div className="max-w-6xl mx-auto px-4 py-3">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
                                 <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                                 <span className="font-medium">Votre session expire bientôt</span>
                             </div>
-                            <button 
-                                onClick={handleSilentRefresh}
-                                disabled={isRefreshing}
-                                className="bg-white/20 hover:bg-white/30 px-4 py-1 rounded-full text-sm font-medium transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
-                            >
-                                {isRefreshing ? (
-                                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-                                ) : (
-                                    'Rafraîchir'
-                                )}
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -725,7 +724,7 @@ function Profile() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
                         )}
-                        <span>{isRefreshing ? 'Rafraîchissement...' : 'Actualiser'}</span>
+                        <span>{isRefreshing ? 'Actualisation' : 'Actualiser'}</span>
                     </button>
                 </div>
 
