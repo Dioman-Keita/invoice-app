@@ -47,7 +47,7 @@ export function requireRole(allowedRoles: AllowedRole[]) {
 // Middlewares prédéfinis pour les rôles courants
 export const requireAdmin = requireRole(['admin']);
 export const requireManagerOrAdmin = requireRole(['admin', 'invoice_manager']);
-export const requireAgentOrManager = requireRole(['dfc_agent', 'invoice_manager']);
+export const requireAgentOrManager = requireRole(['dfc_agent', 'invoice_manager', 'admin']);
 export const requireAnyRole = requireRole(['admin', 'invoice_manager', 'dfc_agent']);
 
 // Fonction utilitaire pour vérifier les permissions dans les contrôleurs

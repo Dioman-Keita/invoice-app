@@ -3,7 +3,7 @@ function ValidateCheckboxGroup({option,  name}) {
     const {formState: {errors}, register} = useFormContext();
     return (
         <div className="w-full md:w-[48%]">
-            <h4 className="mb-4 text-lg font-semibold text-gray-800">Documents joints à la facture</h4>
+            <h4 className="mb-4 text-sm font-semibold text-gray-800">Documents joints à la facture</h4>
             {option.map((e, i) => (
                 <label 
                     key={i}

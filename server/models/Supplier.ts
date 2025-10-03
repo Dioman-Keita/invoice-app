@@ -2,113 +2,281 @@ import database from "../config/database";
 import logger from "../utils/Logger";
 import { auditLog } from "../utils/auditLogger";
 
-type CreateSupplierInput = {
-    suplier_name: string,
-    suplier_account_number: string,
-    suplier_phone: string,
+export type CreateSupplierInput = {
+    supplier_name: string;
+    supplier_account_number: string;
+    supplier_phone: string;
+    created_by?: string;
+    created_by_email?: string;
+    created_by_role?: string;
 }
 
 export type SupplierRecord = {
-    id: string,
-    name: string,
-    account_number: string,
-    phone: string,
-    create_at: string,
-    update_at: string,
+    id: number;
+    name: string;
+    account_number: string;
+    phone: string;
+    create_at: string;
+    update_at: string;
 }
 
+export type UpdateSupplierData = Omit<SupplierRecord, 'create_at' | 'update_at'>;
 
-class Supplier {
+export interface SupplierModel {
+    create(supplierData: CreateSupplierInput): Promise<{success: boolean; data?: unknown; id?: number}>;
+    findSupplier(id: number | string, config: {
+        findBy: 'id' | 'account_number' | 'phone' | 'all';
+        limit?: number;
+        orderBy?: 'desc' | 'asc';
+    }): Promise<SupplierRecord[]>;
+    deleteSupplier(id: number): Promise<{success: boolean}>;
+    updateSupplier(data: UpdateSupplierData): Promise<{success: boolean}>;
+}
 
-    async create(supplierData: CreateSupplierInput): Promise<unknown> {
+class Supplier implements SupplierModel {
+
+    async create(supplierData: CreateSupplierInput): Promise<{success: boolean; data?: unknown; id?: number}> {
+
         try {
-            const { suplier_name, suplier_account_number, suplier_phone } = supplierData;
-            if (!/^\d{12}$/.test(String(suplier_account_number))) {
+            const { supplier_name, supplier_account_number, supplier_phone } = supplierData;
+            
+            // Validation du numéro de compte
+            if (!/^\d{12}$/.test(String(supplier_account_number))) {
                 throw new Error('Le numéro de compte doit contenir exactement 12 chiffres');
             }
-            const query = "INSERT INTO supplier(name, account_number, phone) VALUES (?,?,?)";
-            const params = [
-                suplier_name,
-                suplier_account_number,
-                suplier_phone,
-            ]
+
+            // Validation du nom
+            if (!supplier_name || supplier_name.trim().length === 0) {
+                throw new Error('Le nom du fournisseur est obligatoire');
+            }
+
+            const query = "INSERT INTO supplier(name, account_number, phone) VALUES (?, ?, ?)";
+            const params = [supplier_name, supplier_account_number, supplier_phone];
+
+            const connection = await database.getConnection();
+            const result = await connection.execute(query, params);
+
+            // Récupérer l'ID auto-généré (selon l'implémentation de votre base de données)
+            const generatedId = (result[0] as any).insertId
+
+            if (!generatedId || generatedId === 0) {
+                throw new Error('Aucun ID généré lors de la création du fournisseur');
+            }
             
-            auditLog({
-                table_name: 'Supplier',
+            await auditLog({
+                table_name: 'supplier',
                 action: 'INSERT',
-                performed_by: 'By current current user',
-                record_id: 'Current user',
-                description: `Création du fournisseur ${suplier_name} ${suplier_account_number}`,
-            })
-            return await database.execute(query, params);
+                record_id: generatedId.toString(),
+                performed_by: generatedId.toString(),
+                description: `Création du fournisseur ${supplier_name} (${supplier_account_number})`
+            });
+
+            logger.debug(`Fournisseur ${generatedId} créé avec succès`, {
+                supplierId: generatedId,
+                supplierName: supplier_name,
+                accountNumber: supplier_account_number
+            });
+
+            return {
+                success: true,
+                data: result,
+                id: generatedId
+            };
+
         } catch (error) {
             logger.error('Erreur lors de la création du fournisseur', { 
-                error: error instanceof Error ? error.message : 'Erreur inconnue' 
+                errorMessage: error instanceof Error ? error.message : 'Erreur inconnue',
+                stack: error instanceof Error ? error.stack : 'unknown stack',
+                supplierData: {
+                    name: supplierData.supplier_name,
+                    accountNumber: supplierData.supplier_account_number
+                }
+            });
+            
+            return {
+                success: false,
+                data: error
+            };
+        }
+    }
+
+    async findSupplier(id: number | string, config: {
+        findBy: 'id' | 'account_number' | 'phone' | 'all';
+        limit?: number;
+        orderBy?: 'desc' | 'asc';
+    } = { findBy: 'id', orderBy: 'asc' }): Promise<SupplierRecord[]> {
+        try {
+            let query = "";
+            let params: any[] = [];
+            const validOrderBy = config.orderBy === 'asc' ? 'asc' : 'desc';
+
+            switch (config.findBy) {
+                case 'id':
+                    // Conversion en number pour l'ID
+                    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+                    if (isNaN(numericId)) {
+                        return [];
+                    }
+                    query = `SELECT * FROM supplier WHERE id = ? ORDER BY create_at ${validOrderBy}`;
+                    params = [numericId];
+                    if (config.limit) query += ` LIMIT ${config.limit}`;
+                    break;
+
+                case 'account_number':
+                    query = `SELECT * FROM supplier WHERE account_number = ? ORDER BY create_at ${validOrderBy}`;
+                    params = [id];
+                    if (config.limit) query += ` LIMIT ${config.limit}`;
+                    break;
+
+                case 'phone':
+                    query = `SELECT * FROM supplier WHERE phone = ? ORDER BY create_at ${validOrderBy}`;
+                    params = [id];
+                    if (config.limit) query += ` LIMIT ${config.limit}`;
+                    break;
+
+                case 'all':
+                    query = `SELECT * FROM supplier ORDER BY create_at ${validOrderBy}`;
+                    if (config.limit) query += ` LIMIT ${config.limit}`;
+                    break;
+
+                default:
+                    throw new Error('Type de recherche non supporté');
+            }
+
+            const rows = await database.execute(query, params);
+
+            // Normaliser le résultat en tableau
+            const result = Array.isArray(rows) ? rows : [rows];
+
+
+            if (result.length > 0) {
+                await auditLog({
+                    table_name: 'supplier',
+                    action: 'SELECT',
+                    record_id: config.findBy === 'all' ? 'all' : id.toString(),
+                    performed_by: 'system',
+                    description: `Recherche de fournisseur par ${config.findBy}`
+                });
+            }
+
+            return result;
+
+        } catch (error) {
+            logger.error(`Erreur lors de la recherche du fournisseur`, {
+                errorMessage: error instanceof Error ? error.message : 'unknown error',
+                stack: error instanceof Error ? error.stack : 'unknown stack',
+                findType: config.findBy,
+                id: id
             });
             throw error;
         }
     }
 
-    async findSupplier(id: string, type: 'account_number' | 'id' = 'id'): Promise<SupplierRecord[]> {
-        const focus = type === 'account_number' ? 'account_number' : 'id';
-        const result = await database.execute(`SELECT * FROM supplier WHERE ${focus} = ? LIMIT 1`, [id]);
-        auditLog({
-            table_name: 'supplier',
-            action: 'SELECT',
-            record_id: id,
-            performed_by: id,
-        });
-        return result;
+    async deleteSupplier(id: number): Promise<{success: boolean}> {
+        try {
+            // Vérifier d'abord si le fournisseur existe
+            const existingSupplier = await this.findSupplier(id, { 
+                findBy: 'id', 
+                limit: 1, 
+                orderBy: 'desc' 
+            });
+            
+            if (!existingSupplier || existingSupplier.length === 0) {
+                logger.warn(`Tentative de suppression d'un fournisseur inexistant: ${id}`);
+                return { success: false };
+            }
+
+            const query = "DELETE FROM supplier WHERE id = ?";
+            await database.execute(query, [id]);
+
+            await auditLog({
+                table_name: 'supplier',
+                action: 'DELETE',
+                record_id: id.toString(),
+                performed_by: 'system',
+                description: `Suppression du fournisseur ${id}`
+            });
+
+            logger.debug(`Fournisseur ${id} supprimé avec succès`);
+            return { success: true };
+
+        } catch (error) {
+            logger.error(`Erreur lors de la suppression du fournisseur ${id}`, {
+                errorMessage: error instanceof Error ? error.message : 'unknown error',
+                stack: error instanceof Error ? error.stack : 'unknown stack'
+            });
+            return { success: false };
+        }
     }
 
+    async updateSupplier(data: UpdateSupplierData): Promise<{success: boolean}> {
+        try {
+            // Validation du numéro de compte
+            if (!/^\d{12}$/.test(String(data.account_number))) {
+                throw new Error('Le numéro de compte doit contenir exactement 12 chiffres');
+            }
+
+            // Validation du nom
+            if (!data.name || data.name.trim().length === 0) {
+                throw new Error('Le nom du fournisseur est obligatoire');
+            }
+
+            const params = [
+                data.name,
+                data.account_number,
+                data.phone,
+                data.id
+            ];
+
+            const query = `
+                UPDATE supplier 
+                SET name = ?, account_number = ?, phone = ?, update_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `;
+
+            await database.execute(query, params);
+
+            await auditLog({
+                table_name: 'supplier',
+                action: 'UPDATE',
+                record_id: data.id.toString(),
+                performed_by: 'system',
+                description: `Mise à jour du fournisseur ${data.name} (${data.account_number})`
+            });
+
+            logger.debug(`Fournisseur ${data.id} mis à jour avec succès`, {
+                supplierId: data.id,
+                supplierName: data.name,
+                accountNumber: data.account_number
+            });
+
+            return { success: true };
+
+        } catch (error) {
+            logger.error(`Erreur lors de la mise à jour du fournisseur ${data.id}`, {
+                errorMessage: error instanceof Error ? error.message : 'unknown error',
+                stack: error instanceof Error ? error.stack : 'unknown stack',
+                supplierData: {
+                    id: data.id,
+                    name: data.name,
+                    accountNumber: data.account_number
+                }
+            });
+            return { success: false };
+        }
+    }
+
+    // Méthode utilitaire pour la recherche par téléphone
     async findSupplierByPhone(phone: string): Promise<SupplierRecord[]> {
-        const result = await database.execute("SELECT * FROM supplier WHERE phone = ? LIMIT 1", [phone]);
-        auditLog({
-            action: 'SELECT',
-            table_name: 'supplier',
-            record_id: phone,
-            performed_by: phone,
-        });
-        return result
+        return this.findSupplier(phone, { findBy: 'phone', limit: 1 });
     }
 
-    async getAllSupplier(): Promise<SupplierRecord[]> {
-        const result = await database.execute("SELECT * FROM supplier");
-        auditLog({
-            action: 'SELECT',
-            table_name: 'supplier',
-            record_id: 'all supplier in table supplier',
-        });
-        return result;
-    }
-
-    async deleteSupplier(id: number): Promise<unknown> {
-        const result = await database.execute(
-            "DELETE FROM supplier WHERE id = ?",
-            [id]
-        );
-        auditLog({
-            table_name: 'supplier',
-            action: 'DELETE',
-            record_id: id.toString(),
-        })
-        return result;
-    }
-
-    async updateSupplier(data: CreateSupplierInput, id: number): Promise<unknown> {
-        const result = await database.execute(
-            "UPDATE supplier SET (name, acount_number, phone) WHERE id = ?",
-            [data.suplier_name, data.suplier_account_number, data.suplier_phone]
-        )
-        auditLog({
-            table_name: 'supplier',
-            action: 'UPDATE',
-            record_id: id.toString(),
-            performed_by: null
-        });
-        return result;
+    // Méthode utilitaire pour obtenir tous les fournisseurs
+    async getAllSupplier(limit?: number, orderBy: 'desc' | 'asc' = 'asc'): Promise<SupplierRecord[]> {
+        return this.findSupplier('', { findBy: 'all', limit, orderBy });
     }
 }
 
+// Export en tant qu'instance singleton
 const supplier = new Supplier();
 export default supplier;

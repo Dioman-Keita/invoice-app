@@ -68,10 +68,14 @@ export const invoiceSchema = z.object({
     .regex(/^\d{12}$/, "Le numéro de compte doit contenir exactement 12 chiffres"),
     supplier_phone: z
     .string()
-    .optional()
+    .min(1, "Le numéro de téléphone est requis")
     .transform(v => (v ?? '').trim())
-    .refine((v) => v === '' || /^\+223(\s\d{2}){0,4}$/.test(v), {
-        message: "Le numéro doit être au format +223 XX XX XX XX"
+    .refine((v) => {
+        if (v === '+223' || v === '+223 ') return false; // Rejette explicitement
+        const phoneRegex = /^\+223(\s\d{2}){4}$/;
+        return phoneRegex.test(v);
+    }, {
+        message: "Numéro invalide. Format requis : +223 XX XX XX XX"
     }),
     invoice_object: z.string().min(1, "L'objet est requis")
     .max(100, "Maximum 100 caractères"),

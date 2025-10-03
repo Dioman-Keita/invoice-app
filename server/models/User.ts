@@ -234,7 +234,7 @@ export class UserModel {
             }
     
             // Requête sécurisée - comparaison insensible à la casse
-            const [rows]: [any[], any] = await database.execute(
+            const rows = await database.execute(
                 "SELECT id, email, password, role, isVerified FROM employee WHERE LOWER(email) = LOWER(?) AND isVerified = 1 AND isActive = 1 AND role = ? LIMIT 1",
                 [data.email.trim(), data.role]
             );

@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import express from 'express';
 import invoiceRoutes from './routes/invoice.routes';
 import authRoutes from './routes/auth.route';
+import supplierRoute from './routes/supplier.route';
 import { requestIdMiddleware } from './middleware/requestIdMiddleware';
 import { corsHeaders } from './middleware/corsHeader';
 import { debugCookies } from './middleware/debugCookie';
@@ -38,8 +39,8 @@ app.use(cors(corsOptions));
 // Middlewares globaux
 app.use(corsHeaders);
 app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(requestIdMiddleware);
 
 // Debug en développement
@@ -50,6 +51,7 @@ if (process.env.NODE_ENV === 'development') {
 // Montage des routes
 app.use('/api', authRoutes);
 app.use('/api', invoiceRoutes);
+app.use('/api', supplierRoute);
 
 // Route de test
 app.get('/api/health', (_req, res) => {

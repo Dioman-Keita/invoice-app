@@ -1,205 +1,304 @@
 import database from "../config/database";
-import generateId from "../services/generateId";
 import logger from "../utils/Logger";
+import generateId from "../services/generateId";
 import { formatDate } from "../utils/Formatters";
 import { auditLog } from "../utils/auditLogger";
 
-export type InvoiceType = 'Ordinaire' | 'Transporteur' | 'Transitaire';
-export type FolioType = '1 copie' | 'Org + 1 copie' | 'Org + 2 copies' | 'Org + 3 copies';
-export type InvoiceStatus = 'Oui' | 'Non';
+type FolioType = '1 copie' | 'Orig + 1 copie' | 'Orig + 2 copies' | 'Orig + 3 copies';
+type InvoiceType =  'Ordinaire' | 'Transporteur' | 'Transitaire';
 
-export type InvoiceRecord = {
+export type InvoiceRecordType = {
 	id: string;
+    num_cmdt: string;
+    num_invoice: string;
+    invoice_object: string;
+    supplier_id: string;
+    invoice_type: InvoiceType;
+    invoice_nature: 'Paiement' | 'Acompte' | 'Avoir';
+    invoice_arr_date: string;
+    invoice_date: string;
+    folio: FolioType;
+    amount: string;
+    create_at: string;
+    update_at: string;
+    status: 'Oui'| 'Non';
+    created_by: string;
+    created_by_email: string;
+    created_by_role: 'dfc_agent' | 'invoice_manager' | 'admin';
+}
+
+export type InvoiceInputBody = {
 	num_cmdt: string;
-	num_invoice: string; // 1..12 chiffres, zéros en tête autorisés
-	invoice_object: string | null;
-	supplier_id: number | null;
+	invoice_num: string;
+	invoice_object: string;
+	invoice_nature: string;
+	invoice_arrival_date: string;
+	invoice_date: string;
 	invoice_type: InvoiceType;
-	invoice_arr_date: string; // YYYY-MM-DD
-	invoice_date: string; // YYYY-MM-DD
-	amount: number; // Montant <= 100 000 000 000
+	invoice_status: 'Oui' | 'Non'
 	folio: FolioType;
-	create_at?: string;
-	update_at?: string;
-	status: InvoiceStatus; // défaut "Non"
-	documents?: string[];
-	created_by?: string;
-	created_by_email?: string;
-	created_by_role?: string;
-};
+	invoice_amount: string;
+	supplier_name: string;
+	supplier_account_number: string;
+	supplier_phone: string;
+	documents: string[];
+	status: 'Oui' | 'Non';
+	created_by: string | null;
+    created_by_email?: string;
+    created_by_role?: 'dfc_agent' | 'invoice_manager' | 'admin';
+}
 
-export type CreateInvoiceInput = Omit<InvoiceRecord, 'id' | 'create_at' | 'update_at'> & {
-	createdBy?: string;
-	createdByEmail?: string;
-	createdByRole?: string;
-};
+export type CreateInvoiceInput = Omit<InvoiceInputBody, "supplier_name" | "supplier_account_number" | "supplier_phone"> & { supplier_id: number }
 
-class InvoiceModel {
-	async create(data: CreateInvoiceInput): Promise<unknown> {
-		const id = await generateId('invoice');
+export type UpdateInvoiceData =  Omit<InvoiceRecordType, 'create_at' | 'update_at'>
 
-		// Garde serveur: statut par défaut, format numéro, plafond montant
-		const status: InvoiceStatus = (data.status as InvoiceStatus) ?? 'Non';
-		const numInvoice = String(data.num_invoice ?? '').trim();
-		if (!/^\d{1,12}$/.test(numInvoice)) {
-			throw new Error('Le numéro de facture doit contenir 1 à 12 chiffres');
-		}
-		const amount = Number(data.amount);
-		if (!(amount > 0) || amount > 100_000_000_000) {
-			throw new Error('Montant invalide: maximum 100 000 000 000');
-		}
-		const query =
-			"INSERT INTO invoice(id, num_cmdt, num_invoice, invoice_object, supplier_id, invoice_type, invoice_arr_date, invoice_date, amount, folio, status, created_by, created_by_email, created_by_role) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-		const params = [
-			id,
-			data.num_cmdt,
-			numInvoice,
-			data.invoice_object,
-			data.supplier_id,
-			data.invoice_type,
-			formatDate(data.invoice_arr_date),
-			formatDate(data.invoice_date),
-			amount,
-			data.folio,
-			status,
-			data.createdBy || null,
-			data.createdByEmail || null,
-			data.createdByRole || null,
-		];
-		const result = await database.execute(query, params);
-		logger.info(`Création de la facture ${data.num_invoice}`);
-		await auditLog({
-			action: 'INSERT',
-			table_name: 'invoice',
-			record_id: id,
-			performed_by: data.createdBy,
-			description: `Création de la facture ${data.num_invoice}`,
-		});
-		if (data.documents && data.documents.length > 0) {
-			await database.execute("INSERT INTO attachments(documents, invoice_id) VALUES (?,?)", [JSON.stringify(data.documents), id]);
+export interface InvoiceModel {
+	create(invoiceData: CreateInvoiceInput): Promise<{success: Boolean, data?: unknown}>;
+	findInvoice(id: string | number, config: { 
+		findBy: 'id' | 'phone' | 'account_number' | 'supplier_id' | 'all', 
+		limit: number, orderBy: 'desc' | 'asc' 
+	}): Promise<InvoiceRecordType[]>;
+	deleteInvoice(id: number): Promise<{success: boolean}>;
+	updateInvoice(data: UpdateInvoiceData): Promise<{success: Boolean}>;
+}
+
+class Invoice implements InvoiceModel {
+
+	async create(invoiceData: CreateInvoiceInput): Promise<{ success: Boolean; data?: unknown; }> {
+		try {
+			
+			const id = await generateId('invoice');
+			const params = [
+				id,
+				invoiceData.num_cmdt,
+				invoiceData.invoice_num,
+				invoiceData.invoice_object,
+				invoiceData.supplier_id,
+				invoiceData.invoice_nature,
+				formatDate(invoiceData.invoice_arrival_date),
+				formatDate(invoiceData.invoice_date),
+				invoiceData.invoice_type,
+				invoiceData.folio,
+				invoiceData.invoice_amount,
+				invoiceData.status,
+				invoiceData.created_by,
+				invoiceData.created_by_email,
+				invoiceData.created_by_role
+			]
+	
+			// Correction : la table devrait être "invoice" au lieu de "employee"
+			const query = "INSERT INTO invoice(id, num_cmdt, num_invoice, invoice_object, supplier_id, invoice_nature, invoice_arr_date, invoice_date, invoice_type, folio, amount, status, created_by, created_by_email, created_by_role) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+			const result = await database.execute(query, params);
+
+			if(Array.isArray(invoiceData.documents) && invoiceData.documents.length > 0) {
+				await database.execute(
+					"INSERT INTO attachments(documents, invoice_id) VALUES (?,?)",
+					[JSON.stringify(invoiceData.documents), id]
+				);
+				await auditLog({
+					table_name: 'attachments',
+					action: 'INSERT',
+					performed_by: invoiceData.created_by,
+					record_id: invoiceData.created_by,
+					description: `Ajout des decoument a la facture nouvellement creee ${id}`
+				});
+			}
+			
 			await auditLog({
+				table_name: 'invoice', // Correction : table invoice au lieu de employee
 				action: 'INSERT',
-				table_name: 'attachments',
-				record_id: id,
-				performed_by: data.createdBy,
-				description: `Ajout des documents liés à la facture ${data.num_invoice}`,
-			});
+				record_id: invoiceData.created_by,
+				performed_by: invoiceData.created_by,
+				description: `Création d'une facture par l'utilisateur ${invoiceData.created_by} role : [${invoiceData.created_by_role}]`
+			})
+			
+			logger.debug("Création de la facture " + id + " avec succès", {
+				userId: invoiceData.created_by,
+				email: invoiceData.created_by_email,
+				role: invoiceData.created_by_role
+			})
+
+			return {
+				success: true,
+				data: result
+			}
+		} catch (error) {
+			logger.error(`Une erreur est survenue lors de la création de la facture`, {
+				errorMessage: error instanceof Error ? error.message : 'unknown error',
+				stack: error instanceof Error ? error.stack : 'unknown stack'
+			})
+			return {
+				success: false,
+				data: error instanceof Error ? error.message : 'unknown error'
+			}
 		}
-		return result;
 	}
 
-	async findById(id: string): Promise<InvoiceRecord[] | unknown> {
-		const query = "SELECT * FROM invoice WHERE id = ?";
-		const result = await database.execute(query, [id]);
-		auditLog({
-			action: 'SELECT',
-			table_name: 'invoice',
-			record_id: id,
-			performed_by: id,
-		});
-		return result;
+	async findInvoice(id: string | number, config: { 
+			findBy: "id" | "phone" | "account_number" | "supplier_id" | "all"; 
+			limit: number | null; 
+			orderBy: "desc" | "asc";
+		} = { findBy: 'id', limit: null, orderBy: 'asc'}): Promise<InvoiceRecordType[]> {
+		
+		try {
+			let query = "";
+			let params: any[] = [];
+			let rows: any;
+			const validOrderBy = config.orderBy === 'asc' ? 'asc' : 'desc';
+
+			switch (config.findBy) {
+				case 'id':
+					query = `SELECT * FROM invoice WHERE id = ? ORDER BY create_at ${validOrderBy}`;
+					params = [id];
+					if (config.limit) query += ` LIMIT ${config.limit}`;
+					rows = await database.execute(query, params);
+					break;
+
+				case 'supplier_id':
+					query = `SELECT * FROM invoice WHERE supplier_id = ? ORDER BY create_at ${validOrderBy}`;
+					params = [id];
+					if (config.limit) query += ` LIMIT ${config.limit}`;
+					rows = await database.execute(query, params);
+					break;
+
+				case 'phone':
+				case 'account_number':
+					// Ces critères nécessitent une jointure avec la table supplier
+					query = `
+						SELECT i.* FROM invoice i 
+						INNER JOIN supplier s ON i.supplier_id = s.id 
+						WHERE ${config.findBy === 'phone' ? 's.phone' : 's.account_number'} = ? 
+						ORDER BY i.create_at ${validOrderBy}
+					`;
+					params = [id];
+					if (config.limit) query += ` LIMIT ${config.limit}`;
+					rows = await database.execute(query, params);
+					break;
+
+				case 'all':
+					query = `SELECT * FROM invoice ORDER BY create_at ${config.orderBy}`;
+					if (config.limit) query += ` LIMIT ${config.limit}`;
+					rows = await database.execute(query);
+					break;
+
+				default:
+					throw new Error('Type de recherche non supporté');
+			}
+
+			// Normaliser le résultat en tableau
+			if (rows && !Array.isArray(rows)) {
+				rows = [rows];
+			}
+
+			if (rows && rows.length > 0) {
+				await auditLog({
+					table_name: 'invoice',
+					action: 'SELECT',
+					record_id: typeof id === 'string' ? id : id.toString(),
+					performed_by: 'system', // À remplacer par l'ID utilisateur réel si disponible
+					description: `Recherche de facture par ${config.findBy}`
+				});
+			}
+
+			return rows || [];
+
+		} catch (error) {
+			logger.error(`Une erreur est survenue lors de la recherche de la facture`, {
+				errorMessage: error instanceof Error ? error.message : 'unknown error',
+				stack: error instanceof Error ? error.stack : 'unknown stack',
+				findType: config.findBy,
+				id: id
+			});
+			throw error; // Propager l'erreur pour que l'appelant puisse la gérer
+		}
 	}
 
-	async findAll(): Promise<InvoiceRecord[] | unknown> {
-		const query = "SELECT * FROM invoice ORDER BY create_at DESC";
-		const result = await database.execute(query, []);
-		auditLog({
-			action: 'SELECT',
-			table_name: 'invoice',
-			record_id: 'all',
-			description: 'Récupération de toutes les factures',
-			performed_by: 'system'
-		});
-		return result;
+	async deleteInvoice(id: number): Promise<{success: boolean}> {
+		try {
+			// Vérifier d'abord si la facture existe
+			const existingInvoice = await this.findInvoice(id, { findBy: 'id', limit: 1, orderBy: 'desc' });
+			
+			if (!existingInvoice || existingInvoice.length === 0) {
+				logger.warn(`Tentative de suppression d'une facture inexistante: ${id}`);
+				return { success: false };
+			}
+
+			const query = "DELETE FROM invoice WHERE id = ?";
+			await database.execute(query, [id]);
+
+			await auditLog({
+				table_name: 'invoice',
+				action: 'DELETE',
+				record_id: id.toString(),
+				performed_by: 'system', // À remplacer par l'ID utilisateur réel
+				description: `Suppression de la facture ${id}`
+			});
+
+			logger.debug(`Facture ${id} supprimée avec succès`);
+			return { success: true };
+
+		} catch (error) {
+			logger.error(`Erreur lors de la suppression de la facture ${id}`, {
+				errorMessage: error instanceof Error ? error.message : 'unknown error',
+				stack: error instanceof Error ? error.stack : 'unknown stack'
+			});
+			return { success: false };
+		}
 	}
 
-	async findByUserId(userId: string): Promise<InvoiceRecord[] | unknown> {
-		const query = "SELECT * FROM invoice WHERE created_by = ? ORDER BY create_at DESC";
-		const result = await database.execute(query, [userId]);
-		auditLog({
-			action: 'SELECT',
-			table_name: 'invoice',
-			record_id: userId,
-			description: `Récupération des factures de l'utilisateur ${userId}`,
-			performed_by: 'system'
-		});
-		return result;
-	}
+	async updateInvoice(data: UpdateInvoiceData): Promise<{success: Boolean}> {
+		try {
+			const params = [
+				data.num_cmdt,
+				data.num_invoice,
+				data.invoice_object,
+				data.supplier_id,
+				data.invoice_nature,
+				formatDate(data.invoice_arr_date),
+				formatDate(data.invoice_date),
+				data.invoice_type,
+				data.folio,
+				data.amount,
+				data.status,
+				data.created_by,
+				data.created_by_email,
+				data.created_by_role,
+				data.id // Pour la clause WHERE
+			];
 
-	async findByNumber(numInvoice: string): Promise<InvoiceRecord[] | unknown> {
-		const query = "SELECT * FROM invoice WHERE num_invoice = ?";
-		const result = await database.execute(query, [numInvoice]);
-		auditLog({
-			action: 'SELECT',
-			table_name: 'invoice',
-			record_id: numInvoice,
-			performed_by: numInvoice,
-		});
-		return result;
-	}
+			const query = `
+				UPDATE invoice 
+				SET num_cmdt = ?, num_invoice = ?, invoice_object = ?, supplier_id = ?, 
+					invoice_nature = ?, invoice_arr_date = ?, invoice_date = ?, invoice_type = ?, 
+					folio = ?, amount = ?, status = ?, created_by = ?, created_by_email = ?, created_by_role = ?
+				WHERE id = ?
+			`;
 
-	async listBySupplier(supplierId: number): Promise<InvoiceRecord[] | unknown> {
-		const query = "SELECT * FROM invoice WHERE supplier_id = ? ORDER BY create_at DESC";
-		const result = await database.execute(query, [supplierId]);
-		auditLog({
-			action: 'SELECT',
-			table_name: 'invoice',
-			record_id: supplierId.toString(),
-			performed_by: supplierId.toString(),
-		});
-		return result;
-	}
+			await database.execute(query, params);
 
-	async listRecent(limit: number = 50): Promise<InvoiceRecord[] | unknown> {
-		const query = "SELECT * FROM invoice ORDER BY create_at DESC LIMIT ?";
-		const result = await database.execute(query, [limit]);
-		auditLog({
-			action: 'SELECT',
-			table_name: 'invoice',
-			record_id: null,
-			description: `Obtention des ${limit} dernières factures`,
-		});
-		return result;
-	}
+			await auditLog({
+				table_name: 'invoice',
+				action: 'UPDATE',
+				record_id: data.id,
+				performed_by: data.created_by,
+				description: `Mise à jour de la facture ${data.id} par l'utilisateur ${data.created_by}`
+			});
 
-	async updateStatus(id: string, status: InvoiceStatus): Promise<unknown> {
-		const query = "UPDATE invoice SET status = ? WHERE id = ?";
-		const result = await database.execute(query, [status, id]);
-		await auditLog({
-			action: 'UPDATE',
-			table_name: 'invoice',
-			record_id: id,
-			description: `Mise à jour du statut de la facture vers ${status}`,
-		});
-		return result;
-	}
+			logger.debug(`Facture ${data.id} mise à jour avec succès`, {
+				userId: data.created_by,
+				email: data.created_by_email
+			});
 
-	async updateAmount(id: string, amount: number): Promise<unknown> {
-		const query = "UPDATE invoice SET amount = ? WHERE id = ?";
-		const result = await database.execute(query, [amount, id]);
-		await auditLog({
-			action: 'UPDATE',
-			table_name: 'invoice',
-			record_id: id,
-			description: `Mise à jour du montant de la facture à ${amount}`,
-		});
-		return result;
-	}
+			return { success: true };
 
-	async remove(id: string): Promise<unknown> {
-		const query = "DELETE FROM invoice WHERE id = ?";
-		const result = await database.execute(query, [id]);
-		await auditLog({
-			action: 'DELETE',
-			table_name: 'invoice',
-			record_id: id,
-			description: `Suppression de la facture`,
-		});
-		return result;
+		} catch (error) {
+			logger.error(`Erreur lors de la mise à jour de la facture ${data.id}`, {
+				errorMessage: error instanceof Error ? error.message : 'unknown error',
+				stack: error instanceof Error ? error.stack : 'unknown stack'
+			});
+			return { success: false };
+		}
 	}
 }
 
-const Invoice = new InvoiceModel();
-export default Invoice;
-
-
+export default new Invoice();

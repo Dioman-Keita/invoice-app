@@ -1,22 +1,24 @@
 import type { Request, Response } from 'express';
 import ApiResponder from "../utils/ApiResponder";
-import supplier, {SupplierRecord} from "../models/Supplier";
+import supplier, { SupplierRecord, CreateSupplierInput } from "../models/Supplier";
 import logger from '../utils/Logger';
+import { auditLog } from '../utils/auditLogger';
 
-type CreateSupplierBody = {
-    supplier_name: string;
-    supplier_account_number: string;
-    supplier_phone?: string;
-};
 
 type SupplierIdParams = { id: string };
 
 export async function createSupplier(
-    req: Request<unknown, unknown, CreateSupplierBody>,
+    req: Request<unknown, unknown, CreateSupplierInput>,
     res: Response
 ): Promise<Response> {
+    const requestId = req.headers['x-request-id'] || 'unknown';
+    const user = (req as any).user;
     try {
         const { supplier_name, supplier_account_number = '', supplier_phone = '' } = req.body || {};
+        if (!user || !user.sup) {
+            logger.warn(`[${requestId}] Tentative de création de fournisseur pas un utilisateur non authentifier`);
+            return ApiResponder.unauthorized(res, 'Accès non autorisé.');
+        }
         if (!supplier_name) {
             return ApiResponder.badRequest(res, 'Le nom du fournisseur est requis');
         }
@@ -27,20 +29,67 @@ export async function createSupplier(
             return ApiResponder.badRequest(res, 'Le numéro de compte doit contenir exactement 12 chiffres');
         }
 
-        const isSupplierExist: SupplierRecord[] = await supplier.findSupplier(supplier_account_number, 'account_number');
+        const isSupplierExist: SupplierRecord[] = await supplier.findSupplier(supplier_account_number, {findBy: 'account_number'});
         if (isSupplierExist && isSupplierExist.length > 0) return ApiResponder.badRequest(res, 'Ce fournisseur existe déjà');
 
         const result = await supplier.create({
-            suplier_name: supplier_name,
-            suplier_account_number: supplier_account_number,
-            suplier_phone: supplier_phone,
-        } as any);
+            supplier_name,
+            supplier_account_number,
+            supplier_phone,
+            created_by: user.sup,
+            created_by_email: user.email,
+            created_by_role: user.role
+        } as CreateSupplierInput);
         return ApiResponder.created(res, result, 'Fournisseur créé');
     } catch (err) {
-        logger.error('Erreur lors de la création du fournisseur', { 
+        logger.error(`[${requestId}] Erreur lors de la création du fournisseur`, { 
             error: err instanceof Error ? err.message : 'Erreur inconnue' 
         });
         return ApiResponder.error(res, err);
+    }
+}
+
+export async function getSupplierId(
+    supplierData: CreateSupplierInput, 
+    _userId: string
+): Promise<{success: boolean, supplierId?: number}> {
+    try {
+        const existingSupplier: SupplierRecord[] = await supplier.findSupplier(
+            Number(supplierData.supplier_account_number), 
+            {findBy: 'account_number'}
+        );
+        
+        if (existingSupplier && existingSupplier.length > 0) {
+            return {
+                success: true,
+                supplierId: Number(existingSupplier[0].id)
+            };
+        }
+
+        // ⚠️ CORRECTION : Attendre la résolution de la Promise
+        const result = await supplier.create(supplierData);
+        const supplierId = (result as any).id; // Maintenant result est résolu
+
+        if (!result.success || !result.id) {
+            logger.error('Échec de la création du fournisseur ou ID non retourné', {
+                result,
+                supplierData: {
+                    name: supplierData.supplier_name,
+                    accountNumber: supplierData.supplier_account_number
+                }
+            });
+            return { success: false };
+        }
+
+        return {
+            success: true,
+            supplierId
+        };
+    } catch (error) {
+        logger.error('Erreur lors de la recuperation de l\'identifiant du fournisseur', {
+            error: error instanceof Error ? error.message : 'Erreur inconnue'
+        });
+        return { success: false };
     }
 }
 
@@ -50,7 +99,7 @@ export async function getSupplier(
 ): Promise<Response> {
     try {
         const { id } = req.params;
-        const rows = await supplier.findSupplier(id);
+        const rows = await supplier.findSupplier(Number(id));
         if (!rows || rows.length === 0) {
             return ApiResponder.notFound(res, 'Fournisseur introuvable');
         }
@@ -108,7 +157,7 @@ export async function deleteSupplierById(
         if (!id) {
             return ApiResponder.badRequest(res, 'Paramètre id requis');
         }
-        const rows = await supplier.deleteSupplier(Number(id));
+        const rows = await supplier.deleteSupplier(Number(id as string));
         if (!rows) return ApiResponder.notFound(res, 'Fournisseur introuvable');
         return ApiResponder.success(res, rows, 'Fournisseur supprimé');
     } catch (err) {

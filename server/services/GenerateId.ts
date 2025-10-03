@@ -6,14 +6,15 @@ type Row = {
 
 type IdConfig = {
     prefix: string,
-    table: string
+    table: string,
+    create_at: 'create_at' | 'created_at'
 }
 
 export type EntityType = 'invoice' | 'employee';
 
 const idMap: Record<EntityType, IdConfig> = {
-    invoice: {table: 'invoice', prefix: 'INV'},
-    employee: {table: 'employee', prefix: 'EMP'}
+    invoice: {table: 'invoice', prefix: 'INV', create_at: 'create_at'},
+    employee: {table: 'employee', prefix: 'EMP', create_at: 'created_at'}
 }
 
 /**
@@ -27,7 +28,7 @@ export async function generateId(entity: EntityType): Promise<string> {
     const currentYear = new Date().getFullYear();
     const defaultFormat = `${config.prefix}-${currentYear}-0001`;
 
-    const result = await database.execute<Row[]>(`SELECT id FROM ${config.table} ORDER BY created_at DESC LIMIT 1`);
+    const result = await database.execute<Row[]>(`SELECT id FROM ${config.table} ORDER BY ${config.create_at} DESC LIMIT 1`);
 
     if (result && result.length > 0) {
         const lastId = result[0].id;

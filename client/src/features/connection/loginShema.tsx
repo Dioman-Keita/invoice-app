@@ -85,7 +85,7 @@ export const registerSchema = z.object({
       });
     }
   } else if (data.role === 'invoice_manager') {
-    if (!['Facturation', 'Comptabilité client', 'Gestion des factures'].includes(data.department)) {
+    if (!['Facturation', 'Comptabilité Client', 'Gestion des factures'].includes(data.department)) {
       ctx.addIssue({ 
         code: 'custom', 
         path: ['department'], 
