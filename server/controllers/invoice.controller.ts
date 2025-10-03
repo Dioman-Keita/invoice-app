@@ -4,6 +4,7 @@ import type { Response, Request } from 'express';
 import logger from "../utils/Logger";
 import { canAccessInvoice } from "../middleware/roleGuard";
 import { getSupplierId } from "./supplier.controller";
+import { formatDate } from "../utils/Formatters";
 
 type SearchInvoiceQueryParams = {
     supplier_id?: string;
@@ -36,27 +37,54 @@ export async function createInvoice(
 
     // Validations des champs obligatoires
     if (!data.invoice_num?.trim()) {
-      return ApiResponder.badRequest(res, 'Le numéro de facture est requis');
+      return ApiResponder.badRequest(res, 'Le numéro de facture est requis', { field: 'invoice_num' });
+    }
+    if (!data.num_cmdt?.trim()) {
+      return ApiResponder.badRequest(res, "Le numéro CMDT de la facture est requis", { field: 'num_cmdt' });
     }
     if (!data.supplier_account_number?.trim()) {
-      return ApiResponder.badRequest(res, 'Le numéro de compte fournisseur est requis');
+      return ApiResponder.badRequest(res, 'Le numéro de compte fournisseur est requis', { field: 'supplier_account_number' });
     }
     if (!data.supplier_name?.trim()) {
-      return ApiResponder.badRequest(res, 'Le nom du fournisseur est requis');
+      return ApiResponder.badRequest(res, 'Le nom du fournisseur est requis', { field: 'supplier_name' });
     }
     if (!data.invoice_amount || isNaN(Number(data.invoice_amount))) {
-      return ApiResponder.badRequest(res, 'Le montant de la facture est invalide');
+      return ApiResponder.badRequest(res, 'Le montant de la facture est invalide', { field: 'supplier_amount' });
     }
+    if(!data.invoice_arrival_date) {
+      return ApiResponder.badRequest(res, 'La date d\'arrivée de la facture est requis', { field: 'invoice_arrival_date' });
+    }
+    if(!data.invoice_date) {
+      return ApiResponder.badRequest(res, 'La date de la facture est requis', { field: 'invoice_date'});
+    }
+    
+    const invoiceDate = new Date(formatDate(data.invoice_arrival_date));
+    const inoiceArrivalDate = new Date(formatDate(data.invoice_date));
 
+    if (invoiceDate.getTime() > inoiceArrivalDate.getTime()) {
+      return ApiResponder.badRequest(res, "La date d'arrivée de la facture ne peut pas être anterieur à la data réelle de la facture", { field: 'invoice_arrival_date'});
+    }
+    if (!(['Paiement', 'Acompte', 'Avoir'].includes(data.invoice_nature))) {
+      return ApiResponder.badRequest(res, 'La nature de la facture est invalide', { field: 'invoice_nature' });
+    }
+    if (!(['1 copie', 'Orig + 1 copie', 'Orig + 2 copies', 'Orig + 3 copies'].includes(data.folio))) {
+      return ApiResponder.badRequest(res, "Le folio est invalide", { field: 'folio' });
+    }
+    if (!(['Oui', 'Non'].includes(data.invoice_status))) {
+      return ApiResponder.badRequest(res, "Etat de la facture invalide. Veuillez cocher (Oui ou Non)", { field: 'invoice_status'});
+    }
+    if (!(['Ordinaire', 'Transporter', 'Transitaire'].includes(data.invoice_type))) {
+      return ApiResponder.badRequest(res, "Type de facture invalide", { field: 'invoice_type'});
+    }
     // Validation du numéro de compte fournisseur
     if (!/^\d{12}$/.test(data.supplier_account_number)) {
-      return ApiResponder.badRequest(res, 'Le numéro de compte doit contenir exactement 12 chiffres');
+      return ApiResponder.badRequest(res, 'Le numéro de compte doit contenir exactement 12 chiffres', { field: 'supplier_account_number'});
     }
 
     // Validation du montant
     const amount = Number(data.invoice_amount);
     if (amount <= 0 || amount > 100_000_000_000) {
-      return ApiResponder.badRequest(res, 'Le montant doit être compris entre 1 et 100 000 000 000');
+      return ApiResponder.badRequest(res, 'Le montant doit être compris entre 1 et 100 000 000 000', { field: 'supplier_amount' });
     }
 
     // Récupérer ou créer le fournisseur
@@ -67,7 +95,7 @@ export async function createInvoice(
       created_by: user.sup,
       created_by_email: user.email,
       created_by_role: user.role,
-    }, user.sup);
+    });
 
     if (!supplierResult.success || !supplierResult.supplierId) {
       logger.warn(`[${requestId}] Erreur lors de la récupération/création du fournisseur`, {
@@ -79,7 +107,7 @@ export async function createInvoice(
           account_number: data.supplier_account_number
         }
       });
-      return ApiResponder.badRequest(res, "Erreur lors de la gestion du fournisseur");
+      return ApiResponder.badRequest(res, supplierResult.message || "Erreur lors de la gestion du fournisseur");
     }
 
     // Préparer les données pour la création de la facture

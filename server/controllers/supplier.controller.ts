@@ -50,46 +50,120 @@ export async function createSupplier(
 }
 
 export async function getSupplierId(
-    supplierData: CreateSupplierInput, 
-    _userId: string
-): Promise<{success: boolean, supplierId?: number}> {
+    supplierData: CreateSupplierInput
+): Promise<{success: boolean, supplierId?: number, message?: string}> {
     try {
-        const existingSupplier: SupplierRecord[] = await supplier.findSupplier(
-            Number(supplierData.supplier_account_number), 
-            {findBy: 'account_number'}
+
+        const { supplier_account_number, supplier_phone, supplier_name } = supplierData;
+
+        const exactSupplier = await supplier.findExactSupplier(
+            supplier_account_number,
+            supplier_phone,
+            supplier_name
         );
         
-        if (existingSupplier && existingSupplier.length > 0) {
+        if (exactSupplier && exactSupplier.length > 0) {
+            logger.debug('Fournisseur exact trouvé', {
+                supplierId: exactSupplier[0].id,
+                accountNumber: supplier_account_number,
+                phone: supplier_phone,
+                name: supplier_name
+            });
+
             return {
                 success: true,
-                supplierId: Number(existingSupplier[0].id)
+                supplierId: Number(exactSupplier[0].id)
             };
         }
 
-        // ⚠️ CORRECTION : Attendre la résolution de la Promise
-        const result = await supplier.create(supplierData);
-        const supplierId = (result as any).id; // Maintenant result est résolu
+        const conflicts = await supplier.findSupplierConflicts(
+            supplier_account_number,
+            supplier_phone
+        );
 
-        if (!result.success || !result.id) {
-            logger.error('Échec de la création du fournisseur ou ID non retourné', {
-                result,
-                supplierData: {
-                    name: supplierData.supplier_name,
-                    accountNumber: supplierData.supplier_account_number
+        if (conflicts.hasAccountConflict || conflicts.hasPhoneConflict) {
+            logger.warn('Conflit détecté lors de la création du fournisseur', {
+                accountNumber: supplier_account_number,
+                phone: supplier_phone,
+                name: supplier_name,
+                conflicts: {
+                    accountConflict: conflicts.hasAccountConflict,
+                    phoneConflict: conflicts.hasPhoneConflict,
+                    existingSuppliers: conflicts.conflictingSuppliers.map(s => ({
+                        id: s.id,
+                        name: s.name,
+                        accountNumber: s.account_number,
+                        phone: s.phone
+                    }))
                 }
             });
-            return { success: false };
+        }
+        
+        if (conflicts.hasAccountConflict && conflicts.hasPhoneConflict) {
+            return {
+                success: false,
+                message: 'Un fournisseur existe déjà avec ce numéro de compte et ce téléphone'
+            };
+        } else if (conflicts.hasAccountConflict) {
+            const existing = conflicts.conflictingSuppliers.find(s => s.account_number === supplier_account_number);
+            return {
+                success: false,
+                message: `Le numéro de compte existe déjà pour le fournisseur "${existing?.name}"`
+            }
+        } else if (conflicts.hasPhoneConflict){
+            const existing = conflicts.conflictingSuppliers.find(s => s.phone === supplier_phone);
+            return {
+                success: false,
+                message: `Le numéro de téléphone extiste déjà pour le fournisseur "${existing?.name}"`
+            }
+        } else {
+            const result = await supplier.create({
+                ...supplierData,
+                created_by: supplierData.created_by,
+                created_by_email: supplierData.created_by_email,
+                created_by_role: supplierData.created_by_role
+            });
+
+            if (!result.success || !result.id) {
+                logger.error('Échec de la création du fournisseur', {
+                    result,
+                    supplierData: {
+                        name: supplier_name,
+                        accountNumber: supplier_account_number,
+                        phone: supplier_phone
+                    }
+                });
+                return {
+                    success: false,
+                    message: 'Erreur lors de la création du fournisseur'
+                };
+            }
+
+            logger.debug('Nouveau fournisseur créé avec succès', {
+                supplierId: result.id,
+                accountNumber: supplier_account_number,
+                phone: supplier_phone
+            });
+
+            return {
+                success: true,
+                supplierId: result.id                
+            }
         }
 
-        return {
-            success: true,
-            supplierId
-        };
     } catch (error) {
-        logger.error('Erreur lors de la recuperation de l\'identifiant du fournisseur', {
-            error: error instanceof Error ? error.message : 'Erreur inconnue'
+        logger.error('Erreur lors de la récupération de l\'identifiant du fournisseur', {
+            error: error instanceof Error ? error.message : 'Erreur inconnue',
+            supplierData: {
+                name: supplierData.supplier_name,
+                accountNumber: supplierData.supplier_account_number,
+                phone: supplierData.supplier_phone
+            }
         });
-        return { success: false };
+        return { 
+            success: false,
+            message: 'Erreur interne lors de la gestion du fournisseur'
+        };
     }
 }
 
