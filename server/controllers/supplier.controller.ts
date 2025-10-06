@@ -2,7 +2,6 @@ import type { Request, Response } from 'express';
 import ApiResponder from "../utils/ApiResponder";
 import supplier, { SupplierRecord, CreateSupplierInput } from "../models/Supplier";
 import logger from '../utils/Logger';
-import { auditLog } from '../utils/auditLogger';
 
 
 type SupplierIdParams = { id: string };
@@ -242,5 +241,191 @@ export async function deleteSupplierById(
     }
 }
 
+export async function searchSuppliers(
+    req: Request<unknown, unknown, unknown, {
+        field: 'name' | 'account_number' | 'phone';
+        value: string;
+    }>,
+    res: Response
+): Promise<Response> {
+    try {
+        const { field, value } = req.query;
 
+        if (!field || !value) {
+            return ApiResponder.badRequest(res, 'Les paramètres field et value sont requis');
+        }
 
+        if (!['name', 'account_number', 'phone'].includes(field)) {
+
+            return ApiResponder.badRequest(res, 'Le champ de recherche doit être name, account_number ou phone');
+        }
+
+        let suppliers: SupplierRecord[] = [];
+
+        switch(field) {
+            case 'name':
+                suppliers = await supplier.searchSuppliersByName(value);
+                break;
+            case 'account_number':
+                suppliers = await supplier.findSupplier(value, {
+                    findBy: 'account_number',
+                    limit: 1
+                });
+                break;
+            case 'phone':
+                suppliers = await supplier.findSupplier(decodeURIComponent(value), {
+                    findBy: 'phone',
+                    limit: 1
+                });
+                break;
+            default:
+                throw new Error('Type de champ non supporté')
+        }
+
+        if (suppliers.length === 0) {
+            return  ApiResponder.success(res, [], 'Aucun fournisseur trouvé');
+        }
+
+        const suggestions = suppliers.map(supplier => ({
+            id: supplier.id,
+            name: supplier.name,
+            account_number: supplier.account_number,
+            phone: supplier.phone
+        }));
+
+        return ApiResponder.success(res, suggestions, `${suppliers.length} fournisseurs(s) trouvé(s)`);
+    } catch (err) {
+        logger.error('Erreur lors de la recherche du fournisseurs', {
+            error: err instanceof Error ? err.message : 'unknown error',
+            query: req.query
+        });
+        return ApiResponder.error(res, err);
+    }
+}
+
+export async function getSupplierByAnyField(
+    req: Request<unknown, unknown, unknown, {
+        name?: string;
+        account_number?: string;
+        phone?: string
+    }>,
+    res: Response
+): Promise<Response> {
+    try {
+        const { name, account_number, phone } = req.query;
+
+        if (!name && !account_number && !phone) {
+            return ApiResponder.badRequest(res, 'Au moins un champ (name, account_number ou phone) est requis');
+        }
+
+        let supplierResult: SupplierRecord | null = null;
+
+        if (account_number) {
+            const suppliers = await supplier.findSupplier(account_number, {
+                findBy: 'account_number',
+                limit: 1
+            });
+            if (suppliers.length > 0) supplierResult = suppliers[0];
+        }
+
+        if (!supplierResult && phone) {
+            const suppliers = await supplier.findSupplier(phone, {
+                findBy: 'phone',
+                limit: 1
+            });
+            if (suppliers.length > 0) supplierResult = suppliers[0];
+        }
+
+        if (!supplierResult && name) {
+            const suppliers = await supplier.searchSuppliersByName(name, 1);
+            if (suppliers.length > 0) supplierResult = suppliers[0];
+        }
+
+        if (!supplierResult) {
+            return ApiResponder.notFound(res, 'Fournisseur introuvable');
+        }
+
+        return ApiResponder.success(res, {
+            id: supplierResult.id,
+            name: supplierResult.name,
+            account_number: supplierResult.account_number,
+            phone: supplierResult.phone
+        });
+    } catch (err) {
+        logger.error('Erreur lors de la recherche de fournisseur par champs', {
+            error: err instanceof Error ? err.message : 'unknown error',
+            query: req.query
+        });
+
+        return ApiResponder.error(res, err);
+    }
+}
+
+export async function findSupplierConflicts(
+    req: Request<unknown, unknown, unknown, {
+        account_number?: string,
+        phone?: string
+    }>,
+    res: Response
+): Promise<Response> {
+    const requestId = req.headers['x-request-id'] || 'unknown';
+
+    try {
+        const user = (req as any).user;
+
+        if (!user || !user.sup) {
+            logger.warn(`[${requestId}] Tentative d'accès aux ressources par un utilisateur non authentifié`);
+            return ApiResponder.unauthorized(res, 'Accès interdit');
+        }
+
+        logger.info(`[${requestId}] Début de la vérification du fournisseur`);
+
+        const { account_number, phone } = req.query;
+        
+        if ((!account_number || account_number.trim() === '') && (!phone || phone.trim() === '')) {
+            logger.warn(`[${requestId}] Paramètre manquant lors de l'appel à findSupplierConflicts`, {
+                account_number: !!account_number,
+                phone: !!phone
+            });
+            return ApiResponder.badRequest(res, 'Au moins un numéro de compte ou de téléphone est requis');
+        }
+
+        const supplierConflictsResult = await supplier.findSupplierConflicts(
+            account_number || '', 
+            decodeURIComponent(phone as string) || ''
+        );
+        
+        if (supplierConflictsResult.hasAccountConflict || supplierConflictsResult.hasPhoneConflict) {
+            let existingSupplier = null;
+            let conflictType = '';
+            
+            if (supplierConflictsResult.hasAccountConflict) {
+                conflictType = 'account_number';
+                existingSupplier = supplierConflictsResult.conflictingSuppliers.find(s => s.account_number === account_number);
+            } else {
+                conflictType = 'phone';
+                existingSupplier = supplierConflictsResult.conflictingSuppliers.find(s => s.phone === decodeURIComponent(phone as string));
+            }
+            
+            let message = conflictType === 'account_number' 
+            ? `Ce numéro de compte est déjà utilisé par le fournisseur "${existingSupplier?.name}"`
+            : `Ce numéro de téléphone est déjà utilisé par le fournisseur "${existingSupplier?.name}"`;
+
+            return ApiResponder.badRequest(res, message, {
+                conflictType: conflictType,
+                existingSupplier: existingSupplier // Retourne l'objet complet
+            });
+            
+        } 
+        
+        logger.info(`[${requestId}] Fournisseur vérifié et aucun conflit détecté`);
+        return ApiResponder.success(res, null, 'Aucun conflit détecté');
+    } catch (error) {
+        logger.error(`[${requestId}] Une erreur est survenue lors de la vérification du fournisseur par findSupplierConflicts dans le contrôleur`, {
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            errorStack: error instanceof Error ? error.stack : 'Unknown stack of error'
+        });
+
+        return ApiResponder.badRequest(res, "Une erreur interne est survenue lors de la vérification des conflits fournisseurs");
+    }
+}

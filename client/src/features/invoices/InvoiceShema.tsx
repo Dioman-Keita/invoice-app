@@ -51,14 +51,18 @@ export const invoiceSchema = z.object({
     }),
 
     invoice_amount: z
-    .string()
-    .min(1, "Le montant est requis")
-    .regex(/^\d+$/, "Le montant doit être un entier positif")
+    .union([z.string(), z.undefined()])
+    .transform((val) => val ?? "") // transforme undefined en ""
+    .refine((val) => val.trim() !== "", {
+        message: "Le montant est requis",
+    })
+    .refine((val) => /^\d+$/.test(val), {
+        message: "Le montant doit être un entier positif",
+    })
     .transform((val) => parseInt(val, 10))
     .refine((val) => val > 0 && val <= 100_000_000_000, {
-        message: "Montant maximum autorisé : 100 000 000 000"
+        message: "Montant maximum autorisé : 100 000 000 000",
     }),
-
 
     supplier_name: z.string().min(1, "Le nom du fournisseur est requis").regex(supplierNameRegex, "Nom invalide : seuls les lettres accentuées(êèéï), chiffres(1,3,8), espaces( ), tirets(-) et apostrophes(') sont autorisés"),
     // Remplacement de l'email par le numéro de compte

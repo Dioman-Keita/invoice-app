@@ -1,3 +1,4 @@
+import { errorMonitor } from "events";
 import database from "../config/database";
 import logger from "../utils/Logger";
 import { auditLog } from "../utils/auditLogger";
@@ -41,6 +42,12 @@ export interface SupplierModel {
     }>;
     deleteSupplier(id: number): Promise<{success: boolean}>;
     updateSupplier(data: UpdateSupplierData): Promise<{success: boolean}>;
+    searchSuppliersByName(name: string, limit: number): Promise<SupplierRecord[]>; 
+    findSupplierByAnyField(filters: {
+        name?: string;
+        account_number?: string;
+        phone?: string;
+    }): Promise<SupplierRecord | null>
 }
 
 class Supplier implements SupplierModel {
@@ -210,39 +217,67 @@ class Supplier implements SupplierModel {
         }
     }
 
-    async findSupplierConflicts(accountNumber: string, phone: string): Promise<{
-        hasAccountConflict: boolean;
-        hasPhoneConflict: boolean;
-        conflictingSuppliers: SupplierRecord[];
-    }> {
-        try {
-            const query = `
-                SELECT * FROM supplier
-                WHERE account_number = ? OR phone = ?
-            `;
-            const params = [accountNumber, phone];
+async findSupplierConflicts(accountNumber: string, phone: string): Promise<{
+    hasAccountConflict: boolean;
+    hasPhoneConflict: boolean;
+    conflictingSuppliers: SupplierRecord[];
+}> {
+    try {
+        // Construire la query dynamiquement selon les paramètres fournis
+        let query = 'SELECT * FROM supplier WHERE ';
+        const params = [];
+        const conditions = [];
 
-            const rows = await database.execute(query, params);
-            const suppliers = Array.isArray(rows) ? rows : (rows ? [rows] : []);
-
-            const hasAccountConflict = suppliers.some(s => s.account_number === accountNumber);
-            const hasPhoneConflict = suppliers.some(s => s.phone === phone);
-
-            return {
-                hasAccountConflict,
-                hasPhoneConflict,
-                conflictingSuppliers: suppliers
-            }
-
-        } catch (error) {
-            logger.error('Erreur lors de la recherche de conflits fournisseur', {
-                errorMessage: error instanceof Error ? error.message : 'unknown error',
-                accountNumber,
-                phone
-            });
-            throw error;
+        // Ajouter seulement les conditions pour les paramètres non vides
+        if (accountNumber && accountNumber !== '') {
+            conditions.push('account_number = ?');
+            params.push(accountNumber);
         }
+
+        if (phone && phone !== '') {
+            conditions.push('phone = ?');
+            params.push(phone);
+        }
+
+        // Si aucun paramètre fourni, retourner aucun conflit
+        if (conditions.length === 0) {
+            return {
+                hasAccountConflict: false,
+                hasPhoneConflict: false,
+                conflictingSuppliers: []
+            };
+        }
+
+        // Joindre les conditions avec OR
+        query += conditions.join(' OR ');
+
+        const rows = await database.execute(query, params);
+        const suppliers = Array.isArray(rows) ? rows : (rows ? [rows] : []);
+
+        // Vérifier les conflits seulement pour les paramètres fournis
+        const hasAccountConflict = accountNumber && accountNumber !== '' 
+            ? suppliers.some(s => s.account_number === accountNumber)
+            : false;
+            
+        const hasPhoneConflict = phone && phone !== ''
+            ? suppliers.some(s => s.phone === phone)
+            : false;
+
+        return {
+            hasAccountConflict,
+            hasPhoneConflict,
+            conflictingSuppliers: suppliers
+        };
+
+    } catch (error) {
+        logger.error('Erreur lors de la recherche de conflits fournisseur', {
+            errorMessage: error instanceof Error ? error.message : 'unknown error',
+            accountNumber,
+            phone
+        });
+        throw error;
     }
+}
     async deleteSupplier(id: number): Promise<{success: boolean}> {
         try {
             // Vérifier d'abord si le fournisseur existe
@@ -345,6 +380,79 @@ class Supplier implements SupplierModel {
     // Méthode utilitaire pour obtenir tous les fournisseurs
     async getAllSupplier(limit?: number, orderBy: 'desc' | 'asc' = 'asc'): Promise<SupplierRecord[]> {
         return this.findSupplier('', { findBy: 'all', limit, orderBy });
+    }
+
+    async searchSuppliersByName(name: string, limit: number = 5): Promise<SupplierRecord[]> {
+        try {
+            const query = `
+                SELECT * FROM supplier
+                WHERE name LIKE ?
+                ORDER BY
+                    CASE
+                        WHEN name = ? THEN 1
+                        WHEN name = ? THEN 2
+                        ELSE 3
+                    END,
+                    name ASC
+                LIMIT ?
+            `;
+            const params = [
+                `%${name}%`,
+                name,
+                `%${name}%`,
+                limit
+            ];
+
+            const rows = await database.execute(query, params);
+            return Array.isArray(rows) ? rows : (rows ? [rows] : []);
+        } catch (error) {
+            logger.error('Erreur lors de la recherche de fournisseurs par nom', {
+                errorMessage: error instanceof Error ? error.message : 'unknown error',
+                name,
+                limit
+            });
+            throw error;
+        }
+    }
+
+    async findSupplierByAnyField(filters: { 
+        name?: string; 
+        account_number?: string; 
+        phone?: string; 
+    }): Promise<SupplierRecord | null> {
+        try {
+            const conditions: string[] = [];
+            const params: any[] = [];
+
+            if (filters.name) {
+                conditions.push('name = ?');
+                params.push(filters.name);
+            }
+            if (filters.account_number) {
+                conditions.push('account_number = ?');
+                params.push(filters.account_number);
+            }
+            if (filters.phone) {
+                conditions.push('phone = ?');
+                params.push(filters.phone);
+            }
+            if(conditions.length === 0) {
+                return null;
+            }
+
+            const query = `SELECT * FROM supplier WHERE ${conditions.join(' OR ')} LIMIT 1`;
+            const rows = await database.execute(query, params);
+
+            const result = Array.isArray(rows) ? rows : (rows ? [rows] : []);
+            return result.length > 0 ? result[0] : null;
+        } catch (error) {
+            logger.error('Erreur lors de la recherche de fournisseur par champs multiples', {
+                errorMessage: error instanceof Error ? error.message : 'unknown error',
+                filters,
+                stack: error instanceof Error ? error.stack : 'unknown stack'
+            });
+            throw error;
+        }
     }
 }
 
