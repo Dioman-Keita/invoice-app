@@ -40,7 +40,7 @@ function InvoiceForm() {
   const { control, trigger } = methods;  
   const invoiceDate = useWatch({ control, name: "invoice_date" });
   const arrivalDate = useWatch({ control, name: "invoice_arrival_date" });
-  const { saveInvoice } = useInvoice();
+  const { saveInvoice, lastInvoiceNumber, getLastInvoiceNum } = useInvoice();
   const { success, error } = useToastFeedback();
   const { validateDateOrder } = useDateValidation();
 
@@ -87,7 +87,7 @@ function InvoiceForm() {
   };
   return (
     <FormProvider {...methods}>
-      <FormContainer handleSubmit={methods.handleSubmit} onSubmit={onSubmit}>
+      <FormContainer handleSubmit={methods.handleSubmit} onSubmit={onSubmit} lastInvoiceNumber={lastInvoiceNumber} isLoading={loading}>
           <FormSection legend={"FACTURE"}>
             <ValidatedInvoiceNumberInput name="invoice_num" label="Numéro de la facture" placeholder="000000000001"/>
             <ValidatedCodeInput name="num_cmdt" label="N° CMDT courrier" placeholder="XXXX"/>

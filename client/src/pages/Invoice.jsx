@@ -6,8 +6,8 @@ import useTitle from "../hooks/useTitle";
 import useBackground from "../hooks/useBackground";
 
 function  Invoice() {
-    useBackground('bg-invoice')
-    useTitle('CMDT - Enregistrement de factures')
+    useBackground('bg-invoice');
+    useTitle('CMDT - Enregistrement de factures');
     return (
         <>
             <Banner />

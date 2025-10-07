@@ -73,7 +73,7 @@ export async function createInvoice(
     if (!(['Oui', 'Non'].includes(data.invoice_status))) {
       return ApiResponder.badRequest(res, "Etat de la facture invalide. Veuillez cocher (Oui ou Non)", { field: 'invoice_status'});
     }
-    if (!(['Ordinaire', 'Transporter', 'Transitaire'].includes(data.invoice_type))) {
+    if (!(['Ordinaire', 'Transporteur', 'Transitaire'].includes(data.invoice_type))) {
       return ApiResponder.badRequest(res, "Type de facture invalide", { field: 'invoice_type'});
     }
     // Validation du numéro de compte fournisseur
@@ -580,5 +580,47 @@ async function globalSearchInvoices(
       searchTerm
     });
     return [];
+  }
+}
+
+export async function getLastInvoiceNumber(req: Request, res: Response): Promise<Response> {
+  const requestId = req.headers['x-request-id'];
+  
+  try {
+    const user = (req as any).user;
+    if (!user || !user.sup) {
+      logger.warn(`[${requestId}] Tentative d'accès aux ressources par un utilisateur non authentifié`);
+      return ApiResponder.badRequest(res, 'Accès interdit');
+    }
+
+    logger.info(`[${requestId}] Début de la recherche du dernier numéro de facture enregistré dans le système`);
+    const lastInvoiceNumResult = await Invoice.getLastInvoiceNum();
+
+    if (lastInvoiceNumResult.success) {
+      // Gérer le cas où il n'y a pas encore de factures
+      const invoiceNum = lastInvoiceNumResult.invoiceNum || '0000';
+      
+      logger.info(`[${requestId}] Dernier numéro de facture récupéré avec succès: ${invoiceNum}`);
+      return ApiResponder.success(res, { 
+        lastInvoiceNum: invoiceNum 
+      }, 'Dernier numéro de facture récupéré avec succès');
+
+    } else {
+      logger.debug(`[${requestId}] Une erreur est survenue pendant la récupération du dernier numéro de facture`);
+      // Retourner '0000' comme valeur par défaut en cas d'erreur
+      return ApiResponder.success(res, { 
+        lastInvoiceNum: '0000' 
+      }, 'Aucune facture trouvée, utilisation de la valeur par défaut');
+    }
+  } catch (error) {
+    logger.error(`[${requestId}] Une erreur est survenue lors de la récupération du dernier numéro de facture`, {
+      errorMsg: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : 'Unknown stack'
+    });
+
+    // En cas d'erreur, retourner quand même une valeur par défaut
+    return ApiResponder.success(res, { 
+      lastInvoiceNum: '0000' 
+    }, 'Erreur lors de la récupération, utilisation de la valeur par défaut');
   }
 }

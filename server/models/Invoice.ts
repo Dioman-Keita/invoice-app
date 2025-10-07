@@ -60,6 +60,7 @@ export interface InvoiceModel {
 	}): Promise<InvoiceRecordType[]>;
 	deleteInvoice(id: number): Promise<{success: boolean}>;
 	updateInvoice(data: UpdateInvoiceData): Promise<{success: Boolean}>;
+	getLastInvoiceNum(): Promise<unknown>;
 }
 
 class Invoice implements InvoiceModel {
@@ -299,6 +300,47 @@ class Invoice implements InvoiceModel {
 			return { success: false };
 		}
 	}
-}
 
+	async getLastInvoiceNum(): Promise<{success: boolean, invoiceNum: string | null}> {
+		try {
+		  // Correction de la requête SQL - ORDER BY DESC pour avoir le dernier
+		  const result = await database.execute(
+			"SELECT num_cmdt FROM invoice ORDER BY create_at DESC LIMIT 1"
+		  );
+		  
+		  // Correction du traitement du résultat
+		  let invoiceNum = null;
+		  
+		  if (result && Array.isArray(result) && result.length > 0) {
+			invoiceNum = result[0].num_cmdt;
+		  } else if (result && !Array.isArray(result) && result.num_invoice) {
+			// Cas où le résultat n'est pas un tableau
+			invoiceNum = result.num_invoice;
+		  }
+		  
+		  await auditLog({
+			table_name: 'invoice',
+			action: 'SELECT',
+			performed_by: null,
+			record_id: null,
+			description: 'Récupération du dernier numéro de facture'
+		  });
+	  
+		  return {
+			success: true,
+			invoiceNum: invoiceNum
+		  };
+		  
+		} catch (error) {
+		  logger.error('Une erreur est survenue lors de la récupération du dernier numéro de facture', {
+			err: error instanceof Error ? error.message : 'Unknown error',
+			stack: error instanceof Error ? error.stack : 'Unknown stack'
+		  });
+		  return {
+			success: false,
+			invoiceNum: null
+		  }
+		}
+	  }
+}
 export default new Invoice();
