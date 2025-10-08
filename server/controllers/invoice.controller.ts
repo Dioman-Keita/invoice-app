@@ -1,5 +1,6 @@
 import ApiResponder from "../utils/ApiResponder";
 import Invoice, { CreateInvoiceInput, InvoiceInputBody, InvoiceRecordType, UpdateInvoiceData } from "../models/Invoice";
+import InvoiceLastNumberValidator from "../utils/InvoiceLastNumberValidator";
 import type { Response, Request } from 'express';
 import logger from "../utils/Logger";
 import { canAccessInvoice } from "../middleware/roleGuard";
@@ -39,8 +40,21 @@ export async function createInvoice(
     if (!data.invoice_num?.trim()) {
       return ApiResponder.badRequest(res, 'Le numéro de facture est requis', { field: 'invoice_num' });
     }
+    if(data.invoice_num) {
+      const validationResult = await InvoiceLastNumberValidator.validateInvoiceNumberUniqueness(data.invoice_num);
+      if (!validationResult.success) {
+        return ApiResponder.badRequest(res, validationResult.errorMessage, { field: 'invoice_num' });
+      }
+    }
     if (!data.num_cmdt?.trim()) {
       return ApiResponder.badRequest(res, "Le numéro CMDT de la facture est requis", { field: 'num_cmdt' });
+    }
+
+    if (data.num_cmdt) {
+      const validationResult = await InvoiceLastNumberValidator.validateInvoiceNumberExpected(data.num_cmdt);
+      if (!validationResult.isValid) {
+        return ApiResponder.badRequest(res, validationResult.errorMessage, { field: 'num_cmdt', suggeestion: validationResult.nextNumberExpected });
+      }
     }
     if (!data.supplier_account_number?.trim()) {
       return ApiResponder.badRequest(res, 'Le numéro de compte fournisseur est requis', { field: 'supplier_account_number' });
@@ -146,7 +160,9 @@ export async function createInvoice(
       supplierId: supplierResult.supplierId
     });
 
-    return ApiResponder.created(res, result.data, 'Facture créée avec succès');
+    const warningInfo = await InvoiceLastNumberValidator.checkYearEndThresholdWarning();
+
+    return ApiResponder.created(res, result.data, 'Facture créée avec succès', { warningInfo });
   } catch (err) {
     logger.error(`[${requestId}] Erreur lors de la création de facture`, { 
       errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',
