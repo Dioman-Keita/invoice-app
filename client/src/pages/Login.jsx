@@ -9,20 +9,35 @@ import { useInputFilters } from '../hooks/useInputFilter';
 import AsyncSubmitBtn from '../components/AsyncSubmitBtn';  
 import { useAuth } from '../services/useAuth';
 import useToastFeedback from '../hooks/useToastFeedback';
+
 function Login() {
   useTitle('CMDT - Connexion');
 
-  const [role, setRole] = useState('dfc_agent');
+  // Définition des rôles disponibles
+  const ROLES = {
+    ADMIN: 'admin',
+    DFC_AGENT: 'dfc_agent',
+    INVOICE_MANAGER: 'invoice_manager'
+  };
+
+  // État pour le rôle sélectionné - invoice_manager par défaut
+  const [role, setRole] = useState(ROLES.INVOICE_MANAGER);
   const { filterEmail, filterPassword } = useInputFilters();
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const { success, error } = useToastFeedback();
   const navigate = useNavigate();
+  
   const { register, formState: { errors }, handleSubmit, setValue } = useForm({
     mode: 'onChange',
     reValidateMode: 'onChange',
     criteriaMode: 'all',
-    defaultValues: { email: '', password: '', rememberMe: false, role: 'dfc_agent' },
+    defaultValues: { 
+      email: '', 
+      password: '', 
+      rememberMe: false, 
+      role: ROLES.INVOICE_MANAGER // Valeur par défaut
+    },
     resolver: zodResolver(loginSchema),
   });
 
@@ -31,8 +46,9 @@ function Login() {
   }, [role, setValue]);
 
   const [showPassword, setShowPassword] = useState(false);
+  
   const onSubmit = async (data) => { 
-    console.log(data); 
+    console.log('Données de connexion:', data); 
     try {
       setLoading(true);
       await new Promise((res) => setTimeout(res, 2000));
@@ -45,21 +61,48 @@ function Login() {
 
       if (result.success) {
         success(result.message || 'Connexion réussie');
-            setTimeout(() => {
-              navigate('/profile', { replace: true });
-            }, 4000);
+        
+        // Redirection basée sur le rôle
+        let redirectPath = '/profile';
+        if (data.role === ROLES.ADMIN) {
+          redirectPath = '/dashboard';
+        } else if (data.role === ROLES.INVOICE_MANAGER || data.role === ROLES.DFC_AGENT) {
+          redirectPath = '/profile';
+        }
+        
+        setTimeout(() => {
+          navigate(redirectPath, { replace: true });
+        }, 2000); // Réduction du délai pour une meilleure UX
       } else {
         error(result.message || 'Une erreur interne est survenue');
       }
-      console.log('Donnees soumises : ', data);
     } catch (err) {
-      error(result?.message);
-      console.log(err);
+      error(err?.message || 'Erreur de connexion');
+      console.error('Erreur de connexion:', err);
     } finally {
       setLoading(false);
     }
   };
-  
+
+  // Fonction pour gérer le changement de rôle
+  const handleRoleChange = (selectedRole) => {
+    setRole(selectedRole);
+  };
+
+  // Texte descriptif basé sur le rôle sélectionné
+  const getRoleDescription = () => {
+    switch(role) {
+      case ROLES.ADMIN:
+        return "Accès complet à l'administration du système";
+      case ROLES.DFC_AGENT:
+        return "Gestion des opérations DFC";
+      case ROLES.INVOICE_MANAGER:
+        return "Gestion des factures cotonnières";
+      default:
+        return "Accédez à votre espace personnel";
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-login">
       {/* Section illustration */}
@@ -83,18 +126,29 @@ function Login() {
         <div className="w-full max-w-md bg-white/90 backdrop-blur-md rounded-2xl shadow-lg p-8">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-green-800">Connexion</h2>
-            <p className="text-gray-600 mt-2">Accédez à votre espace personnel</p>
+            <p className="text-gray-600 mt-2">{getRoleDescription()}</p>
           </div>
 
           {/* Sélection du type d'utilisateur */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">Je suis :</label>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               <button
                 type="button"
-                onClick={() => setRole('dfc_agent')}
-                className={`py-3 px-4 rounded-lg border ${
-                  role === 'dfc_agent'
+                onClick={() => handleRoleChange(ROLES.ADMIN)}
+                className={`py-3 px-2 rounded-lg border text-sm ${
+                  role === ROLES.ADMIN
+                    ? 'bg-red-100 border-red-500 text-red-700'
+                    : 'bg-gray-100 border-gray-300 text-gray-700'
+                } transition-colors`}
+              >
+                Administrateur
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRoleChange(ROLES.DFC_AGENT)}
+                className={`py-3 px-2 rounded-lg border text-sm ${
+                  role === ROLES.DFC_AGENT
                     ? 'bg-green-100 border-green-500 text-green-700'
                     : 'bg-gray-100 border-gray-300 text-gray-700'
                 } transition-colors`}
@@ -103,10 +157,10 @@ function Login() {
               </button>
               <button
                 type="button"
-                onClick={() => setRole('invoice_manager')}
-                className={`py-3 px-4 rounded-lg border ${
-                  role === 'invoice_manager'
-                    ? 'bg-green-100 border-green-500 text-green-700'
+                onClick={() => handleRoleChange(ROLES.INVOICE_MANAGER)}
+                className={`py-3 px-2 rounded-lg border text-sm ${
+                  role === ROLES.INVOICE_MANAGER
+                    ? 'bg-blue-100 border-blue-500 text-blue-700'
                     : 'bg-gray-100 border-gray-300 text-gray-700'
                 } transition-colors`}
               >
@@ -125,10 +179,16 @@ function Login() {
                 id="email"
                 onInput={filterEmail}
                 {...register('email')}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none ${errors.email?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none ${
+                  errors.email?.message 
+                    ? 'border-red-500 focus:border-red-600' 
+                    : 'border-gray-400 focus:border-gray-600'
+                }`}
                 placeholder="votre@email.com"
               />
-              {errors.email?.message && <p className="text-sm text-red-600 mt-1">{errors.email.message}</p>}
+              {errors.email?.message && (
+                <p className="text-sm text-red-600 mt-1">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="mb-6">
@@ -141,7 +201,11 @@ function Login() {
                   id="password"
                   onInput={filterPassword}
                   {...register('password')}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none pr-12 ${errors.password?.message ? 'border-red-500 focus:border-red-600' : 'border-gray-400 focus:border-gray-600'}`}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none pr-12 ${
+                    errors.password?.message 
+                      ? 'border-red-500 focus:border-red-600' 
+                      : 'border-gray-400 focus:border-gray-600'
+                  }`}
                   placeholder="Votre mot de passe"
                 />
                 <button
@@ -153,7 +217,9 @@ function Login() {
                   {showPassword ? 'Masquer' : 'Afficher'}
                 </button>
               </div>
-              {errors.password?.message && <p className="text-sm text-red-600 mt-1">{errors.password.message}</p>}
+              {errors.password?.message && (
+                <p className="text-sm text-red-600 mt-1">{errors.password.message}</p>
+              )}
             </div>
 
             <div className="flex items-center justify-between mb-6">
@@ -161,21 +227,21 @@ function Login() {
                 <input
                   type="checkbox"
                   id="remember"
-                  onChange={(e) => {e.target.checked}}
                   className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                   {...register('rememberMe')}
                 />
                 <label htmlFor="remember" className="ml-2 block text-sm text-gray-700">
                   Se souvenir de moi
                 </label>
-                {errors.rememberMe?.message && <p className="text-red-600 text-sm mt-1">{errors.password.message}</p>}
               </div>
 
               <Link to="/forgot-password" className="text-sm text-green-600 hover:text-green-800">
                 Mot de passe oublié?
               </Link>
             </div>
-            <input type="hidden" {...register("role")} name="role" value={role} />
+            
+            {/* Champ caché pour le rôle */}
+            <input type="hidden" {...register("role")} />
 
             <AsyncSubmitBtn
               fullWidth
