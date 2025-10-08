@@ -2,17 +2,16 @@ import mysql from 'mysql2/promise';
 import type { PoolConnection, Pool } from 'mysql2/promise';
 import logger from '../utils/Logger';
 
-export  type DatabaseInstance = Database;
+export type DatabaseInstance = Database;
 
 class Database {
     private pool: Pool | null = null;
-    private connection: PoolConnection | null = null;
 
     public constructor() {
         this.init();
     }
 
-    init(): undefined {
+    init(): void {
         try {
             this.pool = mysql.createPool({
                 host: process.env.DB_HOST || 'localhost',
@@ -35,66 +34,54 @@ class Database {
             throw error;
         }
     }
-    /**
-     * Retourne une connexion a la base de donnée
-     */
+
     public async getConnection(): Promise<PoolConnection> {
         try {
             if (!this.pool) {
                 throw new Error('Pool de connexion non initialisé');
             }
-            this.connection = await this.pool.getConnection();
-            return this.connection;
+            return await this.pool.getConnection();
         } catch (error) {
             logger.error('Erreur lors de l\'obtention de la connexion', error);
             throw error;
         }
     }
 
-    /** 
-     * Exécute une requête avec paramètres (préparation contre les injections SQL) 
-     * @param {string} query - Requête SQL 
-     * @param {Array} param - Paramètres de la requête 
-     * @returns {Promise} Résultats de la requête 
-    */
-
-    async execute<T = any>(query: string, param: unknown[] = []): Promise<T> {
+    async execute<T = any>(query: string, params: unknown[] = []): Promise<T> {
         let connection: PoolConnection | null = null;
         try {
             connection = await this.getConnection();
-            const [rows] = await connection.execute(query, param);
+            const [rows] = await connection.execute(query, params);
             return rows as T;
         } catch (error) {
-            logger.error("Une erreur est survenue lors de l'execution de votre requete", { error, query, param });
+            logger.error("Une erreur est survenue lors de l'execution de votre requete", { error, query, params });
             throw error;
         } finally {
             connection?.release();
         }
     }
-    /**
-     * Verifie la connexion à la base de donnée
-     */
+
     async checkConnection(): Promise<boolean> {
-       try {
-        const connection = await this?.getConnection() || null;
-        await connection?.execute("SELECT 1");
-        connection?.release();
-        logger.info("Connexion à la base de données réussie");
-        return true;
-       } catch (error) {
-        logger.error("Echec de la connection à la base de donnée", error);
-        return false;
-       }
-    }
-    /**
-     * Ferme la pool de connexion
-     */
-    async close() {
+        let connection: PoolConnection | null = null;
         try {
-           if (this.pool) {
-            await this.pool.end();
-            console.log('Pool MySQL fermée avec succès');
-           }
+            connection = await this.getConnection();
+            await connection.execute("SELECT 1");
+            logger.info("Connexion à la base de données réussie");
+            return true;
+        } catch (error) {
+            logger.error("Echec de la connection à la base de donnée", error);
+            return false;
+        } finally {
+            connection?.release();
+        }
+    }
+
+    async close(): Promise<void> {
+        try {
+            if (this.pool) {
+                await this.pool.end();
+                logger.info('Pool MySQL fermée avec succès');
+            }
         } catch (error) {
             logger.error('Erreur lors de la fermeture de la pool', error);
             throw error;
@@ -105,15 +92,12 @@ class Database {
 const database = new Database();
 export default database;
 
-/**
- * Gestion de la fermuture propre
- */
 process.on("SIGINT", async () => {
     try {
         await database.close();
         process.exit(0);
     } catch (error) {
         logger.error("Une erreur est survenue lors de la fermeture securisée de la pool", error);
-        throw error;
+        process.exit(1);
     }
-})
+});
