@@ -151,13 +151,18 @@ Le frontend doit appeler ces endpoints avec `credentials: 'include'` pour inclur
 
 ### Flux d'authentification
 ## Création de compte
+```img
 ![register flow](architechture/register_flow.svg)
+```
 ## Connexion
+```img
 ![login_flow](architechture/login_flow.svg)
+```
 
 ## Flux de création de facture
+```img
 ![invoice_flow](architechture/invoice_flow.svg)
-
+```
 
 ### Lancer le projet en développement
 ```bash
