@@ -151,7 +151,7 @@ Le frontend doit appeler ces endpoints avec `credentials: 'include'` pour inclur
 
 ### Flux d'authentification
 ## Création de compte
-![register flow](architechture/register_flow)
+![register flow](architechture/register_flow.svg)
 ## Connexion
 ![login_flow](architechture/login_flow.svg)
 
