@@ -3,6 +3,8 @@ import { GmailEmailSender } from "../services/emailService";
 import { NotificationFactory } from "../services/notificationFactory";
 import Users, { UserType, User } from "../models/User";
 import { generateRefreshToken, generateUserToken, verifyUserToken } from "../services/userToken";
+import activityTracker, { ActivityTracker } from "../utils/ActivityTracker";
+import UserDataValidator from "../utils/UserDataValidator";
 import type { Response, Request } from "express";
 import { isValidEmail, isValidPassword, isValidPasswordStrength } from "../middleware/validator";
 import { JsonWebTokenError } from "jsonwebtoken";
@@ -10,130 +12,180 @@ import database from "../config/database";
 import logger from "../utils/Logger";
 import { auditLog } from "../utils/auditLogger";
 import { BcryptHasher } from "../utils/PasswordHasher";
-import activityTracker, { ActivityTracker } from "../utils/ActivityTracker";
-export async function createUser(req: Request<unknown, unknown, UserType>, res: Response): Promise<Response> {
+
+export async function createUser(
+    req: Request<unknown, unknown, UserType>, 
+    res: Response
+  ): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
     const data = req.body as UserType;
-    logger.info(`[${requestId}] Tentative de création d'utilisateur`, { email: data.email, role: data.role });
-
-    try {
-        
-        const result = await Users.create(data);
-        
-        if(!result.success) {
-            logger.warn(`[${requestId}] Échec de création d'utilisateur`, {
-                email: data.email,
-                employeeId: data.employeeId,
-                role: data.role,
-                userId: result.userId
-            });
-
-            return ApiResponder.badRequest(res, result.message, {
-                success: false,
-                message: result.message,
-                field: result.field
-            });
-        }
-        logger.info(`[${requestId}] Utilisateur créé avec succès`, { 
-            email: data.email, 
-            employeeId: data.employeeId,
-            role: data.role,
-            userId: result.userId
-        });
-
-        return ApiResponder.created(res, { success: true, userId: result.userId }, 'Un email de verification vous a été envoyé pour completer votre inscription');
-    } catch (error) {
-        logger.error(`[${requestId}] Échec de création d'utilisateur`, { 
-            email: req.body?.email, 
-            error: error instanceof Error ? error.message : 'Erreur inconnue',
-            stack: error instanceof Error ? error.stack : undefined
-        });
-        return ApiResponder.badRequest(res, "Service temporairement indisponible veuillez reéssayer plus tard");
+    
+    logger.info(`[${requestId}] Tentative de création d'utilisateur`, { 
+      email: data.email, 
+      role: data.role 
+    });
+  
+    // ✅ VALIDATION AVEC LA NOUVELLE CLASSE
+    const validationResult = await UserDataValidator.validateUserCreation(data);
+  
+    if (!validationResult.isValid) {
+      logger.warn(`[${requestId}] Validation des données utilisateur échouée`, {
+        errors: validationResult.errors,
+        email: data.email
+      });
+      
+      const firstError = validationResult.errors[0];
+      return ApiResponder.badRequest(res, firstError.message, {
+        field: firstError.field,
+        allErrors: validationResult.errors // Optionnel: retourner toutes les erreurs
+      });
     }
-}
+  
+    try {
+      const result = await Users.create(data);
+      
+      if (!result.success) {
+        logger.warn(`[${requestId}] Échec de création d'utilisateur`, {
+          email: data.email,
+          employeeId: data.employeeId,
+          role: data.role,
+          error: result.message
+        });
+  
+        return ApiResponder.badRequest(res, result.message, {
+          success: false,
+          message: result.message,
+          field: result.field
+        });
+      }
+  
+      logger.info(`[${requestId}] Utilisateur créé avec succès`, { 
+        email: data.email, 
+        employeeId: data.employeeId,
+        role: data.role,
+        userId: result.userId
+      });
+  
+      return ApiResponder.created(res, { 
+        success: true, 
+        userId: result.userId 
+      }, 'Un email de verification vous a été envoyé pour completer votre inscription');
+      
+    } catch (error) {
+      logger.error(`[${requestId}] Échec de création d'utilisateur`, { 
+        email: data.email, 
+        error: error instanceof Error ? error.message : 'Erreur inconnue',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      return ApiResponder.badRequest(res, "Service temporairement indisponible veuillez reéssayer plus tard");
+    }
+  }
 
 export async function login(req: Request, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
     const { email, rememberMe } = req.body;
     
     try {
-        logger.info(`[${requestId}] Tentative de connexion`, { email });
-        
-        const authUser = await Users.verifyCredentials({ email, password: req.body.password, role: req.body.role });
-        
-        console.log('🔧 DEBUG - authUser reçu:', authUser);
-        console.log('🔧 DEBUG - Type de authUser:', typeof authUser);
-        console.log('🔧 DEBUG - authUser.error:', (authUser as any)?.error);
-        
-        // Vérifier si c'est une erreur de connexion à la base de données
-        if (authUser && (authUser as any).error === 'DATABASE_CONNECTION_ERROR') {
-            console.log('🔧 DEBUG - Erreur de connexion DB détectée');
-            logger.error(`[${requestId}] Erreur de connexion à la base de données`, { email });
-            return ApiResponder.error(res, null, "Service temporairement indisponible. Veuillez réessayer plus tard.");
-        }
-        
-        if (!authUser || !authUser.id) {
-            console.log('🔧 DEBUG - Identifiants invalides détectés');
-            logger.warn(`[${requestId}] Échec de connexion - identifiants invalides`, { email });
-            return ApiResponder.unauthorized(res, "Identifiants invalides");
-        }
-
-        const accessToken = generateUserToken({
-            sup: authUser.id,
-            email: authUser.email,
-            role: authUser.role,
-            activity: 'LOGIN'
-        }, { expiresIn: rememberMe ? '2h' : '1h' });
-
-        const refreshToken = generateRefreshToken({ id: authUser.id });
-        const coockieConfig = {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' as 'none' | 'lax' | 'strict',
-            domain: process.env.COOKIE_DOMAIN,
-            path: '/',
-        }
-
-        res.cookie('auth_token', accessToken, {
-            ...coockieConfig,
-            maxAge: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000, // 2h vs 1h
+      logger.info(`[${requestId}] Tentative de connexion`, { email });
+  
+      // Validation des données de connexion
+      const validationResult = await UserDataValidator.validateLogin(req.body);
+  
+      if (!validationResult.isValid) {
+        logger.warn(`[${requestId}] Validation des données de connexion échouée`, {
+          errors: validationResult.errors,
+          email
         });
-
-        res.cookie('refresh_token', refreshToken, {
-            ...coockieConfig,
-            maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000, // 7j vs 24h
-        });
-
-        res.cookie('rememberMe', Boolean(rememberMe) ? 'true' : 'false', {
-            ...coockieConfig,
-            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jrs,
-        })
         
-        logger.info(`[${requestId}] Connexion réussie`, { 
-            userId: authUser.id, 
-            email: authUser.email, 
-            role: authUser.role
+        const firstError = validationResult.errors[0];
+        return ApiResponder.badRequest(res, firstError.message, {
+          field: firstError.field
         });
-        const isTrack = await activityTracker.track('LOGIN', authUser.id);
-        if (isTrack) {
-            return ApiResponder.success(res, { userId: authUser.id, role: authUser.role }, "Connecté");
-        } else {
-            logger.warn(`[${requestId}] Une erreur est survenue lors du suivit de l'utilisateur`, {
-                userId: authUser.id,
-                role: authUser.role,
-                email: authUser.email,
-                userActivity: 'LOGIN'
-            })
-            return ApiResponder.badRequest(res, 'Erreur lors de la connexion (SUIVIT IMPOSSIBLE)');
-        }
+      }
+  
+      const authUser = await Users.verifyCredentials({ 
+        email, 
+        password: req.body.password, 
+        role: req.body.role 
+      });
+      
+      // Vérifier si c'est une erreur de connexion à la base de données
+      if (authUser && (authUser as any).error === 'DATABASE_CONNECTION_ERROR') {
+        logger.error(`[${requestId}] Erreur de connexion à la base de données`, { email });
+        return ApiResponder.error(res, null, "Service temporairement indisponible. Veuillez réessayer plus tard.");
+      }
+      
+      if (!authUser || !authUser.id) {
+        logger.warn(`[${requestId}] Échec de connexion - identifiants invalides`, { email });
+        return ApiResponder.unauthorized(res, "Identifiants invalides");
+      }
+  
+      // Génération des tokens
+      const accessToken = generateUserToken({
+        sup: authUser.id,
+        email: authUser.email,
+        role: authUser.role,
+        activity: 'LOGIN'
+      }, { expiresIn: rememberMe ? '2h' : '1h' });
+  
+      const refreshToken = generateRefreshToken({ id: authUser.id });
+      
+      // Configuration des cookies
+      const cookieConfig = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' as 'none' | 'lax' | 'strict',
+        domain: process.env.COOKIE_DOMAIN,
+        path: '/',
+      }
+  
+      // Définition des cookies
+      res.cookie('auth_token', accessToken, {
+        ...cookieConfig,
+        maxAge: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000,
+      });
+  
+      res.cookie('refresh_token', refreshToken, {
+        ...cookieConfig,
+        maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000,
+      });
+  
+      res.cookie('rememberMe', Boolean(rememberMe) ? 'true' : 'false', {
+        ...cookieConfig,
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      });
+      
+      logger.info(`[${requestId}] Connexion réussie`, { 
+        userId: authUser.id, 
+        email: authUser.email, 
+        role: authUser.role
+      });
+  
+      // Tracking de l'activité
+      const isTrack = await activityTracker.track('LOGIN', authUser.id);
+      
+      if (!isTrack) {
+        logger.warn(`[${requestId}] Erreur lors du suivi de l'activité utilisateur`, {
+          userId: authUser.id,
+          role: authUser.role,
+          email: authUser.email
+        });
+        // On ne bloque pas la connexion pour une erreur de tracking
+      }
+  
+      return ApiResponder.success(res, { 
+        userId: authUser.id, 
+        role: authUser.role 
+      }, "Connecté avec succès");
+      
     } catch (error) {
-        logger.error(`[${requestId}] Erreur lors de la connexion`, { 
-            email, 
-            error: error instanceof Error ? error.message : 'Erreur inconnue' 
-        });
-        return ApiResponder.badRequest(res, "Service temporairement indisponible veuillez reéssayer plus tard");
+      logger.error(`[${requestId}] Erreur lors de la connexion`, { 
+        email, 
+        error: error instanceof Error ? error.message : 'Erreur inconnue' 
+      });
+      return ApiResponder.badRequest(res, "Service temporairement indisponible veuillez reéssayer plus tard");
     }
-}
+  }
 
 export async function getCurrentToken(req: Request, res: Response): Promise<Response> {
     const token = req.cookies?.auth_token;
@@ -179,7 +231,7 @@ export async function logout(req: Request, res: Response): Promise<Response> {
         
         if (user && user.sup) {
             try {
-                await activityTracker.deleteUserActivity(user.sup);
+                await activityTracker.track('LOGOUT', user.sup);
                 logger.debug(`[${requestId}] Utilisateur déconnecté`, {
                     id: user.sup, 
                     email: user.email, 

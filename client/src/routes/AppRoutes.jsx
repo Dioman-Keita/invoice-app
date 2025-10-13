@@ -34,7 +34,6 @@ function AppRoutes() {
             <Route path="/verify" element={<Verify />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/joinDFC" element={<JoinDFC />} />
             <Route path="/help" element={<Help />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
@@ -90,6 +89,13 @@ function AppRoutes() {
                     <Settings />
                 </PrivateRoute>
             } />
+            <Route path="/joinDFC" element={
+                <PrivateRoute
+                    requiredRoles={['admin', 'invoice_manager']}
+                    customMessage="Accès réservé aux gestionnaires de facturation et administrateurs système"
+                ><JoinDFC /></PrivateRoute>
+            } />
+
 
             {/* Tableau de bord admin - Accès libre pour test */}
             <Route path="/dashboard" element={<Dashboard />} />

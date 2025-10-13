@@ -25,7 +25,10 @@ dist-ssr
 
 
 # Cache Vite
-.vite/
+.vite/*
 
 # OS/IDE (déjà partiel)
 .DS_Store
+
+# Fichier texte
+*.txt

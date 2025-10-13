@@ -1,11 +1,12 @@
 import ApiResponder from "../utils/ApiResponder";
-import Invoice, { CreateInvoiceInput, InvoiceInputBody, InvoiceRecordType, UpdateInvoiceData } from "../models/Invoice";
+import Invoice, { InvoiceRecordType, UpdateInvoiceData } from "../models/Invoice";
 import InvoiceLastNumberValidator from "../utils/InvoiceLastNumberValidator";
+import InvoiceValidatorData from "../utils/InvoiceValidatorData";
 import type { Response, Request } from 'express';
 import logger from "../utils/Logger";
 import { canAccessInvoice } from "../middleware/roleGuard";
-import { getSupplierId } from "./supplier.controller";
-import { formatDate } from "../utils/Formatters";
+import { getSetting } from '../utils/InvoiceLastNumberValidator'
+import { ActivityTracker } from "../utils/ActivityTracker";
 
 type SearchInvoiceQueryParams = {
     supplier_id?: string;
@@ -19,7 +20,7 @@ type SearchInvoiceQueryParams = {
 };
 
 export async function createInvoice(
-  req: Request<unknown, unknown, InvoiceInputBody>,
+  req: Request<unknown, unknown, any>,
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
@@ -33,117 +34,33 @@ export async function createInvoice(
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     }
 
-    logger.info(`[${requestId}] Debut de la création de la facture`);
+    logger.info(`[${requestId}] Début de la création de la facture`);
     const data = req.body;
 
-    // Validations des champs obligatoires
-    if (!data.invoice_num?.trim()) {
-      return ApiResponder.badRequest(res, 'Le numéro de facture est requis', { field: 'invoice_num' });
-    }
-    if(data.invoice_num) {
-      const validationResult = await InvoiceLastNumberValidator.validateInvoiceNumberUniqueness(data.invoice_num);
-      if (!validationResult.success) {
-        return ApiResponder.badRequest(res, validationResult.errorMessage, { field: 'invoice_num' });
-      }
-    }
-    if (!data.num_cmdt?.trim()) {
-      return ApiResponder.badRequest(res, "Le numéro CMDT de la facture est requis", { field: 'num_cmdt' });
-    }
+    // Validation complète des données
+    const validationResult = await InvoiceValidatorData.validateInvoiceData(data, user);
 
-    if (data.num_cmdt) {
-      const validationResult = await InvoiceLastNumberValidator.validateInvoiceNumberExpected(data.num_cmdt);
-      if (!validationResult.isValid) {
-        return ApiResponder.badRequest(res, validationResult.errorMessage, { field: 'num_cmdt', suggeestion: validationResult.nextNumberExpected });
-      }
-    }
-    if (!data.supplier_account_number?.trim()) {
-      return ApiResponder.badRequest(res, 'Le numéro de compte fournisseur est requis', { field: 'supplier_account_number' });
-    }
-    if (!data.supplier_name?.trim()) {
-      return ApiResponder.badRequest(res, 'Le nom du fournisseur est requis', { field: 'supplier_name' });
-    }
-    if (!data.invoice_amount || isNaN(Number(data.invoice_amount))) {
-      return ApiResponder.badRequest(res, 'Le montant de la facture est invalide', { field: 'supplier_amount' });
-    }
-    if(!data.invoice_arrival_date) {
-      return ApiResponder.badRequest(res, 'La date d\'arrivée de la facture est requis', { field: 'invoice_arrival_date' });
-    }
-    if(!data.invoice_date) {
-      return ApiResponder.badRequest(res, 'La date de la facture est requis', { field: 'invoice_date'});
-    }
-    
-    const invoiceDate = new Date(formatDate(data.invoice_arrival_date));
-    const inoiceArrivalDate = new Date(formatDate(data.invoice_date));
-
-    if (invoiceDate.getTime() > inoiceArrivalDate.getTime()) {
-      return ApiResponder.badRequest(res, "La date d'arrivée de la facture ne peut pas être anterieur à la data réelle de la facture", { field: 'invoice_arrival_date'});
-    }
-    if (!(['Paiement', 'Acompte', 'Avoir'].includes(data.invoice_nature))) {
-      return ApiResponder.badRequest(res, 'La nature de la facture est invalide', { field: 'invoice_nature' });
-    }
-    if (!(['1 copie', 'Orig + 1 copie', 'Orig + 2 copies', 'Orig + 3 copies'].includes(data.folio))) {
-      return ApiResponder.badRequest(res, "Le folio est invalide", { field: 'folio' });
-    }
-    if (!(['Oui', 'Non'].includes(data.invoice_status))) {
-      return ApiResponder.badRequest(res, "Etat de la facture invalide. Veuillez cocher (Oui ou Non)", { field: 'invoice_status'});
-    }
-    if (!(['Ordinaire', 'Transporteur', 'Transitaire'].includes(data.invoice_type))) {
-      return ApiResponder.badRequest(res, "Type de facture invalide", { field: 'invoice_type'});
-    }
-    // Validation du numéro de compte fournisseur
-    if (!/^\d{12}$/.test(data.supplier_account_number)) {
-      return ApiResponder.badRequest(res, 'Le numéro de compte doit contenir exactement 12 chiffres', { field: 'supplier_account_number'});
-    }
-
-    // Validation du montant
-    const amount = Number(data.invoice_amount);
-    if (amount <= 0 || amount > 100_000_000_000) {
-      return ApiResponder.badRequest(res, 'Le montant doit être compris entre 1 et 100 000 000 000', { field: 'supplier_amount' });
-    }
-
-    // Récupérer ou créer le fournisseur
-    const supplierResult = await getSupplierId({ 
-      supplier_account_number: data.supplier_account_number,
-      supplier_name: data.supplier_name,
-      supplier_phone: data.supplier_phone || '',
-      created_by: user.sup,
-      created_by_email: user.email,
-      created_by_role: user.role,
-    });
-
-    if (!supplierResult.success || !supplierResult.supplierId) {
-      logger.warn(`[${requestId}] Erreur lors de la récupération/création du fournisseur`, {
-        userId: user.sup,
-        email: user.email,
-        role: user.role,
-        supplierData: {
-          name: data.supplier_name,
-          account_number: data.supplier_account_number
-        }
+    if (!validationResult.isValid) {
+      logger.warn(`[${requestId}] Validation des données échouée`, {
+        errors: validationResult.errors,
+        userId: user.sup
       });
-      return ApiResponder.badRequest(res, supplierResult.message || "Erreur lors de la gestion du fournisseur");
+      
+      // Retourner la première erreur (ou toutes selon votre préférence)
+      const firstError = validationResult.errors[0];
+      return ApiResponder.badRequest(
+        res, 
+        firstError.message, 
+        { 
+          field: firstError.field, 
+          suggestion: firstError.suggestion,
+          allErrors: validationResult.errors // Optionnel: retourner toutes les erreurs
+        }
+      );
     }
 
-    // Préparer les données pour la création de la facture
-    const invoiceData = {
-      num_cmdt: data.num_cmdt,
-      invoice_num: data.invoice_num,
-      invoice_object: data.invoice_object,
-      invoice_nature: data.invoice_nature,
-      invoice_arrival_date: data.invoice_arrival_date,
-      invoice_date: data.invoice_date,
-      invoice_type: data.invoice_type,
-      folio: data.folio,
-      invoice_amount: data.invoice_amount,
-      status: data.invoice_status || 'Non',
-      documents: data.documents,
-      supplier_id: supplierResult.supplierId,
-      created_by: user.sup,
-      created_by_email: user.email,
-      created_by_role: user.role
-    } as CreateInvoiceInput;
-
-    const result = await Invoice.create(invoiceData);
+    // Création de la facture avec les données validées
+    const result = await Invoice.create(validationResult.validatedData!);
 
     if (!result.success) {
       logger.error(`[${requestId}] Erreur lors de la création de la facture dans le modèle`, {
@@ -153,15 +70,30 @@ export async function createInvoice(
       return ApiResponder.error(res, result.data);
     }
 
+    // Mettre à jour le compteur CMDT
+    await InvoiceLastNumberValidator.updateCmdtCounter(data.num_cmdt);
+
     logger.info(`[${requestId}] Facture créée avec succès`, { 
       userId: user.sup, 
       email: user.email,
       role: user.role,
-      supplierId: supplierResult.supplierId
+      supplierId: validationResult.validatedData!.supplier_id
     });
 
-    const warningInfo = await InvoiceLastNumberValidator.checkYearEndThresholdWarning();
+    // tracking de l'utilisateur
+    const userActivity = new ActivityTracker();
+    const trackingResult = userActivity.track('SUBMIT_INVOICE', user.sup);
 
+    if (!trackingResult) {
+      logger.warn(`Echec du tracking de l'utilisateur ${user.sup} lors de la soumission du formulaire de facture`, {
+        role: user.role,
+        email: user.email
+      });
+    }
+
+    // Vérifier les alertes de fin d'année
+    const warningInfo = await InvoiceLastNumberValidator.checkYearEndThresholdWarning();
+    
     return ApiResponder.created(res, result.data, 'Facture créée avec succès', { warningInfo });
   } catch (err) {
     logger.error(`[${requestId}] Erreur lors de la création de facture`, { 
@@ -606,37 +538,79 @@ export async function getLastInvoiceNumber(req: Request, res: Response): Promise
     const user = (req as any).user;
     if (!user || !user.sup) {
       logger.warn(`[${requestId}] Tentative d'accès aux ressources par un utilisateur non authentifié`);
-      return ApiResponder.badRequest(res, 'Accès interdit');
+      return ApiResponder.unauthorized(res, 'Accès interdit');
     }
 
-    logger.info(`[${requestId}] Début de la recherche du dernier numéro de facture enregistré dans le système`);
-    const lastInvoiceNumResult = await Invoice.getLastInvoiceNum();
+    logger.info(`[${requestId}] Début de la recherche du dernier numéro de facture utilisé`);
+    
+    // ✅ CORRECTION : Récupérer le compteur actuel, pas le prochain numéro
+    const counter = await InvoiceLastNumberValidator.getCurrentFiscalYearCounter();
+    const config = await getSetting('cmdt_format');
+    
+    // Formater le dernier numéro utilisé (pas le prochain)
+    const lastInvoiceNumber = counter.last_cmdt_number.toString().padStart(config.padding, '0');
 
-    if (lastInvoiceNumResult.success) {
-      // Gérer le cas où il n'y a pas encore de factures
-      const invoiceNum = lastInvoiceNumResult.invoiceNum || '0000';
-      
-      logger.info(`[${requestId}] Dernier numéro de facture récupéré avec succès: ${invoiceNum}`);
-      return ApiResponder.success(res, { 
-        lastInvoiceNum: invoiceNum 
-      }, 'Dernier numéro de facture récupéré avec succès');
+    logger.info(`[${requestId}] Dernier numéro de facture récupéré avec succès: ${lastInvoiceNumber} pour l'année ${counter.fiscal_year}`);
+    
+    return ApiResponder.success(res, { 
+      lastInvoiceNum: lastInvoiceNumber,
+      fiscalYear: counter.fiscal_year,
+      rawLastNumber: counter.last_cmdt_number // Optionnel : pour debug
+    }, 'Dernier numéro de facture récupéré avec succès');
 
-    } else {
-      logger.debug(`[${requestId}] Une erreur est survenue pendant la récupération du dernier numéro de facture`);
-      // Retourner '0000' comme valeur par défaut en cas d'erreur
-      return ApiResponder.success(res, { 
-        lastInvoiceNum: '0000' 
-      }, 'Aucune facture trouvée, utilisation de la valeur par défaut');
-    }
   } catch (error) {
-    logger.error(`[${requestId}] Une erreur est survenue lors de la récupération du dernier numéro de facture`, {
+    logger.error(`[${requestId}] Erreur lors de la récupération du dernier numéro de facture`, {
       errorMsg: error instanceof Error ? error.message : 'Unknown error',
       errorStack: error instanceof Error ? error.stack : 'Unknown stack'
     });
 
-    // En cas d'erreur, retourner quand même une valeur par défaut
+    // Fallback sécurisé
     return ApiResponder.success(res, { 
-      lastInvoiceNum: '0000' 
+      lastInvoiceNum: '0000',
+      fiscalYear: new Date().getFullYear().toString()
     }, 'Erreur lors de la récupération, utilisation de la valeur par défaut');
+  }
+}
+
+export async function getNextInvoiceNumber(req: Request, res: Response): Promise<Response> {
+  const requestId = req.headers['x-request-id'];
+  
+  try {
+    const user = (req as any).user;
+    if (!user || !user.sup) {
+      logger.warn(`[${requestId}] Tentative d'accès aux ressources par un utilisateur non authentifié`);
+      return ApiResponder.unauthorized(res, 'Accès interdit');
+    }
+
+    logger.info(`[${requestId}] Calcul du prochain numéro de facture attendu`);
+    
+    // ✅ Pour le prochain numéro, utiliser calculateNextNumberExpected()
+    const result = await InvoiceLastNumberValidator.calculateNextNumberExpected();
+
+    if (result.success) {
+      logger.info(`[${requestId}] Prochain numéro de facture calculé avec succès: ${result.nextNumberExpected}`);
+      return ApiResponder.success(res, { 
+        nextInvoiceNum: result.nextNumberExpected, // Note: champ différent
+        fiscalYear: result.fiscalYear
+      }, 'Prochain numéro de facture calculé avec succès');
+    } else {
+      logger.warn(`[${requestId}] Impossible de calculer le prochain numéro: ${result.errorMessage}`);
+      
+      return ApiResponder.error(res, { 
+        nextInvoiceNum: '0000',
+        fiscalYear: new Date().getFullYear().toString(),
+        warning: result.errorMessage
+      }, 'Calcul du prochain numéro impossible, utilisation de la valeur par défaut');
+    }
+  } catch (error) {
+    logger.error(`[${requestId}] Erreur lors du calcul du prochain numéro de facture`, {
+      errorMsg: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : 'Unknown stack'
+    });
+
+    return ApiResponder.error(res, { 
+      nextInvoiceNum: '0000',
+      fiscalYear: new Date().getFullYear().toString()
+    }, 'Erreur lors du calcul, utilisation de la valeur par défaut');
   }
 }

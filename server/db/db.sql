@@ -151,6 +151,37 @@ CREATE TABLE audit_log (
     FOREIGN KEY (performed_by) REFERENCES employee(id)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- table pour gérer les compteurs par année fiscale
+CREATE TABLE fiscal_year_counter (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    fiscal_year VARCHAR(4) NOT NULL,
+    last_cmdt_number INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_fiscal_year (fiscal_year)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- table enregistrant les parametres critiques de l'application
+CREATE TABLE app_settings (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    setting_key VARCHAR(100) UNIQUE NOT NULL,
+    setting_value JSON NOT NULL,
+    description TEXT,
+    created_by VARCHAR(50),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES employee(id) ON DELETE SET NULL
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Table app_settings configuration initiale
+INSERT INTO app_settings (setting_key, setting_value, description) VALUES
+('fiscal_year', '"2025"', 'Année fiscale en cours'),
+('cmdt_format', '{"padding": 4, "max": 9999}', 'Format des numéros CMDT (immuable)'),
+('year_end_warning_threshold', '200', 'Seuil d avertissement fin d année');
+
+INSERT INTO app_settings (setting_key, setting_value, description) VALUES
+('auto_year_switch', 'true', 'Changement automatique d année fiscale');
+
 -- Index
 CREATE INDEX idx_employee_cmdt ON employee(employee_cmdt_id);
 CREATE INDEX idx_employee ON employee(id);

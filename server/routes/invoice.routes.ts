@@ -5,6 +5,7 @@ import {
   deleteInvoice, 
   getInvoice, 
   getLastInvoiceNumber, 
+  getNextInvoiceNumber, 
   getUserInvoices, 
   updateInvoice 
 } from '../controllers/invoice.controller';
@@ -18,7 +19,8 @@ router.use(authGuard);
 // Routes protégées
 
 // GET - Routes fixes (les plus spécifiques en premier)
-router.get('/invoices/last-invoice-num', requireAgentOrManager, getLastInvoiceNumber); // GET /invoices/last-invoice-num - Récupérer le numero de la derniere facture enregistrée dans le systeme
+router.get('/invoices/last-num', requireAgentOrManager, getLastInvoiceNumber); // GET /invoices/last-num - Récupérer le numero de la derniere facture enregistrée dans le systeme
+router.get('/invoices/next-num', requireManagerOrAdmin, getNextInvoiceNumber); // GET /invoices/next-num - Récupérer le prochain numero de facture attendu par le systeme
 router.get('/invoices', requireAgentOrManager, getUserInvoices);             // GET /invoices - Lister les factures
 
 // POST - Routes fixes

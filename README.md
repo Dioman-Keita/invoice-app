@@ -78,9 +78,7 @@ DB_NAME=cmdt_invoice_db
 Si front et back sont sur des origines différentes, activer CORS avec `credentials` côté serveur et utiliser `credentials: 'include'` côté client.
 
 ### Base de données
-- **Script initial** : `server/db/cmdt_invoice_db.sql`
-- **Mise à jour requise** : Exécuter `server/db/add_user_tracking_to_invoice.sql` pour ajouter la traçabilité utilisateur aux factures
-- **Colonnes ajoutées** : `created_by`, `created_by_email`, `created_by_role` dans la table `invoice`
+- **Script initial** : `server/db/db.sql`
 
 #### Règles et contraintes récentes
 - Facture:
@@ -90,8 +88,6 @@ Si front et back sont sur des origines différentes, activer CORS avec `credenti
 - Fournisseur:
   - L'email est remplacé par le **numéro de compte** `account_number` (exactement 12 chiffres, unique)
 
-#### Migrations
-- Traçabilité facture: `server/db/add_user_tracking_to_invoice.sql`
 - Numéro de compte fournisseur (si vous avez déjà des données):
   - Renommer la colonne `supplier.email` en `supplier.account_number` (type `CHAR(12)` ou `VARCHAR(12)`),
   - Normaliser les valeurs existantes en 12 chiffres (suppression des non-chiffres, tronquer/padder),

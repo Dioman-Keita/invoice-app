@@ -32,7 +32,7 @@ function InvoiceForm() {
       invoice_date: formatDate(),
       invoice_arrival_date: formatDate(),
       invoice_num: "",
-      num_cmdt: "",
+      num_cmdt: '',
       invoice_status: "Non"
     }
   });
@@ -40,7 +40,8 @@ function InvoiceForm() {
   const { control, trigger } = methods;  
   const invoiceDate = useWatch({ control, name: "invoice_date" });
   const arrivalDate = useWatch({ control, name: "invoice_arrival_date" });
-  const { saveInvoice, lastInvoiceNumber, getLastInvoiceNum } = useInvoice();
+  const { saveInvoice, lastInvoiceNumber, fiscalYear, nextNumberExpected } = useInvoice();
+  const [resetTrigger, setResetTrigger] = useState(0);
   const { success, error } = useToastFeedback();
   const { validateDateOrder } = useDateValidation();
 
@@ -73,6 +74,7 @@ function InvoiceForm() {
       
       if (result.success) {
         success("Facture envoyée avec succès");
+        setResetTrigger(prev => prev + 1);
         console.log('✅ Succès:', data);
         methods.reset();
       } else {
@@ -87,10 +89,16 @@ function InvoiceForm() {
   };
   return (
     <FormProvider {...methods}>
-      <FormContainer handleSubmit={methods.handleSubmit} onSubmit={onSubmit} lastInvoiceNumber={lastInvoiceNumber} isLoading={loading}>
+      <FormContainer 
+        handleSubmit={methods.handleSubmit} 
+        onSubmit={onSubmit} 
+        lastInvoiceNumber={lastInvoiceNumber} 
+        isLoading={loading} 
+        fiscalYear={fiscalYear}
+    >
           <FormSection legend={"FACTURE"}>
             <ValidatedInvoiceNumberInput name="invoice_num" label="Numéro de la facture" placeholder="000000000001"/>
-            <ValidatedCodeInput name="num_cmdt" label="N° CMDT courrier" placeholder="XXXX"/>
+            <ValidatedCodeInput name="num_cmdt" label="N° CMDT courrier" placeholder="XXXX" initialValue={nextNumberExpected} resetTrigger={resetTrigger}/>
             <ValidateDateInput name={"invoice_date"}  label={'Date de la facture'}  placeholder={'JJ/MM/AAAA'} />
             <ValidateDateInput name={'invoice_arrival_date'} label={'Date d\'arrivée du courrier'} placeholder={'JJ/MM/AAAA'} />
             <ValidatedAmountInput />

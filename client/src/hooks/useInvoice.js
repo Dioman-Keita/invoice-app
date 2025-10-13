@@ -4,26 +4,57 @@ import api from '../services/api';
 
 export default function useInvoice() {
   const [lastInvoiceNumber, setLastInvoiceNumber] = useState('0000');
+  const [nextNumberExpected, setNextNumberExpected] = useState(null);
+  const [fiscalYear, setFiscalYear] = useState(new Date().getFullYear());
+  const [isLoading, setLoading] = useState(false);
   const location = useLocation();
   
   const getLastInvoiceNum = useCallback(async (force = false) => {
     try {
       console.log('🔄 Appel API last-invoice-num', { force });
-      const response = await api.get('/invoices/last-invoice-num');
+      const response = await api.get('/invoices/last-num');
       
       if (response?.success === true) {
-        const newInvoiceNum = response?.data?.lastInvoiceNum || '0000';
-        console.log('📦 Nouveau numéro reçu:', newInvoiceNum);
-        setLastInvoiceNumber(newInvoiceNum);
-        return newInvoiceNum;
+        const lastInvoiceNum = response?.data?.lastInvoiceNum || '0000';
+        const currentFiscalYear = response?.data?.fiscalYear || new Date().getFullYear();
+        console.log('📦 Nouveau numéro reçu:', lastInvoiceNum);
+        console.log('Annee fiscal recue : ', currentFiscalYear);
+        setLastInvoiceNumber(lastInvoiceNum);
+        setFiscalYear(currentFiscalYear);
+        return lastInvoiceNum;
       } else {
         setLastInvoiceNumber('0000');
         return '0000';
       }
     } catch (error) {
       setLastInvoiceNumber('0000');
-      console.log('❌ Erreur récupération numéro:', error?.response?.data?.message || error.message);
+      console.log(error,  '❌ Erreur récupération numéro:', error?.response?.data?.message || error.message);
       return '0000';
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const getNextNumberExpected = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/invoices/next-num');
+      if (response?.success ===  true) {
+        const nextNumberExpected = response?.data?.nextInvoiceNum;
+        setNextNumberExpected(nextNumberExpected);
+      }
+    } catch (error) {
+      setLoading(false);
+      const isBackendMessage = response?.data?.status >= 400 &&
+                               response?.data?.status <= 500
+      if (isBackendMessage) {
+        setNextNumberExpected(response?.data?.nextInvoiceNum || '----');
+      } else {
+        setNextNumberExpected('Une erreur interne est survenue');
+        console.log('backend error : ', error);
+      }
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -31,11 +62,13 @@ export default function useInvoice() {
   useEffect(() => {
     if (location.pathname === '/facture') {
       getLastInvoiceNum();
+      getNextNumberExpected();
     }
-  }, [location.pathname, getLastInvoiceNum]);
+  }, [location.pathname, getLastInvoiceNum, getNextNumberExpected]);
 
   const saveInvoice = useCallback(async (invoiceData) => {
     try {
+      setLoading(true);
       const response = await api.post('/invoices', invoiceData);
       if (response.success === true) {
         console.log('✅ Facture créée, mise à jour du numéro...');
@@ -45,6 +78,7 @@ export default function useInvoice() {
         
         // Recharger le dernier numéro
         const newNum = await getLastInvoiceNum(true);
+        await getNextNumberExpected();
         console.log('🎯 Numéro après création:', newNum);
         
         return {
@@ -58,6 +92,7 @@ export default function useInvoice() {
         message: 'Une erreur inattendue est survenue. Veuillez réessayer ultérieurement'
       };
     } catch (error) {
+      setLoading(false);
       const isBackendMessage = error?.response?.status >= 400 &&
                                error.response?.status <= 500;
       if (isBackendMessage) {
@@ -71,12 +106,17 @@ export default function useInvoice() {
           success: false
         };
       }
+    } finally {
+      setLoading(false);
     }
   }, [getLastInvoiceNum]);
 
   return { 
     saveInvoice,
     getLastInvoiceNum,
-    lastInvoiceNumber
+    lastInvoiceNumber,
+    fiscalYear,
+    nextNumberExpected,
+    loading: isLoading
   };
 }

@@ -33,7 +33,7 @@ const phoneSchema = z
   });
 
 const roleSchema = z
-  .enum(['dfc_agent', 'invoice_manager'], {
+  .enum(['dfc_agent', 'invoice_manager', 'admin'], {
   message: "Veuillez choisir le rôle"
 });
 

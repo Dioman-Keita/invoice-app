@@ -137,7 +137,41 @@ export class UserModel {
     
             if (!isValidEmail(this.email)) return { success: false, message: "Email invalide", field: "email" };
             if (!isValidPasswordStrength(password)) return { success: false, message: "Mot de passe trop faible", field: "password" };
-    
+
+            const isExistingUser = await database.execute(
+                "SELECT 1 FROM employee WHERE email = ?",
+                [this.email]
+            );
+            if (Array.isArray(isExistingUser) && isExistingUser.length > 0) {
+                return {
+                    success: false,
+                    message: 'Cet email est déjà utiliser. Veuillez en choisir un autre.',
+                    field: 'email',
+                }
+            }
+            const isExistingEmployeeId = await database.execute(
+                "SELECT 1 FROM employee WHERE employee_cmdt_id = ?",
+                [this.employeeId]
+            )
+            if (Array.isArray(isExistingEmployeeId) && isExistingEmployeeId.length > 0) {
+                return {
+                    success: false,
+                    message: 'Cet identifiant employé est déjà utiliser. Veuillez en choisir un autre.',
+                    field: 'employeeId',
+                }
+            }
+            const isExistingEmployeePhone = await database.execute(
+                "SELECT 1 FROM employee WHERE phone = ?",
+                [this.phone]
+            )
+            if (Array.isArray(isExistingEmployeePhone) && isExistingEmployeePhone.length > 0) {
+                return {
+                    success: false,
+                    message:'Ce numéro de téléphone est déjà utiliser. Veuillez en choisir un autre.',
+                    field: 'phone',
+                }
+            }
+
             this.id = await generateId(this.entity);
             this.hash = await BcryptHasher.hash(password);
     

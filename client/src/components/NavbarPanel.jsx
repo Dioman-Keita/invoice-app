@@ -14,6 +14,7 @@ import {
   Cog6ToothIcon,
   QuestionMarkCircleIcon,
   UserIcon,
+  DocumentCheckIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid, CommandLineIcon } from '@heroicons/react/24/solid';
 import { StarIcon } from '@heroicons/react/24/outline';
@@ -78,6 +79,7 @@ function NavbarPanel({ isOpen, onClose }) {
     { label: 'Rechercher', icon: <MagnifyingGlassIcon className="w-6 h-6" />, action: 'search' },
     { label: 'Imprimer une facture', icon: <PrinterIcon className="w-6 h-6" />, action: 'print' },
     { label: 'Devenir agent DFC', icon: <UserPlusIcon className="w-6 h-6" />, action: 'joinDFC' },
+    { label: 'Traitement DFC', icon: <DocumentCheckIcon className="w-6 h-6" />, action: 'dfc_traitment' },
     { label: 'Accueil', icon: <HomeIcon className="w-6 h-6" />, action: 'home' },
     { label: 'Mon Profil', icon: <UserIcon className="w-6 h-6" />, action: 'profile' },
     { label: 'Aide & Support', icon: <QuestionMarkCircleIcon className="w-6 h-6" />, action: 'help' }
@@ -159,6 +161,9 @@ function NavbarPanel({ isOpen, onClose }) {
         break;
       case 'joinDFC':
         navigate('/joinDFC');
+        break;
+      case 'dfc_traitment':
+        navigate('/dfc_traitment');
         break;
       case 'home':
         navigate('/');
