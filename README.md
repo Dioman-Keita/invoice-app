@@ -154,7 +154,9 @@ Le frontend doit appeler ces endpoints avec `credentials: 'include'` pour inclur
 <p align="center">
   <img src="architechture/register_flow.svg" alt="register_flow" width="600" style="max-width: 100%; height: auto;" />
 </p>
+
 ## Connexion
+
 <p align="center">
   <img src="architechture/login_flow.svg" alt="login_flow" width="600" style="max-width: 100%; height: auto;" />
 </p>
