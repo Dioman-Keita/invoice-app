@@ -149,6 +149,16 @@ npm run preview       # prévisualisation du build
 
 Le frontend doit appeler ces endpoints avec `credentials: 'include'` pour inclure les cookies cross-origin.
 
+### Flux d'authentification
+## Création de compte
+![register flow](architechture/register_flow)
+## Connexion
+![login_flow](architechture/login_flow.svg)
+
+## Flux de création de facture
+![invoice_flow](architechture/invoice_flow.svg)
+
+
 ### Lancer le projet en développement
 ```bash
 # terminal 1 (serveur)
