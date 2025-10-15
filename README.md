@@ -65,7 +65,7 @@ Créer un fichier `.env` dans `server/` avec (exemple):
 ```
 JWT_SECRET_KEY=change_me
 NODE_ENV=development
-APP_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:5173
 PORT=3000
 
 # Exemple DB (adapter à votre driver/implémentation)
@@ -76,6 +76,8 @@ DB_NAME=cmdt_invoice_db
 ```
 
 Si front et back sont sur des origines différentes, activer CORS avec `credentials` côté serveur et utiliser `credentials: 'include'` côté client.
+
+Note Vite: un proxy est configuré dans `vite.config.js` pour rediriger `/api` vers `http://localhost:3000`. Ainsi côté client vous pouvez appeler directement `/api/...` pendant le développement.
 
 ### Base de données
 - **Script initial** : `server/db/db.sql`
@@ -108,7 +110,7 @@ npm run dev           # (optionnel) proxy/outil global si présent
 
 # serveur
 cd server
-npm run dev           # démarre l'API en mode dev (ts-node nodemon)
+npm run dev           # démarre l'API en mode dev (ts-node sur server.ts)
 npm run build         # compile TypeScript
 npm start             # démarre la version compilée
 
@@ -143,11 +145,43 @@ npm run preview       # prévisualisation du build
 - **POST** `/auth/admin/create-user` → création d'utilisateur (admin seulement)
 
 ### Endpoints Factures (protégés)
-- POST `/invoices` → créer une facture (associée à l'utilisateur connecté)
-- GET  `/invoices` → lister les factures (ses propres factures, ou toutes si admin)
-- GET  `/invoices/:id` → récupérer une facture (vérification des permissions)
+- GET  `/invoices/last-num` → récupérer le dernier numéro de facture enregistré (rôles: agent, manager)
+- GET  `/invoices/next-num` → récupérer le prochain numéro attendu (rôles: manager, admin)
+- GET  `/invoices` → lister les factures (propres factures; toutes si admin) [supporte `?fiscal_year=YYYY`]
+- GET  `/invoices/:id` → récupérer une facture spécifique (contrôle d'accès)
+- GET  `/invoices/search` → recherche par `supplier_id`, `account_number` ou `phone` [supporte `?fiscal_year=YYYY`]
+- POST `/invoices` → créer une facture (traçabilité automatique)
+- POST `/invoices/update/:id` → mettre à jour une facture (rôles: manager, admin)
+- POST `/invoices/delete/:id` → supprimer une facture (rôle: admin)
+
+### Endpoints Fournisseurs (protégés)
+- POST `/supplier` → créer un fournisseur (rôles: manager, admin)
+- POST `/supplier/delete/:id` → supprimer un fournisseur (rôle: admin)
+- GET  `/supplier` → lister les fournisseurs (rôles: agent, manager)
+- GET  `/supplier/phone` → trouver par téléphone (rôles: agent, manager)
+- GET  `/supplier/:id` → récupérer un fournisseur (rôles: agent, manager)
+- GET  `/suppliers/search` → recherche flexible par champ (rôles: manager, admin)
+- GET  `/suppliers/find` → rechercher par plusieurs champs (rôles: manager, admin)
+- GET  `/suppliers/verify-conflicts` → vérifier conflits (numéro de compte/téléphone) (rôles: agent, manager)
 
 Le frontend doit appeler ces endpoints avec `credentials: 'include'` pour inclure les cookies cross-origin.
+
+### Flux d'authentification
+## Création de compte
+<p align="center">
+  <img src="architechture/register_flow.svg" alt="register_flow" width="600" style="max-width: 100%; height: auto;" />
+</p>
+
+## Connexion
+
+<p align="center">
+  <img src="architechture/login_flow.svg" alt="login_flow" width="600" style="max-width: 100%; height: auto;" />
+</p>
+
+## Flux de création de facture
+<p align="center">
+  <img src="architechture/invoice_flow.svg" alt="invoice_flow" width="600" style="max-width: 100%; height: auto;" />
+</p>
 
 ### Lancer le projet en développement
 ```bash
@@ -173,6 +207,40 @@ npm run format
 - [x] **Interface responsive** : Design moderne avec Tailwind CSS
 - [x] **Gestion des rôles** : admin, invoice_manager, dfc_agent avec permissions granulaires
 - [x] **Audit trail** : Traçabilité complète des actions dans la base de données
+
+### Changements API/UX (Oct 2025)
+- **Filtrage par année fiscale**
+  - Les endpoints de lecture de factures supportent `?fiscal_year=YYYY`.
+  - Si omis, l’API utilise par défaut l’année fiscale active (paramètre serveur).
+  - Côté serveur, toutes les requêtes sont filtrées sur `invoice.fiscal_year` (y compris les recherches par `phone`/`account_number`).
+
+- **`warningInfo` côté serveur**
+  - Le serveur retourne un objet `warningInfo` lors de la création de facture ou via `/api/settings/fiscal` (selon implémentation):
+    ```json
+    {
+      "warning": false,
+      "remaining": 9997,
+      "threshold": 200,
+      "max": 9999,
+      "lastNumber": 2,
+      "fiscalYear": "2026"
+    }
+    ```
+  - Interprétation:
+    - `warning`: vrai si `remaining <= threshold`.
+    - `remaining`: restants avant d’atteindre `max`.
+    - `threshold`: seuil d’alerte configurable côté serveur.
+    - `max`: maximum de la séquence (ex: 9999).
+    - `lastNumber`: dernier numéro utilisé pour l’année fiscale.
+    - `fiscalYear`: année fiscale concernée.
+
+- **Paramètres (UI Settings)**
+  - Suppression de la carte de “réinitialisation système”.
+  - Ajout d’un panneau “État du Compteur CMDT” affichant `warningInfo`.
+  - Animations subtiles sur les cartes et transitions.
+  - Bouton “Programmer” (bascule d’année):
+    - Affiche un curseur “not-allowed” et une info-bulle lorsque l’auto-switch est activé ou qu’aucune année n’est sélectionnée.
+    - États de chargement intégrés pour l’activation/désactivation de l’auto-switch et la programmation.
 
 ### Roadmap (à compléter)
 - [ ] Tests d'intégration (auth, invoices, activity tracking)

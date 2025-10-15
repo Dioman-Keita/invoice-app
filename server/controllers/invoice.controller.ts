@@ -17,6 +17,7 @@ type SearchInvoiceQueryParams = {
     limit?: string;
     orderBy?: 'desc' | 'asc';
     search?: string;
+    fiscal_year?: string;
 };
 
 export async function createInvoice(
@@ -179,7 +180,7 @@ export async function getUserInvoices(
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     }
 
-    const { supplier_id, account_number, phone, status, created_by, limit, orderBy, search } = req.query;
+    const { supplier_id, account_number, phone, status, created_by, limit, orderBy, search, fiscal_year } = req.query;
 
     let invoices: InvoiceRecordType[] = [];
 
@@ -189,37 +190,41 @@ export async function getUserInvoices(
         invoices = await Invoice.findInvoice(supplier_id, {
           findBy: 'supplier_id',
           limit: limit ? parseInt(limit) : null,
-          orderBy: orderBy || 'desc'
+          orderBy: orderBy || 'desc',
+          fiscalYear: fiscal_year || await getSetting('fiscal_year')
         });
       } else if (account_number) {
         invoices = await Invoice.findInvoice(account_number, {
           findBy: 'account_number',
           limit: limit ? parseInt(limit) : null,
-          orderBy: orderBy || 'desc'
+          orderBy: orderBy || 'desc',
+          fiscalYear: fiscal_year || await getSetting('fiscal_year')
         });
       } else if (phone) {
         invoices = await Invoice.findInvoice(phone, {
           findBy: 'phone',
           limit: limit ? parseInt(limit) : null,
-          orderBy: orderBy || 'desc'
+          orderBy: orderBy || 'desc',
+          fiscalYear: fiscal_year || await getSetting('fiscal_year')
         });
       } else if (created_by) {
         // Recherche par créateur (pour les admins)
-        invoices = await searchInvoicesByCreator(created_by, limit ? parseInt(limit) : undefined, orderBy);
+        invoices = await searchInvoicesByCreator(created_by, limit ? parseInt(limit) : undefined, orderBy, fiscal_year || await getSetting('fiscal_year'));
       } else if (search) {
         // Recherche globale (pour les admins)
-        invoices = await globalSearchInvoices(search, limit ? parseInt(limit) : undefined, orderBy);
+        invoices = await globalSearchInvoices(search, limit ? parseInt(limit) : undefined, orderBy, fiscal_year || await getSetting('fiscal_year'));
       } else {
         // Toutes les factures pour les admins
         invoices = await Invoice.findInvoice('', {
           findBy: 'all',
           limit: limit ? parseInt(limit) : null,
-          orderBy: orderBy || 'desc'
+          orderBy: orderBy || 'desc',
+          fiscalYear: fiscal_year || await getSetting('fiscal_year')
         });
       }
     } else {
       // Pour les non-admins, seulement leurs propres factures
-      invoices = await searchInvoicesByCreator(user.sup, limit ? parseInt(limit) : undefined, orderBy);
+      invoices = await searchInvoicesByCreator(user.sup, limit ? parseInt(limit) : undefined, orderBy, fiscal_year || await getSetting('fiscal_year'));
     }
 
     // Filtrer par statut si spécifié
@@ -257,7 +262,7 @@ export async function searchInvoices(
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     }
 
-    const { supplier_id, account_number, phone, status, limit, orderBy } = req.query;
+    const { supplier_id, account_number, phone, status, limit, orderBy, fiscal_year } = req.query;
 
     // Vérifier les permissions pour la recherche avancée
     if (user.role !== 'admin' && (supplier_id || account_number || phone)) {
@@ -277,21 +282,24 @@ export async function searchInvoices(
       invoices = await Invoice.findInvoice(supplier_id, {
         findBy: 'supplier_id',
         limit: limit ? parseInt(limit) : null,
-        orderBy: orderBy || 'desc'
+        orderBy: orderBy || 'desc',
+        fiscalYear: fiscal_year || await getSetting('fiscal_year')
       });
     } else if (account_number) {
       searchType = 'account_number';
       invoices = await Invoice.findInvoice(account_number, {
         findBy: 'account_number',
         limit: limit ? parseInt(limit) : null,
-        orderBy: orderBy || 'desc'
+        orderBy: orderBy || 'desc',
+        fiscalYear: fiscal_year || await getSetting('fiscal_year')
       });
     } else if (phone) {
       searchType = 'phone';
       invoices = await Invoice.findInvoice(phone, {
         findBy: 'phone',
         limit: limit ? parseInt(limit) : null,
-        orderBy: orderBy || 'desc'
+        orderBy: orderBy || 'desc',
+        fiscalYear: fiscal_year || await getSetting('fiscal_year')
       });
     } else {
       return ApiResponder.badRequest(res, 'Critère de recherche requis (supplier_id, account_number, phone)');
@@ -467,16 +475,18 @@ export async function deleteInvoice(
 async function searchInvoicesByCreator(
   createdBy: string,
   limit?: number,
-  orderBy: 'desc' | 'asc' = 'desc'
+  orderBy: 'desc' | 'asc' = 'desc',
+  fiscalYear?: string
 ): Promise<InvoiceRecordType[]> {
   try {
     const query = `
       SELECT * FROM invoice 
-      WHERE created_by = ? 
+      WHERE created_by = ? ${fiscalYear ? 'AND fiscal_year = ?' : ''}
       ORDER BY create_at ${orderBy}
       ${limit ? `LIMIT ${limit}` : ''}
     `;
-    const result = await (Invoice as any).database.execute(query, [createdBy]);
+    const params = fiscalYear ? [createdBy, fiscalYear] : [createdBy];
+    const result = await (Invoice as any).database.execute(query, params);
     
     if (result && !Array.isArray(result)) {
       return [result];
@@ -497,17 +507,20 @@ async function searchInvoicesByCreator(
 async function globalSearchInvoices(
   searchTerm: string,
   limit?: number,
-  orderBy: 'desc' | 'asc' = 'desc'
+  orderBy: 'desc' | 'asc' = 'desc',
+  fiscalYear?: string
 ): Promise<InvoiceRecordType[]> {
   try {
     const query = `
       SELECT i.* FROM invoice i
       LEFT JOIN supplier s ON i.supplier_id = s.id
-      WHERE i.num_invoice LIKE ? 
+      WHERE (
+         i.num_invoice LIKE ? 
          OR i.num_cmdt LIKE ?
          OR i.invoice_object LIKE ?
          OR s.name LIKE ?
          OR s.account_number LIKE ?
+      ) ${fiscalYear ? 'AND i.fiscal_year = ?' : ''}
       ORDER BY i.create_at ${orderBy}
       ${limit ? `LIMIT ${limit}` : ''}
     `;
@@ -515,8 +528,9 @@ async function globalSearchInvoices(
       `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`,
       `%${searchTerm}%`, `%${searchTerm}%`
     ];
+    const finalParams = fiscalYear ? [...params, fiscalYear] : params;
     
-    const result = await (Invoice as any).database.execute(query, params);
+    const result = await (Invoice as any).database.execute(query, finalParams);
     
     if (result && !Array.isArray(result)) {
       return [result];

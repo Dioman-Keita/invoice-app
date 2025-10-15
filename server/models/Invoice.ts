@@ -3,6 +3,7 @@ import logger from "../utils/Logger";
 import generateId from "../services/generateId";
 import { formatDate } from "../utils/Formatters";
 import { auditLog } from "../utils/auditLogger";
+import { getSetting } from "../utils/InvoiceLastNumberValidator";
 
 type FolioType = '1 copie' | 'Orig + 1 copie' | 'Orig + 2 copies' | 'Orig + 3 copies';
 type InvoiceType =  'Ordinaire' | 'Transporteur' | 'Transitaire';
@@ -25,6 +26,7 @@ export type InvoiceRecordType = {
     created_by: string;
     created_by_email: string;
     created_by_role: 'dfc_agent' | 'invoice_manager' | 'admin';
+    fiscal_year: string;
 }
 
 export type InvoiceInputBody = {
@@ -56,7 +58,7 @@ export interface InvoiceModel {
 	create(invoiceData: CreateInvoiceInput): Promise<{success: Boolean, data?: unknown}>;
 	findInvoice(id: string | number, config: { 
 		findBy: 'id' | 'phone' | 'account_number' | 'supplier_id' | 'all', 
-		limit: number, orderBy: 'desc' | 'asc' 
+		limit: number | null, orderBy: 'desc' | 'asc', fiscalYear?: string 
 	}): Promise<InvoiceRecordType[]>;
 	deleteInvoice(id: number): Promise<{success: boolean}>;
 	updateInvoice(data: UpdateInvoiceData): Promise<{success: Boolean}>;
@@ -69,10 +71,12 @@ class Invoice implements InvoiceModel {
 		try {
 			
 			const id = await generateId('invoice');
+            const fiscalYear = await getSetting('fiscal_year');
 			const params = [
 				id,
 				invoiceData.num_cmdt,
 				invoiceData.invoice_num,
+                fiscalYear,
 				invoiceData.invoice_object,
 				invoiceData.supplier_id,
 				invoiceData.invoice_nature,
@@ -87,8 +91,8 @@ class Invoice implements InvoiceModel {
 				invoiceData.created_by_role
 			]
 	
-			// Correction : la table devrait être "invoice" au lieu de "employee"
-			const query = "INSERT INTO invoice(id, num_cmdt, num_invoice, invoice_object, supplier_id, invoice_nature, invoice_arr_date, invoice_date, invoice_type, folio, amount, status, created_by, created_by_email, created_by_role) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+			// Insertion incluant fiscal_year
+			const query = "INSERT INTO invoice(id, num_cmdt, num_invoice, fiscal_year, invoice_object, supplier_id, invoice_nature, invoice_arr_date, invoice_date, invoice_type, folio, amount, status, created_by, created_by_email, created_by_role) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 			const result = await database.execute(query, params);
 
 			if(Array.isArray(invoiceData.documents) && invoiceData.documents.length > 0) {
@@ -139,6 +143,7 @@ class Invoice implements InvoiceModel {
 			findBy: "id" | "phone" | "account_number" | "supplier_id" | "all"; 
 			limit: number | null; 
 			orderBy: "desc" | "asc";
+			fiscalYear?: string;
 		} = { findBy: 'id', limit: null, orderBy: 'asc'}): Promise<InvoiceRecordType[]> {
 		
 		try {
@@ -146,41 +151,42 @@ class Invoice implements InvoiceModel {
 			let params: any[] = [];
 			let rows: any;
 			const validOrderBy = config.orderBy === 'asc' ? 'asc' : 'desc';
+			const fy = config.fiscalYear;
 
-			switch (config.findBy) {
-				case 'id':
-					query = `SELECT * FROM invoice WHERE id = ? ORDER BY create_at ${validOrderBy}`;
-					params = [id];
-					if (config.limit) query += ` LIMIT ${config.limit}`;
-					rows = await database.execute(query, params);
-					break;
+            switch (config.findBy) {
+                case 'id':
+                    query = `SELECT * FROM invoice WHERE id = ? ${fy ? 'AND fiscal_year = ?' : ''} ORDER BY create_at ${validOrderBy}`;
+                    params = fy ? [id, fy] : [id];
+                    if (config.limit) query += ` LIMIT ${config.limit}`;
+                    rows = await database.execute(query, params);
+                    break;
 
-				case 'supplier_id':
-					query = `SELECT * FROM invoice WHERE supplier_id = ? ORDER BY create_at ${validOrderBy}`;
-					params = [id];
-					if (config.limit) query += ` LIMIT ${config.limit}`;
-					rows = await database.execute(query, params);
-					break;
+                case 'supplier_id':
+                    query = `SELECT * FROM invoice WHERE supplier_id = ? ${fy ? 'AND fiscal_year = ?' : ''} ORDER BY create_at ${validOrderBy}`;
+                    params = fy ? [id, fy] : [id];
+                    if (config.limit) query += ` LIMIT ${config.limit}`;
+                    rows = await database.execute(query, params);
+                    break;
 
-				case 'phone':
-				case 'account_number':
-					// Ces critères nécessitent une jointure avec la table supplier
-					query = `
-						SELECT i.* FROM invoice i 
-						INNER JOIN supplier s ON i.supplier_id = s.id 
-						WHERE ${config.findBy === 'phone' ? 's.phone' : 's.account_number'} = ? 
-						ORDER BY i.create_at ${validOrderBy}
-					`;
-					params = [id];
-					if (config.limit) query += ` LIMIT ${config.limit}`;
-					rows = await database.execute(query, params);
-					break;
+                case 'phone':
+                case 'account_number':
+                    // Ces critères nécessitent une jointure avec la table supplier
+                    query = `
+                        SELECT i.* FROM invoice i 
+                        INNER JOIN supplier s ON i.supplier_id = s.id 
+                        WHERE ${config.findBy === 'phone' ? 's.phone' : 's.account_number'} = ? ${fy ? 'AND i.fiscal_year = ?' : ''}
+                        ORDER BY i.create_at ${validOrderBy}
+                    `;
+                    params = fy ? [id, fy] : [id];
+                    if (config.limit) query += ` LIMIT ${config.limit}`;
+                    rows = await database.execute(query, params);
+                    break;
 
-				case 'all':
-					query = `SELECT * FROM invoice ORDER BY create_at ${config.orderBy}`;
-					if (config.limit) query += ` LIMIT ${config.limit}`;
-					rows = await database.execute(query);
-					break;
+                case 'all':
+                    query = `SELECT * FROM invoice ${fy ? 'WHERE fiscal_year = ?' : ''} ORDER BY create_at ${config.orderBy}`;
+                    if (config.limit) query += ` LIMIT ${config.limit}`;
+                    rows = fy ? await database.execute(query, [fy]) : await database.execute(query);
+                    break;
 
 				default:
 					throw new Error('Type de recherche non supporté');
@@ -303,9 +309,10 @@ class Invoice implements InvoiceModel {
 
 	async getLastInvoiceNum(): Promise<{success: boolean, invoiceNum: string | null}> {
 		try {
-		  // Correction de la requête SQL - ORDER BY DESC pour avoir le dernier
+		  const fiscalYear = await getSetting('fiscal_year');
 		  const result = await database.execute(
-			"SELECT num_cmdt FROM invoice ORDER BY create_at DESC LIMIT 1"
+			"SELECT num_cmdt FROM invoice WHERE fiscal_year = ? ORDER BY create_at DESC LIMIT 1",
+			[fiscalYear]
 		  );
 		  
 		  // Correction du traitement du résultat
@@ -313,9 +320,6 @@ class Invoice implements InvoiceModel {
 		  
 		  if (result && Array.isArray(result) && result.length > 0) {
 			invoiceNum = result[0].num_cmdt;
-		  } else if (result && !Array.isArray(result) && result.num_invoice) {
-			// Cas où le résultat n'est pas un tableau
-			invoiceNum = result.num_invoice;
 		  }
 		  
 		  await auditLog({
@@ -345,19 +349,17 @@ class Invoice implements InvoiceModel {
 
 	async getTheLatestInvoiceNumber(): Promise<{success: boolean; lastInvoiceNumber: string}> {
 		try {
-			// Correction de la requête SQL - ORDER BY DESC pour avoir le dernier
+			const fiscalYear = await getSetting('fiscal_year');
 			const result = await database.execute(
-			  "SELECT num_cmdt FROM invoice ORDER BY create_at DESC LIMIT 1"
+			  "SELECT num_cmdt FROM invoice WHERE fiscal_year = ? ORDER BY create_at DESC LIMIT 1",
+			  [fiscalYear]
 			);
 			
 			// Correction du traitement du résultat
 			let invoiceNum = null;
 			
 			if (result && Array.isArray(result) && result.length > 0) {
-			  invoiceNum = result[0].num_invoice;
-			} else if (result && !Array.isArray(result) && result.num_invoice) {
-			  // Cas où le résultat n'est pas un tableau
-			  invoiceNum = result.num_invoice;
+			  invoiceNum = result[0].num_cmdt;
 			}
 			
 			await auditLog({
