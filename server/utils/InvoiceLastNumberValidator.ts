@@ -9,6 +9,7 @@ type AppSettingMap = {
     };
     year_end_warning_threshold: number;
     auto_year_switch: boolean;
+    app_version: string;
 };
 
 export async function getSetting<K extends keyof AppSettingMap>(key: K): Promise<AppSettingMap[K]> {
@@ -50,7 +51,7 @@ class InvoiceLastNumberValidator {
                 return { changed: true, newYear: currentYear };
             }
 
-            return { changed: false }
+            return { changed: false };
         } catch (error) {
             logger.error('Erreur lors de la vérification de l\'année fiscale', {
                 error: error instanceof Error ? error.message : 'Unknown error'
@@ -220,13 +221,9 @@ class InvoiceLastNumberValidator {
             }
 
             const isInvoiceNumberExist = await database.execute(
-                `SELECT i.* FROM invoice i
-                WHERE i.num_cmdt = ?
-                AND EXISTS (
-                    SELECT 1 FROM app_settings a
-                    WHERE a.setting_key = 'fiscal_year'
-                    AND JSON_UNQUOTE(a.setting_value) = ?
-                )`,
+                `SELECT i.id FROM invoice i
+                 WHERE i.num_cmdt = ?
+                 AND i.fiscal_year = ?`,
                 [invoiceNumber, fiscalYear]
             );
 
@@ -306,6 +303,14 @@ class InvoiceLastNumberValidator {
             const currentFiscalYear = await getSetting('fiscal_year');
             const currentYear = new Date().getFullYear();
             const newYearNum = Number(newYear);
+            const autoSwitch = await getSetting('auto_year_switch');
+
+            if (Boolean(autoSwitch) !== false) {
+                return {
+                    success: false,
+                    message: 'Le changement manuel d\'année fiscale est désactivé car le mode automatique est activé.'
+                };
+            }
     
             // Validation basique
             if (newYear === currentFiscalYear) {
@@ -324,10 +329,10 @@ class InvoiceLastNumberValidator {
             }
     
             // Validation : l'année doit être raisonnable (pas trop dans le futur)
-            if (newYearNum > currentYear + 1) {
+            if (newYearNum > currentYear + 2) {
                 return {
                     success: false,
-                    message: `Impossible de planifier une année fiscale au-delà de ${currentYear + 1}.`
+                    message: `Impossible de planifier une année fiscale au-delà de ${currentYear + 2}.`
                 };
             }
     
@@ -342,10 +347,12 @@ class InvoiceLastNumberValidator {
             if (Array.isArray(existingCounter) && existingCounter.length > 0) {
                 const lastNumber = existingCounter[0].last_cmdt_number;
                 counterInfo = ` Dernier numéro utilisé: ${lastNumber}.`;
+                logger.info(`Le compteur pour l'année fiscale ${newYear} existe déjà avec le dernier numéro ${lastNumber}.`);
             } else {
                 // Initialiser le compteur seulement s'il n'existe pas
                 await this.initializeFiscalYearCounter(newYear);
                 counterInfo = " Nouveau compteur initialisé.";
+                logger.info(`Compteur initialisé avec succès pour la nouvelle année fiscale ${newYear}.`);
             }
     
             // Mettre à jour l'année fiscale
@@ -388,25 +395,37 @@ class InvoiceLastNumberValidator {
         }
     }
 
-    async getAvailableFiscalYears(): Promise<Array<{ year: string; isCurrent: boolean; canActivate: boolean }>> {
+    async getAvailableFiscalYears(): Promise<Array<{ year: string[]; isCurrent: boolean; canActivate: boolean }>> {
         try {
-            const currentYear = new Date().getFullYear();
+            const currentSystemYear = new Date().getFullYear();
             const currentFiscalYear = await getSetting('fiscal_year');
-            
-            const availableYears = [
+            const fy = parseInt(currentFiscalYear, 10);
+
+            // Règles:
+            // - Inclure l'année fiscale courante (non activable)
+            // - Inclure uniquement la prochaine année fiscale (activable)
+            // - Pas d'années passées, pas de doublons
+
+            const list = [
                 {
-                    year: currentYear.toString(),
-                    isCurrent: currentFiscalYear === currentYear.toString(),
-                    canActivate: currentFiscalYear !== currentYear.toString()
+                    year: [currentFiscalYear],
+                    isCurrent: true,
+                    canActivate: false
                 },
                 {
-                    year: (currentYear + 1).toString(),
-                    isCurrent: currentFiscalYear === (currentYear + 1).toString(),
-                    canActivate: true // Toujours autoriser l'année suivante
+                    year: [(fy + 1).toString()],
+                    isCurrent: false,
+                    canActivate: true
                 }
             ];
-    
-            return availableYears;
+
+            // Sécurité: si l'année suivante est inférieure à l'année système (cas edge), filtrer
+            const sanitized = list.filter(item => {
+                const y = parseInt(item.year[0], 10);
+                return y >= currentSystemYear;
+            });
+
+            return sanitized;
         } catch (error) {
             logger.error('Erreur lors de la récupération des années disponibles', {
                 error: error instanceof Error ? error.message : 'Unknown error'
@@ -430,9 +449,11 @@ class InvoiceLastNumberValidator {
                     errorMessage: 'Format invalide. Format attendu (1 à 12 chiffres inclu. 0 au debut autorisé)'
                 }
             }
+            const currentFiscalYear = await getSetting('fiscal_year');
             const result = await database.execute(
-                "SELECT * FROM invoice WHERE num_invoice = ?",
-                [invoiceNum]
+                `SELECT id FROM invoice 
+                 WHERE num_invoice = ? AND fiscal_year = ?`,
+                [invoiceNum, currentFiscalYear]
             );
 
             if (Array.isArray(result) && result.length > 0) {

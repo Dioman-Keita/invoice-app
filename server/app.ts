@@ -5,6 +5,7 @@ import express from 'express';
 import invoiceRoutes from './routes/invoice.routes';
 import authRoutes from './routes/auth.route';
 import supplierRoute from './routes/supplier.route';
+import settingsRoute from './routes/settings.route';
 import { requestIdMiddleware } from './middleware/requestIdMiddleware';
 import { corsHeaders } from './middleware/corsHeader';
 import { debugCookies } from './middleware/debugCookie';
@@ -52,6 +53,7 @@ if (process.env.NODE_ENV === 'development') {
 app.use('/api', authRoutes);
 app.use('/api', invoiceRoutes);
 app.use('/api', supplierRoute);
+app.use('/api', settingsRoute);
 
 // Route de test
 app.get('/api/health', (_req, res) => {

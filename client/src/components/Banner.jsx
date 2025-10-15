@@ -1,6 +1,5 @@
 import '../css/Banner.css';
 import Header from './Header';
-import EmployeeProfile from './EmployeeProfile';
 
 function Banner() {
     return (

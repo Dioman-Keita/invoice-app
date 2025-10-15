@@ -1,0 +1,515 @@
+openapi: 3.0.3
+info:
+  title: CMDT Invoice API
+  version: 1.0.0
+  description: API de gestion de factures (auth via JWT en cookie HttpOnly)
+servers:
+  - url: http://localhost:3000/api
+    description: Développement local
+security:
+  - cookieAuth: []
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: auth_token
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum: [admin, invoice_manager, dfc_agent]
+    RegisterRequest:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+        firstName: { type: string }
+        lastName: { type: string }
+        role: { type: string, enum: [admin, invoice_manager, dfc_agent] }
+        terms: { type: boolean }
+      required: [email, password, firstName, lastName, role, terms]
+    LoginRequest:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+        role: { type: string, enum: [admin, invoice_manager, dfc_agent] }
+        rememberMe: { type: boolean }
+      required: [email, password, role]
+    AuthStatusResponse:
+      type: object
+      properties:
+        isAuthenticated: { type: boolean }
+        user: { $ref: '#/components/schemas/User' }
+        shouldRefresh: { type: boolean }
+        expiresIn: { type: integer }
+        rememberMe: { type: boolean }
+    Invoice:
+      type: object
+      properties:
+        id: { type: string }
+        num_invoice: { type: string, maxLength: 12 }
+        amount: { type: number, maximum: 100000000000 }
+        status: { type: string }
+        createdBy: { type: string }
+        createdAt: { type: string, format: date-time }
+    CreateInvoiceRequest:
+      type: object
+      properties:
+        num_invoice: { type: string, maxLength: 12 }
+        amount: { type: number, maximum: 100000000000 }
+        supplierId: { type: string }
+      required: [num_invoice, amount, supplierId]
+    Supplier:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        account_number: { type: string, pattern: '^[0-9]{12}$' }
+        phone: { type: string }
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  message: { type: string }
+  /protected:
+    get:
+      summary: Test d'authentification
+      responses:
+        '200':
+          description: Utilisateur courant
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+  /auth/register:
+    post:
+      summary: Inscription utilisateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '200': { description: Email de vérification envoyé }
+        '400': { description: Requête invalide, email/terms
+          }
+  /auth/login:
+    post:
+      summary: Connexion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Connecté (cookie auth_token défini)
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: Cookie HttpOnly auth_token
+        '401':
+          description: Identifiants invalides
+  /auth/status:
+    get:
+      summary: Statut d'authentification
+      responses:
+        '200':
+          description: Statut
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthStatusResponse' }
+        '401': { description: Non authentifié }
+  /auth/profile:
+    get:
+      summary: Profil utilisateur
+      responses:
+        '200':
+          description: Profil
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { description: Non authentifié }
+  /auth/forgot-password:
+    post:
+      summary: Demande de réinitialisation de mot de passe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+              required: [email]
+      responses:
+        '200': { description: Email envoyé }
+  /auth/reset-password:
+    post:
+      summary: Réinitialisation du mot de passe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token: { type: string }
+                newPassword: { type: string }
+              required: [token, newPassword]
+      responses:
+        '200': { description: Mot de passe mis à jour }
+  /auth/logout:
+    post:
+      summary: Déconnexion
+      responses:
+        '200': { description: Déconnecté, cookie supprimé }
+  /auth/silent-refresh:
+    post:
+      summary: Rafraîchissement silencieux
+      responses:
+        '200': { description: Token rafraîchi si valide }
+        '401': { description: Non authentifié }
+  /auth/token:
+    get:
+      summary: Récupérer le token courant
+      responses:
+        '200':
+          description: Token courant
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  payload: { type: object }
+  /auth/admin/create-user:
+    post:
+      summary: Création d'utilisateur (admin)
+      responses:
+        '201': { description: Créé }
+        '403': { description: Accès refusé }
+  /invoices/last-num:
+    get:
+      summary: Dernier numéro de facture enregistré
+      responses:
+        '200':
+          description: Dernier numéro
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lastInvoiceNumber: { type: string }
+  /invoices/next-num:
+    get:
+      summary: Prochain numéro de facture attendu
+      responses:
+        '200':
+          description: Prochain numéro
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nextInvoiceNumber: { type: string }
+  /invoices:
+    get:
+      summary: Lister les factures (filtrage par rôle)
+      responses:
+        '200':
+          description: Liste de factures
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Invoice' }
+    post:
+      summary: Créer une facture
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateInvoiceRequest' }
+      responses:
+        '201':
+          description: Facture créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Invoice' }
+  /invoices/{id}:
+    get:
+      summary: Détail d'une facture
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Facture
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Invoice' }
+        '403': { description: Accès refusé }
+        '404': { description: Introuvable }
+  /invoices/update/{id}:
+    post:
+      summary: Mettre à jour une facture
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200': { description: Mis à jour }
+        '403': { description: Accès refusé }
+        '404': { description: Introuvable }
+  /invoices/delete/{id}:
+    post:
+      summary: Supprimer une facture
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Supprimé }
+        '403': { description: Accès refusé }
+        '404': { description: Introuvable }
+  /supplier:
+    get:
+      summary: Lister les fournisseurs
+      responses:
+        '200':
+          description: Liste de fournisseurs
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Supplier' }
+    post:
+      summary: Créer un fournisseur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201': { description: Créé }
+  /supplier/delete/{id}:
+    post:
+      summary: Supprimer un fournisseur
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Supprimé }
+  /supplier/phone:
+    get:
+      summary: Rechercher un fournisseur par téléphone
+      parameters:
+        - in: query
+          name: phone
+          schema: { type: string }
+      responses:
+        '200':
+          description: Résultats
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Supplier' }
+  /supplier/{id}:
+    get:
+      summary: Détail fournisseur
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Fournisseur
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Supplier' }
+  /suppliers/search:
+    get:
+      summary: Recherche par champ
+      parameters:
+        - in: query
+          name: field
+          schema: { type: string }
+        - in: query
+          name: value
+          schema: { type: string }
+      responses:
+        '200':
+          description: Résultats
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Supplier' }
+  /suppliers/find:
+    get:
+      summary: Recherche multi-champs
+      parameters:
+        - in: query
+          name: name
+          schema: { type: string, nullable: true }
+        - in: query
+          name: account_number
+          schema: { type: string, nullable: true }
+        - in: query
+          name: phone
+          schema: { type: string, nullable: true }
+      responses:
+        '200':
+          description: Résultats
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Supplier' }
+  /suppliers/verify-conflicts:
+    get:
+      summary: Vérifier les conflits fournisseur
+      parameters:
+        - in: query
+          name: account_number
+          schema: { type: string }
+        - in: query
+          name: phone
+          schema: { type: string }
+      responses:
+        '200':
+          description: Résultat de vérification
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /settings/fiscal:
+    get:
+      summary: Informations fiscales et configuration courante
+      responses:
+        '200':
+          description: Paramètres fiscaux
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fiscalYear: { type: string }
+                  app_version: { type: string }
+                  cmdt_format:
+                    type: object
+                    properties:
+                      padding: { type: integer }
+                      max: { type: integer }
+                  auto_year_switch: { type: boolean }
+                  year_end_warning_threshold: { type: integer }
+                  counter:
+                    type: object
+                    properties:
+                      fiscal_year: { type: string }
+                      last_cmdt_number: { type: integer }
+                      remaining: { type: integer }
+                      max: { type: integer }
+                  availableYears:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        year:
+                          type: array
+                          items: { type: string }
+                        isCurrent: { type: boolean }
+                        canActivate: { type: boolean }
+                  warningInfo:
+                    type: object
+  /settings/auto-year-switch:
+    post:
+      summary: Activer/Désactiver l'auto-switch d'année fiscale
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enable: { type: boolean }
+              required: [enable]
+      responses:
+        '200':
+          description: Mis à jour
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  auto_year_switch: { type: boolean }
+        '403': { description: Accès refusé }
+  /settings/fiscal-year/switch:
+    post:
+      summary: Bascule manuelle de l'année fiscale
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newYear: { type: string }
+              required: [newYear]
+      responses:
+        '200': { description: Année fiscale changée }
+        '400': { description: Requête invalide ou auto-switch activé }
+        '403': { description: Accès refusé }

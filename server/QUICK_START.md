@@ -1,4 +1,4 @@
-# 🚀 Guide de Démarrage Rapide
+# Guide de Démarrage Rapide
 
 ## **1. Installation des dépendances**
 ```bash
@@ -11,7 +11,7 @@ Créer un fichier `.env` dans `server/` :
 ```env
 JWT_SECRET_KEY=votre_cle_secrete_ici
 NODE_ENV=development
-APP_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:5173
 PORT=3000
 
 # Configuration base de données
@@ -79,8 +79,22 @@ http://localhost:3000/api/
 │   ├── token             (GET) - Vérification token
 │   └── admin/create-user (POST) - Création utilisateur (admin)
 ├── invoices/
-│   ├── /              (GET, POST) - protégé avec traçabilité
-│   └── /:id           (GET) - protégé avec vérification permissions
+│   ├── last-num        (GET) - Dernier numéro enregistré (agent, manager)
+│   ├── next-num        (GET) - Prochain numéro attendu (manager, admin)
+│   ├── /               (GET, POST) - Lister / Créer (protégé, traçabilité)
+│   ├── /:id            (GET) - Détail avec vérification permissions
+│   ├── update/:id      (POST) - Mise à jour (manager, admin)
+│   └── delete/:id      (POST) - Suppression (admin)
+├── supplier/
+│   ├── (POST)               - Créer fournisseur (manager, admin)
+│   ├── delete/:id (POST)    - Supprimer fournisseur (admin)
+│   ├── (GET)                - Lister fournisseurs (agent, manager)
+│   ├── phone (GET)          - Recherche par téléphone (agent, manager)
+│   └── :id (GET)            - Détail fournisseur (agent, manager)
+├── suppliers/
+│   ├── search (GET)         - Recherche flexible (manager, admin)
+│   ├── find (GET)           - Recherche multi-champs (manager, admin)
+│   └── verify-conflicts (GET) - Vérifier conflits (agent, manager)
 ├── protected          (GET) - test auth
 └── health             (GET) - test serveur
 ```
@@ -108,9 +122,10 @@ cd client && npm run dev
 - Exécuter les scripts SQL dans l'ordre : `cmdt_invoice_db.sql` puis `add_user_tracking_to_invoice.sql`
 
 ### **Erreur CORS**
-- Vérifier que l'origine frontend est `http://localhost:5173`
+- Vérifier que l'origine frontend est `http://localhost:5173` (ou la valeur de `FRONTEND_URL`)
 - S'assurer que `credentials: true` est configuré
 - Vérifier la configuration CORS dans `app.ts`
+- En dev, vous pouvez appeler `/api/...` côté client (proxy Vite configuré dans `vite.config.js`)
 
 ### **Erreur d'authentification**
 - Vérifier que `JWT_SECRET_KEY` est défini

@@ -77,6 +77,7 @@ CREATE TABLE invoice (
     id VARCHAR(15) PRIMARY KEY,
     num_cmdt VARCHAR(15) NOT NULL,
     num_invoice VARCHAR(15) NOT NULL,
+    fiscal_year VARCHAR(4) NOT NULL,
     invoice_object TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     supplier_id INT,
     invoice_type ENUM('Ordinaire', 'Transporteur', 'Transitaire') DEFAULT 'Ordinaire',
@@ -182,6 +183,13 @@ INSERT INTO app_settings (setting_key, setting_value, description) VALUES
 INSERT INTO app_settings (setting_key, setting_value, description) VALUES
 ('auto_year_switch', 'true', 'Changement automatique d année fiscale');
 
+INSERT INTO app_settings(setting_key, setting_value, description) VALUES
+('app_theme', '{"theme": "light"}', 'Paramètres d apparence de l application');
+
+-- Version de l'application
+INSERT INTO app_settings (setting_key, setting_value, description) VALUES
+('app_version', '"1.0.0"', 'Version de l application');
+
 -- Index
 CREATE INDEX idx_employee_cmdt ON employee(employee_cmdt_id);
 CREATE INDEX idx_employee ON employee(id);
@@ -192,6 +200,10 @@ CREATE INDEX idx_invoice_search ON invoice(num_invoice, invoice_type, status, cr
 CREATE INDEX idx_invoice_date ON invoice(invoice_date);
 CREATE INDEX idx_invoice_arr_date ON invoice(invoice_arr_date);
 CREATE INDEX idx_invoice_created_by ON invoice(created_by);
+-- Index pour les vérifications par année fiscale
+CREATE INDEX idx_invoice_fiscal_year ON invoice(fiscal_year);
+CREATE INDEX idx_invoice_cmdt_fiscal ON invoice(fiscal_year, num_cmdt);
+CREATE INDEX idx_invoice_num_invoice_fiscal ON invoice(fiscal_year, num_invoice);
 
 -- Vues sur les audits
 CREATE VIEW view_audit_log AS SELECT * FROM audit_log;
