@@ -118,6 +118,26 @@ http://localhost:3000/api
 - **Protection** : `authGuard`
 - **Rôles** : `admin`
 
+### **GET** `/invoices/dfc/pending`
+- **Description** : Lister les factures DFC en attente pour l'année fiscale courante
+- **Response** : Liste des factures DFC en attente + `fiscalYear`
+- **Protection** : `authGuard`
+- **Rôles** : `dfc_agent`, `invoice_manager`
+
+### **POST** `/invoices/:id/dfc/approve`
+- **Description** : Approuver une facture DFC (année fiscale courante uniquement)
+- **Body** : `{ comments?: string }`
+- **Response** : Confirmation d'approbation
+- **Protection** : `authGuard`
+- **Rôles** : `dfc_agent`, `invoice_manager`
+
+### **POST** `/invoices/:id/dfc/reject`
+- **Description** : Rejeter une facture DFC (année fiscale courante uniquement)
+- **Body** : `{ comments?: string }`
+- **Response** : Confirmation de rejet
+- **Protection** : `authGuard`
+- **Rôles** : `dfc_agent`, `invoice_manager`
+
 ### **GET** `/invoices`
 - **Description** : Lister les factures avec filtrage par rôle
 - **Response** : Liste des factures (ses propres factures, ou toutes si admin)

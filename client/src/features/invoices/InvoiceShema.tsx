@@ -7,7 +7,7 @@ const allowedDocument = [
     "Lettre de voiture Inter-Etats"
 ] as const;
 
-const supplierNameRegex = /^[\p{L}\d\s\-']+$/u;
+const supplierNameRegex = /^[\p{L}\d\s\-'&]+$/u;
 const fourDigitCode = z
   .string()
   .min(1, "Champ requis")
@@ -64,7 +64,7 @@ export const invoiceSchema = z.object({
         message: "Montant maximum autorisé : 100 000 000 000",
     }),
 
-    supplier_name: z.string().min(1, "Le nom du fournisseur est requis").regex(supplierNameRegex, "Nom invalide : seuls les lettres accentuées(êèéï), chiffres(1,3,8), espaces( ), tirets(-) et apostrophes(') sont autorisés"),
+    supplier_name: z.string().min(1, "Le nom du fournisseur est requis").regex(supplierNameRegex, "Nom invalide : seuls les lettres accentuées(êèéï), chiffres(1,3,8), espaces( ), tirets(-) et apostrophes(') et caractères(&) sont autorisés"),
     // Remplacement de l'email par le numéro de compte
     supplier_account_number: z
     .string()

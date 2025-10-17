@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useTitle from '../hooks/useTitle';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -9,7 +9,18 @@ import {
   DocumentMagnifyingGlassIcon,
   ClockIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  ExclamationTriangleIcon,
+  BanknotesIcon,
+  UserIcon,
+  CalendarIcon,
+  DocumentTextIcon,
+  HashtagIcon,
+  BuildingStorefrontIcon,
+  CreditCardIcon,
+  TagIcon,
+  UserCircleIcon,
+  ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline';
 import useBackground from '../hooks/useBackground';
 
@@ -21,296 +32,690 @@ function DFCFormular() {
   const [decision, setDecision] = useState('');
   const [comments, setComments] = useState('');
   const [processedInvoices, setProcessedInvoices] = useState([]);
+  const [pendingInvoices, setPendingInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [fiscalYear, setFiscalYear] = useState(new Date().getFullYear().toString());
+  const [showStats, setShowStats] = useState(true);
+  const [commentError, setCommentError] = useState('');
+  
+  // Configuration du textarea
+  const MAX_COMMENT_LENGTH = 500;
+  const COMMENT_WARNING_THRESHOLD = 450;
 
-  // Données factices pour la démonstration
-  const pendingInvoices = [
-    {
-      id: 'INV-2023-001',
-      supplier: 'SARL COTON-MALI',
-      amount: '1,250.00 FCFA',
-      date: '2023-10-15',
-      dueDate: '2023-11-15',
-      category: 'Fournitures agricoles',
-      status: 'pending',
-      items: [
-        { description: 'Engrais NPK', quantity: 50, price: '25.00 FCFA' },
-        { description: 'Pesticides', quantity: 20, price: '12.50 FCFA' }
-      ]
-    },
-    {
-      id: 'INV-2023-002',
-      supplier: 'ENTREPRISE AGRO-TECH',
-      amount: '3,450.00 FCFA',
-      date: '2023-10-18',
-      dueDate: '2023-11-18',
-      category: 'Équipement',
-      status: 'pending',
-      items: [
-        { description: 'Tracteur pièces', quantity: 1, price: '3,450.00 FCFA' }
-      ]
+  // Formater les montants de manière professionnelle
+  const formatAmount = (amount) => {
+    if (!amount) return '0 FCFA';
+    try {
+      const num = typeof amount === 'string' ? parseFloat(amount.replace(/\s/g, '')) : Number(amount);
+      if (isNaN(num)) return 'Montant invalide';
+      
+      return new Intl.NumberFormat('fr-FR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(num) + ' FCFA';
+    } catch {
+      return 'Montant invalide';
     }
-  ];
+  };
 
-  const handleProcessInvoice = () => {
-    if (!currentInvoice || !decision) return;
+  // Formater les dates
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Non spécifié';
+    try {
+      return new Date(dateString).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch {
+      return 'Date invalide';
+    }
+  };
 
-    const processedInvoice = {
-      ...currentInvoice,
-      decision,
-      comments,
-      processedDate: new Date().toISOString(),
-      processor: 'Agent DFC'
+  // Formater la date avec heure
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'Non spécifié';
+    try {
+      return new Date(dateString).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return 'Date invalide';
+    }
+  };
+
+  // Tronquer les textes longs
+  const truncateText = (text, maxLength = 30) => {
+    if (!text) return '';
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  };
+
+  // Gestion des commentaires avec limite
+  const handleCommentsChange = (e) => {
+    const value = e.target.value;
+    if (value.length <= MAX_COMMENT_LENGTH) {
+      setComments(value);
+      setCommentError('');
+    } else {
+      setCommentError(`Limite de ${MAX_COMMENT_LENGTH} caractères dépassée`);
+    }
+  };
+
+  // Réinitialiser l'affichage des stats quand une facture est sélectionnée
+  const handleInvoiceSelect = (invoice) => {
+    setCurrentInvoice(invoice);
+    setShowStats(false);
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    const loadPending = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const res = await fetch('/api/invoices/dfc/pending', {
+          credentials: 'include',
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        const payload = await res.json();
+        
+        if (!res.ok) {
+          throw new Error(payload?.message || 'Erreur lors du chargement des factures');
+        }
+
+        const rows = payload?.data || [];
+        setFiscalYear(payload?.meta?.fiscalYear || new Date().getFullYear().toString());
+        
+        if (rows.length === 0) {
+          if (mounted) {
+            setPendingInvoices([]);
+            setError(`Aucune facture DFC en attente pour l'année fiscale ${fiscalYear}`);
+          }
+          return;
+        }
+
+        const normalized = rows.map((inv) => ({
+          id: inv.id,
+          num_cmdt: inv.num_cmdt,
+          num_invoice: inv.num_invoice,
+          invoice_object: inv.invoice_object,
+          supplier: inv.supplier_name || `Fournisseur #${inv.supplier_id}`,
+          supplier_id: inv.supplier_id,
+          supplier_account: inv.supplier_account_number,
+          supplier_phone: inv.supplier_phone,
+          amount: inv.amount,
+          invoice_date: inv.invoice_date,
+          invoice_arr_date: inv.invoice_arr_date,
+          invoice_type: inv.invoice_type,
+          invoice_nature: inv.invoice_nature,
+          folio: inv.folio,
+          status: inv.dfc_status || 'pending',
+          created_by: inv.created_by,
+          created_by_email: inv.created_by_email,
+          created_by_role: inv.created_by_role,
+          fiscal_year: inv.fiscal_year,
+          create_at: inv.create_at,
+          update_at: inv.update_at,
+          items: Array.isArray(inv.items) ? inv.items : []
+        }));
+
+        if (mounted) {
+          setPendingInvoices(normalized);
+          setError('');
+        }
+      } catch (e) {
+        if (mounted) {
+          setError(e.message || 'Échec de chargement des factures DFC en attente');
+          setPendingInvoices([]);
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
     };
+    
+    loadPending();
+    return () => { mounted = false; };
+  }, [fiscalYear]);
 
-    setProcessedInvoices([...processedInvoices, processedInvoice]);
-    setCurrentInvoice(null);
-    setDecision('');
-    setComments('');
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'approved': return 'green';
-      case 'rejected': return 'red';
-      case 'pending': return 'yellow';
-      default: return 'gray';
+  const approveInvoice = async (invoiceId) => {
+    const res = await fetch(`/api/invoices/${invoiceId}/dfc/approve`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comments })
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j?.message || 'Erreur lors de l\'approbation');
     }
   };
+
+  const rejectInvoice = async (invoiceId) => {
+    const res = await fetch(`/api/invoices/${invoiceId}/dfc/reject`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comments })
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j?.message || 'Erreur lors du rejet');
+    }
+  };
+
+  const handleProcessInvoice = async () => {
+    if (!currentInvoice || !decision) return;
+    try {
+      setLoading(true);
+      if (decision === 'approved') {
+        await approveInvoice(currentInvoice.id);
+      } else if (decision === 'rejected') {
+        await rejectInvoice(currentInvoice.id);
+      }
+      
+      const processedInvoice = {
+        ...currentInvoice,
+        decision,
+        comments,
+        processedDate: new Date().toISOString(),
+        processor: 'Agent DFC'
+      };
+      
+      setProcessedInvoices((prev) => [...prev, processedInvoice]);
+      setPendingInvoices((prev) => prev.filter(inv => inv.id !== currentInvoice.id));
+      setCurrentInvoice(null);
+      setDecision('');
+      setComments('');
+      setShowStats(true); // Afficher les stats après traitement
+    } catch (e) {
+      alert(e.message || 'Une erreur est survenue lors du traitement');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <Navbar />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Chargement des factures en attente...</p>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
-    <div className="min-h-screen">
-      {/* Header */}
-      <Header />
-      {/* Navbar */}
-      <Navbar />
-      <div className="max-w-7xl mx-auto">
-        {/* En-tête */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Traitement des factures DFC</h1>
-              <p className="text-gray-900">Validation et traitement des factures fournisseurs</p>
-            </div>
-            <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg">
-              <span className="font-medium">{pendingInvoices.length}</span> factures en attente
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Colonne de gauche : Factures en attente */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-6 flex items-center">
-                <ClockIcon className="w-6 h-6 text-amber-600 mr-2" />
-                Factures en attente de traitement
-              </h2>
-              
-              <div className="space-y-4">
-                {pendingInvoices.map((invoice) => (
-                  <div
-                    key={invoice.id}
-                    onClick={() => setCurrentInvoice(invoice)}
-                    className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
-                      currentInvoice?.id === invoice.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-gray-900">{invoice.id}</span>
-                      <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded-full text-xs font-medium">
-                        En attente
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600 mb-2">
-                      {invoice.supplier} • {invoice.amount}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Échéance: {invoice.dueDate}
-                    </div>
-                  </div>
-                ))}
+      <div className="min-h-screen">
+        <Header />
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* En-tête avec informations contextuelles */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                  Traitement des factures DFC
+                </h1>
+                <p className="text-gray-900 text-xl font-semibold">
+                  Validation et traitement des factures fournisseurs
+                  <span className="inline-flex items-center bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold ml-3">
+                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                    </svg>
+                    Année fiscale {fiscalYear}
+                  </span>
+                </p>
+              </div>
+              <div className={`px-3 py-2 rounded border ${
+                pendingInvoices.length > 0 
+                  ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                  : 'bg-gray-50 text-gray-600 border-gray-200'
+              }`}>
+                <span className="font-semibold">{pendingInvoices.length}</span> facture(s) en attente
               </div>
             </div>
+          </div>
 
-            {/* Historique des traitements */}
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-6">Historique des traitements</h2>
-              <div className="space-y-3">
-                {processedInvoices.slice(-5).map((invoice, index) => (
-                  <div key={index} className="p-3 border border-gray-200 rounded-lg">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium">{invoice.id}</span>
-                      <span className={`bg-${getStatusColor(invoice.decision)}-100 text-${getStatusColor(invoice.decision)}-800 px-2 py-1 rounded-full text-xs font-medium`}>
-                        {invoice.decision === 'approved' ? 'Approuvée' : 'Rejetée'}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600">{invoice.supplier}</div>
-                    <div className="text-xs text-gray-500">
-                      Traité le {new Date(invoice.processedDate).toLocaleDateString()}
-                    </div>
+          {/* Message d'information si aucune facture */}
+          {error && !loading && (
+            <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <ExclamationTriangleIcon className="w-5 h-5 text-amber-600 mr-3 mt-0.5" />
+                <div>
+                  <h3 className="text-sm font-medium text-amber-800">Information</h3>
+                  <p className="text-amber-700 text-sm mt-1">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Colonne de gauche : Factures en attente */}
+            <div className="space-y-6">
+              <div className="bg-white rounded-lg border border-gray-200 p-5">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <ClockIcon className="w-5 h-5 text-amber-500 mr-2" />
+                  Factures en attente de traitement
+                </h2>
+                
+                {pendingInvoices.length > 0 ? (
+                  <div className="space-y-3">
+                    {pendingInvoices.map((invoice) => (
+                      <div
+                        key={invoice.id}
+                        onClick={() => handleInvoiceSelect(invoice)}
+                        className={`p-4 border rounded-lg cursor-pointer transition-all duration-150 ${
+                          currentInvoice?.id === invoice.id
+                            ? 'border-green-500 bg-green-25 ring-1 ring-green-500'
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-25'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <span className="font-semibold text-gray-900 text-sm truncate">
+                                {invoice.id}
+                              </span>
+                              <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap`}>
+                                {invoice.invoice_nature}
+                              </span>
+                            </div>
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {invoice.supplier}
+                            </p>
+                          </div>
+                          <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-medium whitespace-nowrap ml-2">
+                            En attente
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between mt-3">
+                          <div className="flex items-center space-x-4 text-xs text-gray-500">
+                            <span className="flex items-center whitespace-nowrap">
+                              <CalendarIcon className="w-3 h-3 mr-1 flex-shrink-0" />
+                              {formatDate(invoice.invoice_date)}
+                            </span>
+                            <span className="flex items-center whitespace-nowrap">
+                              <HashtagIcon className="w-3 h-3 mr-1 flex-shrink-0" />
+                              CMD: {invoice.num_cmdt}
+                            </span>
+                          </div>
+                          <span className="font-bold text-gray-900 text-sm whitespace-nowrap ml-2">
+                            {formatAmount(invoice.amount)}
+                          </span>
+                        </div>
+                        
+                        {invoice.invoice_object && (
+                          <div className="mt-2 text-xs text-gray-600">
+                            <DocumentTextIcon className="w-3 h-3 inline mr-1 flex-shrink-0" />
+                            <span className="break-words">{truncateText(invoice.invoice_object, 50)}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ))}
-                {processedInvoices.length === 0 && (
-                  <div className="text-center py-4 text-gray-500">
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
                     <DocumentMagnifyingGlassIcon className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                    <p>Aucun traitement effectué</p>
+                    <p className="text-sm font-medium">Aucune facture en attente</p>
+                    <p className="text-xs mt-1">Toutes les factures ont été traitées</p>
                   </div>
                 )}
               </div>
+
+              {/* Historique des traitements */}
+              <div className="bg-white rounded-lg border border-gray-200 p-5">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Historique des traitements</h2>
+                <div className="space-y-2">
+                  {processedInvoices.slice(-5).map((invoice, index) => (
+                    <div key={index} className="p-3 border border-gray-150 rounded hover:bg-gray-25">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium text-gray-900 text-sm">{invoice.id}</span>
+                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                          invoice.decision === 'approved' 
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                            : 'bg-red-50 text-red-700 border border-red-200'
+                        } whitespace-nowrap`}>
+                          {invoice.decision === 'approved' ? 'Approuvée' : 'Rejetée'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs text-gray-600 mb-1">
+                        <span className="truncate flex-1 mr-2">{invoice.supplier}</span>
+                        <span className="font-medium whitespace-nowrap">{formatAmount(invoice.amount)}</span>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        <div className="whitespace-nowrap">Traitée le {formatDateTime(invoice.processedDate)}</div>
+                        {invoice.comments && (
+                          <div className="mt-1 text-gray-400 truncate">"{invoice.comments}"</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {processedInvoices.length === 0 && (
+                    <div className="text-center py-4 text-gray-500">
+                      <DocumentCheckIcon className="w-6 h-6 mx-auto mb-2 text-gray-300" />
+                      <p className="text-sm">Aucun traitement effectué</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Colonne de droite : Détails et traitement */}
-          <div className="space-y-6">
-            {currentInvoice ? (
-              <>
-                {/* Détails de la facture */}
-                <div className="bg-white rounded-xl shadow-md p-6">
-                  <h2 className="text-xl font-semibold mb-6 flex items-center">
-                    <DocumentMagnifyingGlassIcon className="w-6 h-6 text-blue-600 mr-2" />
-                    Détails de la facture {currentInvoice.id}
+            {/* Colonne de droite : Détails et traitement */}
+            <div className="space-y-6">
+              {currentInvoice ? (
+                <>
+                  {/* Détails de la facture */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-5">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <DocumentMagnifyingGlassIcon className="w-5 h-5 text-gray-600 mr-2" />
+                      Détails de la facture
+                    </h2>
+
+                    {/* Informations principales */}
+                    <div className="space-y-4 mb-6">
+                      <div className="flex items-center justify-between p-3 bg-gray-25 rounded border border-gray-200">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-gray-900 text-sm">Référence</p>
+                          <p className="text-gray-900 font-mono text-sm truncate">{currentInvoice.id}</p>
+                        </div>
+                        <div className="text-right min-w-0 ml-4">
+                          <p className="font-semibold text-gray-900 text-sm">Montant total</p>
+                          <p className="text-xl font-bold text-gray-900 whitespace-nowrap">
+                            {formatAmount(currentInvoice.amount)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-3">
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-gray-500 mb-1 flex items-center">
+                              <BuildingStorefrontIcon className="w-3 h-3 mr-1" />
+                              Fournisseur
+                            </p>
+                            <p className="text-sm font-medium text-gray-900 truncate">{currentInvoice.supplier}</p>
+                            <div className="text-xs text-gray-600 mt-1 space-y-1">
+                              <div className="truncate flex items-center">
+                                <CreditCardIcon className="w-3 h-3 mr-1 flex-shrink-0" />
+                                Compte: {currentInvoice.supplier_account}
+                              </div>
+                              <div className="truncate flex items-center">
+                                <UserIcon className="w-3 h-3 mr-1 flex-shrink-0" />
+                                Tél: {currentInvoice.supplier_phone}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-gray-500 mb-1 flex items-center">
+                              <HashtagIcon className="w-3 h-3 mr-1" />
+                              Numéro de commande
+                            </p>
+                            <p className="text-sm font-medium text-gray-900">{currentInvoice.num_cmdt}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-gray-500 mb-1 flex items-center">
+                              <CalendarIcon className="w-3 h-3 mr-1" />
+                              Dates
+                            </p>
+                            <div className="text-xs text-gray-600 space-y-1">
+                              <div className="whitespace-nowrap flex items-center">
+                                <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 flex-shrink-0"></span>
+                                Émission: {formatDate(currentInvoice.invoice_date)}
+                              </div>
+                              <div className="whitespace-nowrap flex items-center">
+                                <span className="w-2 h-2 bg-green-500 rounded-full mr-2 flex-shrink-0"></span>
+                                Enregistrement: {formatDate(currentInvoice.invoice_arr_date)}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-gray-500 mb-1 flex items-center">
+                              <TagIcon className="w-3 h-3 mr-1" />
+                              Numéro de facture
+                            </p>
+                            <p className="text-sm font-medium text-gray-900 font-mono truncate">{currentInvoice.num_invoice}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Objet de la facture */}
+                    {currentInvoice.invoice_object && (
+                      <div className="mb-6 p-3 bg-gray-25 rounded border border-gray-200">
+                        <p className="text-xs font-medium text-gray-500 mb-2 flex items-center">
+                          <ClipboardDocumentListIcon className="w-3 h-3 mr-1" />
+                          Objet de la facture
+                        </p>
+                        <p className="text-sm text-gray-900 break-words">{currentInvoice.invoice_object}</p>
+                      </div>
+                    )}
+
+                    {/* Catégories - Version améliorée */}
+                    <div className="mb-6">
+                      <p className="text-xs font-medium text-gray-500 mb-3 flex items-center">
+                        <DocumentTextIcon className="w-3 h-3 mr-1" />
+                        INFORMATIONS DE CATÉGORISATION
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                        <div className="p-3 bg-blue-50 rounded border border-blue-200 min-w-0">
+                          <p className="text-xs text-blue-600 font-medium mb-1 whitespace-nowrap flex items-center">
+                            <TagIcon className="w-3 h-3 mr-1" />
+                            Type de facture
+                          </p>
+                          <p className="text-sm font-medium text-gray-900 truncate" title={currentInvoice.invoice_type}>
+                            {currentInvoice.invoice_type}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-green-50 rounded border border-green-200 min-w-0">
+                          <p className="text-xs text-green-600 font-medium mb-1 whitespace-nowrap flex items-center">
+                            <DocumentCheckIcon className="w-3 h-3 mr-1" />
+                            Nature
+                          </p>
+                          <p className="text-sm font-medium text-gray-900 truncate" title={currentInvoice.invoice_nature}>
+                            {currentInvoice.invoice_nature}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-purple-50 rounded border border-purple-200 min-w-0">
+                          <p className="text-xs text-purple-600 font-medium mb-1 whitespace-nowrap flex items-center">
+                            <HashtagIcon className="w-3 h-3 mr-1" />
+                            Folio
+                          </p>
+                          <p className="text-sm font-medium text-gray-900 truncate" title={currentInvoice.folio}>
+                            {currentInvoice.folio}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-gray-50 rounded border border-gray-200 min-w-0">
+                          <p className="text-xs text-gray-600 font-medium mb-1 whitespace-nowrap flex items-center">
+                            <UserCircleIcon className="w-3 h-3 mr-1" />
+                            Créée par
+                          </p>
+                          <p className="text-sm font-medium text-gray-900 truncate" title={currentInvoice.created_by}>
+                            {currentInvoice.created_by}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Formulaire de décision */}
+                    <div className="border-t pt-6">
+                      <h3 className="text-md font-semibold text-gray-900 mb-4">Décision de traitement</h3>
+                      
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <button
+                          onClick={() => setDecision('approved')}
+                          className={`p-3 border rounded-lg transition-all duration-150 flex items-center justify-center space-x-2 ${
+                            decision === 'approved'
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-emerald-300 hover:bg-emerald-25'
+                          }`}
+                        >
+                          <CheckCircleIcon className="w-4 h-4 flex-shrink-0" />
+                          <span className="text-sm font-medium whitespace-nowrap">Approuver</span>
+                        </button>
+                        <button
+                          onClick={() => setDecision('rejected')}
+                          className={`p-3 border rounded-lg transition-all duration-150 flex items-center justify-center space-x-2 ${
+                            decision === 'rejected'
+                              ? 'border-red-500 bg-red-50 text-red-700 ring-1 ring-red-500'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-red-300 hover:bg-red-25'
+                          }`}
+                        >
+                          <XCircleIcon className="w-4 h-4 flex-shrink-0" />
+                          <span className="text-sm font-medium whitespace-nowrap">Rejeter</span>
+                        </button>
+                      </div>
+
+                      <div className="mb-4">
+                        <label className="block text-xs font-medium text-gray-700 mb-2">
+                          Commentaires (optionnel)
+                        </label>
+                        <div className="relative">
+                          <textarea
+                            value={comments}
+                            onChange={handleCommentsChange}
+                            placeholder="Justification de la décision..."
+                            rows={3}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm transition-colors duration-150 resize-none ${
+                              commentError 
+                                ? 'border-red-500 bg-red-50' 
+                                : comments.length > COMMENT_WARNING_THRESHOLD 
+                                  ? 'border-amber-500 bg-amber-50'
+                                  : 'border-gray-300'
+                            }`}
+                          />
+                          <div className={`absolute bottom-2 right-2 text-xs ${
+                            comments.length > MAX_COMMENT_LENGTH 
+                              ? 'text-red-600 font-bold'
+                              : comments.length > COMMENT_WARNING_THRESHOLD
+                                ? 'text-amber-600'
+                                : 'text-gray-500'
+                          }`}>
+                            {comments.length}/{MAX_COMMENT_LENGTH}
+                          </div>
+                        </div>
+                        {commentError && (
+                          <div className="mt-1 text-xs text-red-600 flex items-center">
+                            <ExclamationTriangleIcon className="w-3 h-3 mr-1" />
+                            {commentError}
+                          </div>
+                        )}
+                        {comments.length > COMMENT_WARNING_THRESHOLD && comments.length <= MAX_COMMENT_LENGTH && (
+                          <div className="mt-1 text-xs text-amber-600 flex items-center">
+                            <ExclamationTriangleIcon className="w-3 h-3 mr-1" />
+                            Vous approchez de la limite de caractères
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={handleProcessInvoice}
+                        disabled={!decision || loading || comments.length > MAX_COMMENT_LENGTH}
+                        className="w-full bg-gray-900 text-white py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors duration-150 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                      >
+                        <DocumentCheckIcon className="w-4 h-4 flex-shrink-0" />
+                        <span className="whitespace-nowrap">
+                          {loading ? 'Traitement en cours...' : 'Traiter la facture'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+                  <DocumentMagnifyingGlassIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <h3 className="text-sm font-medium text-gray-900 mb-2">Sélectionnez une facture</h3>
+                  <p className="text-xs text-gray-600">
+                    {pendingInvoices.length > 0 
+                      ? "Choisissez une facture dans la liste pour commencer le traitement" 
+                      : "Aucune facture disponible pour le moment"}
+                  </p>
+                </div>
+              )}
+
+              {/* Statistiques de traitement - Affichage conditionnel */}
+              {showStats && (
+                <div className="bg-white rounded-lg border border-gray-200 p-5">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <ChartBarIcon className="w-5 h-5 text-gray-600 mr-2" />
+                    Statistiques du jour
                   </h2>
-
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Fournisseur</label>
-                      <p className="text-gray-900 font-medium">{currentInvoice.supplier}</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center p-3 bg-emerald-50 rounded border border-emerald-200">
+                      <div className="text-lg font-bold text-emerald-700">
+                        {processedInvoices.filter(i => i.decision === 'approved').length}
+                      </div>
+                      <div className="text-xs text-emerald-800 font-medium whitespace-nowrap">Approuvées</div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Montant</label>
-                      <p className="text-gray-900 font-medium">{currentInvoice.amount}</p>
+                    <div className="text-center p-3 bg-red-50 rounded border border-red-200">
+                      <div className="text-lg font-bold text-red-700">
+                        {processedInvoices.filter(i => i.decision === 'rejected').length}
+                      </div>
+                      <div className="text-xs text-red-800 font-medium whitespace-nowrap">Rejetées</div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                      <p className="text-gray-600">{currentInvoice.date}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Échéance</label>
-                      <p className="text-gray-600">{currentInvoice.dueDate}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
-                      <p className="text-gray-600">{currentInvoice.category}</p>
+                    <div className="text-center p-3 bg-gray-100 rounded border border-gray-300">
+                      <div className="text-lg font-bold text-gray-700">
+                        {processedInvoices.length}
+                      </div>
+                      <div className="text-xs text-gray-800 font-medium whitespace-nowrap">Traitées</div>
                     </div>
                   </div>
-
-                  {/* Articles de la facture */}
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-3">Articles</label>
-                    <div className="border border-gray-200 rounded-lg">
-                      <table className="w-full">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Description</th>
-                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Quantité</th>
-                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Prix</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {currentInvoice.items.map((item, index) => (
-                            <tr key={index} className="border-t border-gray-200">
-                              <td className="px-4 py-3 text-sm text-gray-900">{item.description}</td>
-                              <td className="px-4 py-3 text-sm text-gray-600">{item.quantity}</td>
-                              <td className="px-4 py-3 text-sm text-gray-600">{item.price}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                  <div className="mt-4 pt-3 border-t border-gray-200 space-y-1">
+                    <div className="flex justify-between text-xs text-gray-600">
+                      <span>En attente:</span>
+                      <span className="font-medium">{pendingInvoices.length}</span>
                     </div>
-                  </div>
-
-                  {/* Formulaire de décision */}
-                  <div className="border-t pt-6">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Décision de traitement</h3>
-                    
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <button
-                        onClick={() => setDecision('approved')}
-                        className={`p-4 border-2 rounded-lg transition-all duration-200 flex items-center justify-center ${
-                          decision === 'approved'
-                            ? 'border-green-500 bg-green-50 text-green-700'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <CheckCircleIcon className="w-5 h-5 mr-2" />
-                        Approuver
-                      </button>
-                      <button
-                        onClick={() => setDecision('rejected')}
-                        className={`p-4 border-2 rounded-lg transition-all duration-200 flex items-center justify-center ${
-                          decision === 'rejected'
-                            ? 'border-red-500 bg-red-50 text-red-700'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <XCircleIcon className="w-5 h-5 mr-2" />
-                        Rejeter
-                      </button>
+                    <div className="flex justify-between text-xs text-gray-600">
+                      <span>Total aujourd'hui:</span>
+                      <span className="font-medium">{pendingInvoices.length + processedInvoices.length}</span>
                     </div>
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Commentaires</label>
-                      <textarea
-                        value={comments}
-                        onChange={(e) => setComments(e.target.value)}
-                        placeholder="Ajoutez des commentaires sur votre décision..."
-                        rows={3}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-
-                    <button
-                      onClick={handleProcessInvoice}
-                      disabled={!decision}
-                      className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                    >
-                      <DocumentCheckIcon className="w-5 h-5 mr-2" />
-                      Traiter la facture
-                    </button>
                   </div>
                 </div>
-              </>
-            ) : (
-              <div className="bg-white rounded-xl shadow-md p-6 text-center">
-                <DocumentMagnifyingGlassIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Sélectionnez une facture</h3>
-                <p className="text-gray-600">Choisissez une facture dans la liste pour commencer le traitement</p>
-              </div>
-            )}
-
-            {/* Statistiques de traitement */}
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-6">Statistiques du jour</h2>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">
-                    {processedInvoices.filter(i => i.decision === 'approved').length}
-                  </div>
-                  <div className="text-sm text-green-800">Approuvées</div>
-                </div>
-                <div className="text-center p-4 bg-red-50 rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">
-                    {processedInvoices.filter(i => i.decision === 'rejected').length}
-                  </div>
-                  <div className="text-sm text-red-800">Rejetées</div>
-                </div>
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {processedInvoices.length}
-                  </div>
-                  <div className="text-sm text-blue-800">Traitées</div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
       </div>
-    </div>
-  <Footer />
-</>
+      <Footer />
+    </>
+  );
+}
+
+// Composant d'icône manquant pour les statistiques
+function ChartBarIcon(props) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"
+      />
+    </svg>
   );
 }
 

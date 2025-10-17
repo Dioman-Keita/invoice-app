@@ -1,4 +1,5 @@
 import ApiResponder from "../utils/ApiResponder";
+import database from "../config/database";
 import Invoice, { InvoiceRecordType, UpdateInvoiceData } from "../models/Invoice";
 import InvoiceLastNumberValidator from "../utils/InvoiceLastNumberValidator";
 import InvoiceValidatorData from "../utils/InvoiceValidatorData";
@@ -83,7 +84,7 @@ export async function createInvoice(
 
     // tracking de l'utilisateur
     const userActivity = new ActivityTracker();
-    const trackingResult = userActivity.track('SUBMIT_INVOICE', user.sup);
+    const trackingResult = await userActivity.track('SUBMIT_INVOICE', user.sup);
 
     if (!trackingResult) {
       logger.warn(`Echec du tracking de l'utilisateur ${user.sup} lors de la soumission du formulaire de facture`, {
@@ -628,3 +629,105 @@ export async function getNextInvoiceNumber(req: Request, res: Response): Promise
     }, 'Erreur lors du calcul, utilisation de la valeur par défaut');
   }
 }
+
+// Liste des factures DFC en attente pour l'année fiscale courante
+export async function getDfcPendingInvoices(
+  req: Request<unknown, unknown, unknown, { limit?: string }>,
+  res: Response
+): Promise<Response> {
+  const requestId = req.headers['x-request-id'] || 'unknown';
+  try {
+    const user = (req as any).user;
+    if (!user) {
+      logger.warn(`[${requestId}] Tentative d'accès aux factures DFC sans utilisateur authentifié`);
+      return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
+    }
+
+    const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
+    const invoices = await Invoice.findDfcPendingCurrentFiscalYear(limit);
+    const fiscalYear = await getSetting('fiscal_year');
+
+    logger.info(`[${requestId}] Factures DFC en attente récupérées`, {
+      userId: user.sup,
+      role: user.role,
+      count: invoices.length
+    });
+
+    return ApiResponder.success(res, invoices, `${invoices.length} facture(s) DFC en attente`, {fiscalYear});
+  } catch (error) {
+    logger.error(`[${requestId}] Erreur lors de la récupération des factures DFC en attente`, {
+      errorMessage: error instanceof Error ? error.message : 'Erreur inconnue',
+      stack: error instanceof Error ? error.stack : 'unknown stack'
+    });
+    return ApiResponder.error(res, error);
+  }
+}
+
+// Approuver une facture DFC (année fiscale courante uniquement)
+export async function approveDfcInvoice(
+  req: Request<{ id: string }>,
+  res: Response
+): Promise<Response> {
+  const requestId = req.headers['x-request-id'] || 'unknown';
+  try {
+    const user = (req as any).user;
+    if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
+    const { id } = req.params;
+    if (!id) return ApiResponder.badRequest(res, 'ID de la facture requis');
+
+    const result = await Invoice.updateDfcStatusIfCurrentFiscalYear(id, 'approved', user.sup);
+    if (!result.success) {
+      return ApiResponder.badRequest(res, result.message || "Impossible d'approuver la facture");
+    }
+
+    const fiscalYear = await getSetting('fiscal_year');
+    const body: any = (req as any).body || {};
+    await (database as any).execute(
+      "INSERT INTO dfc_decision(invoice_id, decision, comment, decided_by, fiscal_year) VALUES (?,?,?,?,?)",
+      [id, 'approved', body.comments || null, user.sup, fiscalYear]
+    );
+
+    logger.info(`[${requestId}] Facture DFC approuvée`, { invoiceId: id, userId: user.sup, role: user.role });
+    return ApiResponder.success(res, null, 'Facture approuvée avec succès');
+  } catch (error) {
+    logger.error(`[${requestId}] Erreur lors de l'approbation DFC`, {
+      errorMessage: error instanceof Error ? error.message : 'Erreur inconnue'
+    });
+    return ApiResponder.error(res, error);
+  }
+}
+
+// Rejeter une facture DFC (année fiscale courante uniquement)
+export async function rejectDfcInvoice(
+  req: Request<{ id: string }>,
+  res: Response
+): Promise<Response> {
+  const requestId = req.headers['x-request-id'] || 'unknown';
+  try {
+    const user = (req as any).user;
+    if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
+    const { id } = req.params;
+    if (!id) return ApiResponder.badRequest(res, 'ID de la facture requis');
+
+    const result = await Invoice.updateDfcStatusIfCurrentFiscalYear(id, 'rejected', user.sup);
+    if (!result.success) {
+      return ApiResponder.badRequest(res, result.message || 'Impossible de rejeter la facture');
+    }
+
+    const fiscalYear = await getSetting('fiscal_year');
+    const body: any = (req as any).body || {};
+    await (database as any).execute(
+      "INSERT INTO dfc_decision(invoice_id, decision, comment, decided_by, fiscal_year) VALUES (?,?,?,?,?)",
+      [id, 'rejected', body.comments || null, user.sup, fiscalYear]
+    );
+
+    logger.info(`[${requestId}] Facture DFC rejetée`, { invoiceId: id, userId: user.sup, role: user.role });
+    return ApiResponder.success(res, null, 'Facture rejetée avec succès');
+  } catch (error) {
+    logger.error(`[${requestId}] Erreur lors du rejet DFC`, {
+      errorMessage: error instanceof Error ? error.message : 'Erreur inconnue'
+    });
+    return ApiResponder.error(res, error);
+  }
+}
+

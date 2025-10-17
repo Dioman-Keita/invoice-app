@@ -89,6 +89,7 @@ CREATE TABLE invoice (
     create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     status ENUM('Oui', 'Non') DEFAULT 'Non',
+    dfc_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending', 
     created_by VARCHAR(50),
     created_by_email VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     created_by_role ENUM('dfc_agent', 'invoice_manager', 'admin'),
@@ -152,6 +153,19 @@ CREATE TABLE audit_log (
     FOREIGN KEY (performed_by) REFERENCES employee(id)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- Table des décisions DFC (approbation/rejet) avec commentaires optionnels
+CREATE TABLE dfc_decision (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    invoice_id VARCHAR(15) NOT NULL,
+    decision ENUM('approved', 'rejected') NOT NULL,
+    comment TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
+    decided_by VARCHAR(50) NULL,
+    decided_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fiscal_year VARCHAR(4) NOT NULL,
+    FOREIGN KEY (invoice_id) REFERENCES invoice(id) ON DELETE CASCADE,
+    FOREIGN KEY (decided_by) REFERENCES employee(id) ON DELETE SET NULL
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- table pour gérer les compteurs par année fiscale
 CREATE TABLE fiscal_year_counter (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -200,6 +214,12 @@ CREATE INDEX idx_invoice_search ON invoice(num_invoice, invoice_type, status, cr
 CREATE INDEX idx_invoice_date ON invoice(invoice_date);
 CREATE INDEX idx_invoice_arr_date ON invoice(invoice_arr_date);
 CREATE INDEX idx_invoice_created_by ON invoice(created_by);
+CREATE INDEX idx_invoice_dfc_status ON invoice(dfc_status);
+CREATE INDEX idx_dfc_decision_invoice ON dfc_decision(invoice_id);
+CREATE INDEX idx_dfc_decision_fy ON dfc_decision(fiscal_year);
+CREATE INDEX idx_dfc_decision_by ON dfc_decision(decided_by);
+CREATE INDEX idx_dfc_decision_at ON dfc_decision(decided_at);
+
 -- Index pour les vérifications par année fiscale
 CREATE INDEX idx_invoice_fiscal_year ON invoice(fiscal_year);
 CREATE INDEX idx_invoice_cmdt_fiscal ON invoice(fiscal_year, num_cmdt);

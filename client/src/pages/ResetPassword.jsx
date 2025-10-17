@@ -47,9 +47,10 @@ export default function ResetPassword() {
 
     // Validation du mot de passe
     const validatePassword = (password) => {
-        if (password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères.';
-        if (password.length > 20) return 'Le mot de passe ne doit pas dépasser 20 caractères.';
+        if (password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères (incluant au moins un chiffre).';
         if (!/[A-Z]/.test(password)) return 'Le mot de passe doit contenir au moins une lettre majuscule.';
+        if (!/\d/.test(password)) return 'Le mot de passe doit contenir au moin 1 chiffre.';
+        if (password.length > 20) return 'Le mot de passe ne doit pas dépasser 20 caractères.';
         if (!/[@$!%*?&]/.test(password)) return 'Le mot de passe doit contenir au moins un caractère spécial (@$!%*?&).';
         return true;
     };
@@ -200,15 +201,15 @@ export default function ResetPassword() {
                                 <div className="w-full bg-gray-200 rounded-full h-2">
                                     <div 
                                         className={`h-2 rounded-full ${
+                                            passwordStrength.strength < 50 ? 'bg-red-500' :
                                             passwordStrength.color === 'green' ? 'bg-green-500' :
-                                            passwordStrength.color === 'yellow' ? 'bg-yellow-500' :
-                                            passwordStrength.color === 'orange' ? 'bg-orange-500' : 'bg-red-500'
+                                            passwordStrength.color === 'yellow' ? 'bg-yellow-500' : 'bg-orange-500'
                                         }`}
                                         style={{ width: `${passwordStrength.strength}%` }}
                                     ></div>
                                 </div>
                                 <div className="text-xs text-gray-500 mt-1">
-                                    Doit contenir: 8-20 caractères, majuscule, caractère spécial (@$!%*?&)
+                                    Doit contenir: 8-20 caractères, majuscule, caractère spécial (@$!%*?&), au moin un chiffre
                                 </div>
                             </div>
                         )}

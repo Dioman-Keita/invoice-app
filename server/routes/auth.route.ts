@@ -4,6 +4,8 @@ import { createUser, login, getCurrentToken, forgotPassword, logout, resetUserPa
 import authGuard from "../middleware/authGuard";
 import { requireAdmin } from "../middleware/roleGuard";
 import ApiResponder from "../utils/ApiResponder";
+import { autoTrackActivity } from "../middleware/autoTrackActivity";
+
 import { checkAuthStatus } from "../controllers/auth.controller";
 const router = express.Router();
 
@@ -25,8 +27,9 @@ router.post('/auth/logout', logout);
 router.post('/auth/verify-registration-token', verifyRegistrationToken);
 router.post('/auth/silent-refresh', authGuard, silentRefresh);
 router.get('/auth/token', getCurrentToken);
-router.get('/auth/profile', authGuard, getUserProfil);
-router.get('/auth/status', authGuard, checkAuthStatus);
+router.get('/auth/profile', authGuard, autoTrackActivity('VIEW_PROFILE'), getUserProfil);
+router.get('/auth/status', authGuard, autoTrackActivity('REFRESH_PROFILE'), checkAuthStatus);
+
 // Route admin pour créer des utilisateurs (nécessite le rôle admin)
 router.post('/auth/admin/create-user', authGuard, requireAdmin, createUser);
 

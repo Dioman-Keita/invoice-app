@@ -1,4 +1,3 @@
-// components/ValidateSupplierInput.jsx
 import { useFormContext } from "react-hook-form";
 import useProgressiveValidation from "../hooks/useProgressiveValidation";
 import { useInputFilters } from "../hooks/useInputFilter";
@@ -45,12 +44,17 @@ function ValidateSupplierInput() {
   const [isCheckingConflict, setIsCheckingConflict] = useState(false);
   const lastAutoCompletedData = useRef({ name: '', account: '', phone: '' });
   const lastValidSupplier = useRef(null);
+  // NOUVEAU : Référence pour suivre les erreurs persistantes
+  const persistentErrors = useRef({
+    account_number: false,
+    phone: false
+  });
 
   const supplierName = watch('supplier_name');
   const supplierAccount = watch('supplier_account_number');
   const supplierPhone = watch('supplier_phone');
 
-  // Gestion intelligente des vérifications
+  // Gestion intelligente des vérifications - MODIFIÉ
   useEffect(() => {
     const verifyConflicts = async () => {
       if (isAutoCompleted) return;
@@ -97,7 +101,7 @@ function ValidateSupplierInput() {
           setSelectedField('phone');
           searchSuppliers('phone', supplierPhone);
         }
-        clearConflicts();
+        // NE PAS effacer les conflits existants automatiquement
       } else if (shouldCheckConflict) {
         // Vérification de conflit - utiliser les valeurs formatées
         console.log('🔍 Déclenchement vérification conflit');
@@ -105,8 +109,7 @@ function ValidateSupplierInput() {
         await checkFieldConflicts(supplierAccount, supplierPhone, supplierName, false);
         setIsCheckingConflict(false);
       } else {
-        // Aucune action nécessaire
-        clearConflicts();
+        // Aucune action nécessaire - NE PAS effacer les conflits automatiquement
         clearSuggestions();
       }
     };
@@ -118,14 +121,13 @@ function ValidateSupplierInput() {
     supplierAccount, 
     supplierPhone, 
     checkFieldConflicts, 
-    clearConflicts, 
     clearSuggestions, 
     isAutoCompleted, 
     searchSuppliers, 
     setSelectedField
   ]);
 
-  // Gestion des changements après auto-complétion
+  // Gestion des changements après auto-complétion - MODIFIÉ
   useEffect(() => {
     if (isAutoCompleted) {
       const currentData = { 
@@ -140,27 +142,13 @@ function ValidateSupplierInput() {
       
       if (hasChanged) {
         // Si l'utilisateur modifie un champ après auto-complétion, on sort du mode auto-complété
-        clearConflicts();
+        // Mais on conserve les erreurs existantes
+        console.log("🔄 Sortie du mode auto-complété, conservation des erreurs");
       }
     }
-  }, [supplierName, supplierAccount, supplierPhone, isAutoCompleted, clearConflicts]);
+  }, [supplierName, supplierAccount, supplierPhone, isAutoCompleted]);
 
-  // Réinitialisation des conflits si les champs deviennent incomplets
-  useEffect(() => {
-    const resetConflictIfFieldChanged = () => {
-      if (fieldConflicts.account_number && supplierAccount?.length < 12) {
-        clearFieldConflict('account_number');
-      }
-      if (fieldConflicts.phone && (supplierPhone?.replace(/\D/g, '').length < 8 || !supplierPhone?.includes('+223'))) {
-        clearFieldConflict('phone');
-      }
-    };
-
-    const timeoutId = setTimeout(resetConflictIfFieldChanged, 300);
-    return () => clearTimeout(timeoutId);
-  }, [supplierAccount, supplierPhone, fieldConflicts, clearFieldConflict]);
-
-  // Gestion des erreurs de conflit pour chaque champ
+  // NOUVELLE Gestion des erreurs persistantes - REMPLACE l'ancien useEffect
   useEffect(() => {
     if (!isAutoCompleted) {
       // Réinitialiser l'erreur générale
@@ -175,31 +163,58 @@ function ValidateSupplierInput() {
         return;
       }
 
-      // Afficher les messages d'erreur spécifiques pour chaque champ
+      // Gestion des erreurs de compte - PERSISTANTES
       if (fieldConflicts.account_number && conflictData.account_number) {
         setError('supplier_account_number', { 
           type: 'manual', 
           message: `Ce numéro de compte est déjà utilisé par le fournisseur "${conflictData.account_number.name}"` 
         });
-      } else {
-        clearErrors('supplier_account_number');
+        persistentErrors.current.account_number = true;
+      } 
+      // NE PAS effacer l'erreur automatiquement - seulement si le conflit est résolu
+      else if (!fieldConflicts.account_number && persistentErrors.current.account_number) {
+        // Garder l'erreur jusqu'à ce que l'utilisateur change la valeur
+        console.log("💾 Conservation de l'erreur de compte");
       }
 
+      // Gestion des erreurs de téléphone - PERSISTANTES
       if (fieldConflicts.phone && conflictData.phone) {
         setError('supplier_phone', { 
           type: 'manual', 
           message: `Ce numéro de téléphone est déjà utilisé par le fournisseur "${conflictData.phone.name}"` 
         });
-      } else {
-        clearErrors('supplier_phone');
+        persistentErrors.current.phone = true;
+      }
+      // NE PAS effacer l'erreur automatiquement - seulement si le conflit est résolu
+      else if (!fieldConflicts.phone && persistentErrors.current.phone) {
+        // Garder l'erreur jusqu'à ce que l'utilisateur change la valeur
+        console.log("💾 Conservation de l'erreur de téléphone");
       }
     } else {
       // En mode auto-complété, effacer toutes les erreurs
       clearErrors('supplier_conflict');
       clearErrors('supplier_account_number');
       clearErrors('supplier_phone');
+      persistentErrors.current.account_number = false;
+      persistentErrors.current.phone = false;
     }
   }, [fieldConflicts, conflictData, setError, clearErrors, isAutoCompleted]);
+
+  // NOUVELLE fonction pour effacer les erreurs seulement quand l'utilisateur corrige vraiment
+  const clearErrorIfCorrected = useCallback((fieldName, currentValue, conflictType) => {
+    const hasConflict = fieldConflicts[conflictType];
+    const hasPersistentError = persistentErrors.current[conflictType];
+    
+    // Effacer l'erreur seulement si :
+    // 1. Il y avait une erreur persistante
+    // 2. ET le conflit n'existe plus 
+    // 3. ET l'utilisateur a modifié la valeur (champ non vide)
+    if (hasPersistentError && !hasConflict && currentValue) {
+      clearErrors(fieldName);
+      persistentErrors.current[conflictType] = false;
+      console.log(`✅ Erreur ${conflictType} corrigée par l'utilisateur`);
+    }
+  }, [fieldConflicts, clearErrors]);
 
   const handleNameInput = useCallback((e) => {
     const value = e.target.value;
@@ -231,9 +246,12 @@ function ValidateSupplierInput() {
     e.target.value = nextVal;
     setValue('supplier_account_number', nextVal, { shouldValidate: true });
     
+    // Vérifier si l'utilisateur a corrigé l'erreur
+    clearErrorIfCorrected('supplier_account_number', nextVal, 'account_number');
+    
     // Déclencher la validation Zod
     setTimeout(() => trigger('supplier_account_number'), 0);
-  }, [setValue, trigger, showError]);
+  }, [setValue, trigger, showError, clearErrorIfCorrected]);
 
   const handlePhoneInput = useCallback((e) => {
     filterPhone(e);
@@ -241,8 +259,11 @@ function ValidateSupplierInput() {
     
     setValue('supplier_phone', value, { shouldValidate: true });
     
+    // Vérifier si l'utilisateur a corrigé l'erreur
+    clearErrorIfCorrected('supplier_phone', value, 'phone');
+    
     setTimeout(() => trigger('supplier_phone'), 0);
-  }, [filterPhone, setValue, trigger]);
+  }, [filterPhone, setValue, trigger, clearErrorIfCorrected]);
 
   const handleSuggestionClick = useCallback((supplier) => {
     const safeSupplier = {
@@ -262,6 +283,10 @@ function ValidateSupplierInput() {
     setValue('supplier_name', safeSupplier.name, { shouldValidate: true });
     setValue('supplier_account_number', safeSupplier.account_number, { shouldValidate: true });
     setValue('supplier_phone', safeSupplier.phone, { shouldValidate: true });
+    
+    // Effacer toutes les erreurs persistantes lors de la sélection
+    persistentErrors.current.account_number = false;
+    persistentErrors.current.phone = false;
     
     setTimeout(() => {
       trigger(['supplier_name', 'supplier_account_number', 'supplier_phone']);

@@ -23,6 +23,7 @@ export type InvoiceRecordType = {
     create_at: string;
     update_at: string;
     status: 'Oui'| 'Non';
+    dfc_status: 'pending' | 'approved' | 'rejected';
     created_by: string;
     created_by_email: string;
     created_by_role: 'dfc_agent' | 'invoice_manager' | 'admin';
@@ -108,25 +109,25 @@ class Invoice implements InvoiceModel {
 					description: `Ajout des decoument a la facture nouvellement creee ${id}`
 				});
 			}
-			
-			await auditLog({
-				table_name: 'invoice', // Correction : table invoice au lieu de employee
-				action: 'INSERT',
-				record_id: invoiceData.created_by,
-				performed_by: invoiceData.created_by,
-				description: `Création d'une facture par l'utilisateur ${invoiceData.created_by} role : [${invoiceData.created_by_role}]`
-			})
-			
-			logger.debug("Création de la facture " + id + " avec succès", {
-				userId: invoiceData.created_by,
-				email: invoiceData.created_by_email,
-				role: invoiceData.created_by_role
-			})
 
-			return {
-				success: true,
-				data: result
-			}
+            await auditLog({
+                table_name: 'invoice', // Correction : table invoice au lieu de employee
+                action: 'INSERT',
+                record_id: invoiceData.created_by,
+                performed_by: invoiceData.created_by,
+                description: `Création d'une facture par l'utilisateur ${invoiceData.created_by} role : [${invoiceData.created_by_role}]`
+            })
+            
+            logger.debug("Création de la facture " + id + " avec succès", {
+                userId: invoiceData.created_by,
+                email: invoiceData.created_by_email,
+                role: invoiceData.created_by_role
+            })
+
+            return {
+                success: true,
+                data: result
+            }
 		} catch (error) {
 			logger.error(`Une erreur est survenue lors de la création de la facture`, {
 				errorMessage: error instanceof Error ? error.message : 'unknown error',
@@ -139,6 +140,71 @@ class Invoice implements InvoiceModel {
 		}
 	}
 
+	async updateDfcStatusIfCurrentFiscalYear(id: string, newStatus: 'approved' | 'rejected', performedBy: string): Promise<{success: boolean; message?: string}> {
+		try {
+			const fiscalYear = await getSetting('fiscal_year');
+			// Ensure invoice exists, matches fiscal year, and is pending
+			const checkQuery = `SELECT id, fiscal_year, dfc_status FROM invoice WHERE id = ?`;
+			const rows: any = await database.execute(checkQuery, [id]);
+			const invoice = Array.isArray(rows) ? rows[0] : rows;
+			if (!invoice) return { success: false, message: 'Facture introuvable' };
+			if (invoice.fiscal_year !== fiscalYear) return { success: false, message: "Facture hors de l'année fiscale courante" };
+			if (invoice.dfc_status !== 'pending') return { success: false, message: 'Facture déjà traitée DFC' };
+
+			await database.execute(`UPDATE invoice SET dfc_status = ?, update_at = CURRENT_TIMESTAMP WHERE id = ?`, [newStatus, id]);
+
+			await auditLog({
+				table_name: 'invoice',
+				action: 'UPDATE',
+				record_id: id,
+				performed_by: performedBy,
+				description: `Mise à jour du statut DFC à ${newStatus} pour la facture ${id}`
+			});
+
+			return {
+				success: true
+			}
+		} catch (error) {
+			logger.error(`Erreur lors de la mise à jour du statut DFC pour la facture ${id}`, {
+				errorMessage: error instanceof Error ? error.message : 'unknown error',
+				stack: error instanceof Error ? error.stack : 'unknown stack'
+			});
+			return { success: false, message: 'Erreur interne' }
+		}
+	}
+
+	async findDfcPendingCurrentFiscalYear(limit?: number): Promise<InvoiceRecordType[]> {
+		try {
+			const fiscalYear = await getSetting('fiscal_year');
+			let query = `
+				SELECT i.*, s.name AS supplier_name, s.account_number AS supplier_account_number, s.phone AS supplier_phone
+				FROM invoice i
+				LEFT JOIN supplier s ON i.supplier_id = s.id
+				WHERE i.fiscal_year = ? AND i.dfc_status = 'pending'
+				ORDER BY i.create_at DESC
+			`;
+			if (limit && Number.isFinite(limit)) {
+				query += ` LIMIT ${limit}`;
+			}
+			let rows: any = await database.execute(query, [fiscalYear]);
+			if (rows && !Array.isArray(rows)) {
+				rows = [rows];
+			}
+			await auditLog({
+				table_name: 'invoice',
+				action: 'SELECT',
+				record_id: null,
+				performed_by: 'system',
+				description: `Récupération des factures DFC en attente pour l'année fiscale ${fiscalYear}`
+			});
+			return rows || [];
+		} catch (error) {
+			logger.error('Erreur lors de la récupération des factures DFC en attente', {
+				errorMessage: error instanceof Error ? error.message : 'unknown error'
+			});
+			return [];
+		}
+	}
 	async findInvoice(id: string | number, config: { 
 			findBy: "id" | "phone" | "account_number" | "supplier_id" | "all"; 
 			limit: number | null; 

@@ -80,7 +80,7 @@ Si front et back sont sur des origines différentes, activer CORS avec `credenti
 Note Vite: un proxy est configuré dans `vite.config.js` pour rediriger `/api` vers `http://localhost:3000`. Ainsi côté client vous pouvez appeler directement `/api/...` pendant le développement.
 
 ### Base de données
-- **Script initial** : `server/db/db.sql`
+- Voir `server/QUICK_START.md` pour les scripts SQL et les étapes d'initialisation de la base (création du schéma et traçabilité utilisateur).
 
 #### Règles et contraintes récentes
 - Facture:
@@ -153,6 +153,9 @@ npm run preview       # prévisualisation du build
 - POST `/invoices` → créer une facture (traçabilité automatique)
 - POST `/invoices/update/:id` → mettre à jour une facture (rôles: manager, admin)
 - POST `/invoices/delete/:id` → supprimer une facture (rôle: admin)
+ - GET  `/invoices/dfc/pending` → lister les factures DFC en attente pour l'année fiscale courante (rôles: agent, manager)
+ - POST `/invoices/:id/dfc/approve` → approuver une facture DFC (rôles: agent, manager)
+ - POST `/invoices/:id/dfc/reject` → rejeter une facture DFC (rôles: agent, manager)
 
 ### Endpoints Fournisseurs (protégés)
 - POST `/supplier` → créer un fournisseur (rôles: manager, admin)
