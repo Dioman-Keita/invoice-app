@@ -75,7 +75,7 @@ export async function createInvoice(
     // Mettre à jour le compteur CMDT
     await InvoiceLastNumberValidator.updateCmdtCounter(data.num_cmdt);
 
-    logger.info(`[${requestId}] Facture créée avec succès`, { 
+    logger.info(`[${requestId}] Facture créée avec succès 🎯`, {
       userId: user.sup, 
       email: user.email,
       role: user.role,
@@ -96,7 +96,7 @@ export async function createInvoice(
     // Vérifier les alertes de fin d'année
     const warningInfo = await InvoiceLastNumberValidator.checkYearEndThresholdWarning();
     
-    return ApiResponder.created(res, result.data, 'Facture créée avec succès', { warningInfo });
+    return ApiResponder.created(res, result.data, 'Facture créée avec succès 🎯', { warningInfo });
   } catch (err) {
     logger.error(`[${requestId}] Erreur lors de la création de facture`, { 
       errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',

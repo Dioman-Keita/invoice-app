@@ -1,6 +1,6 @@
 import database from "../config/database";
 import logger from "../utils/Logger";
-import generateId from "../services/generateId";
+import generateId from "../services/GenerateId";
 import { formatDate } from "../utils/Formatters";
 import { auditLog } from "../utils/auditLogger";
 import { getSetting } from "../utils/InvoiceLastNumberValidator";
@@ -111,7 +111,7 @@ class Invoice implements InvoiceModel {
 			}
 
             await auditLog({
-                table_name: 'invoice', // Correction : table invoice au lieu de employee
+                table_name: 'invoice', // Correction : table form au lieu de employee
                 action: 'INSERT',
                 record_id: invoiceData.created_by,
                 performed_by: invoiceData.created_by,
@@ -143,7 +143,7 @@ class Invoice implements InvoiceModel {
 	async updateDfcStatusIfCurrentFiscalYear(id: string, newStatus: 'approved' | 'rejected', performedBy: string): Promise<{success: boolean; message?: string}> {
 		try {
 			const fiscalYear = await getSetting('fiscal_year');
-			// Ensure invoice exists, matches fiscal year, and is pending
+			// Ensure form exists, matches fiscal year, and is pending
 			const checkQuery = `SELECT id, fiscal_year, dfc_status FROM invoice WHERE id = ?`;
 			const rows: any = await database.execute(checkQuery, [id]);
 			const invoice = Array.isArray(rows) ? rows[0] : rows;
@@ -296,7 +296,7 @@ class Invoice implements InvoiceModel {
 				return { success: false };
 			}
 
-			const query = "DELETE FROM invoice WHERE id = ?";
+			const query = "DELETE FROM form WHERE id = ?";
 			await database.execute(query, [id]);
 
 			await auditLog({
@@ -377,7 +377,7 @@ class Invoice implements InvoiceModel {
 		try {
 		  const fiscalYear = await getSetting('fiscal_year');
 		  const result = await database.execute(
-			"SELECT num_cmdt FROM invoice WHERE fiscal_year = ? ORDER BY create_at DESC LIMIT 1",
+			"SELECT num_cmdt FROM form WHERE fiscal_year = ? ORDER BY create_at DESC LIMIT 1",
 			[fiscalYear]
 		  );
 		  
@@ -417,7 +417,7 @@ class Invoice implements InvoiceModel {
 		try {
 			const fiscalYear = await getSetting('fiscal_year');
 			const result = await database.execute(
-			  "SELECT num_cmdt FROM invoice WHERE fiscal_year = ? ORDER BY create_at DESC LIMIT 1",
+			  "SELECT num_cmdt FROM form WHERE fiscal_year = ? ORDER BY create_at DESC LIMIT 1",
 			  [fiscalYear]
 			);
 			

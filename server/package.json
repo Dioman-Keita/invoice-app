@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "dev": "ts-node server.ts",
+    "dev": "tsx server.ts",
     "build": "tsc",
     "start:prod": "npm run build && node dist/server.js"
   },
@@ -23,6 +23,7 @@
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.14.5",
     "nodemailer": "^7.0.6",
+    "tsx": "^4.20.6",
     "uuid": "^13.0.0",
     "validator": "^13.15.15",
     "zod": "^4.1.12"

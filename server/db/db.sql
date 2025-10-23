@@ -9,7 +9,7 @@ USE cmdt_invoice_db;
 CREATE TABLE supplier (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-    account_number CHAR(12) UNIQUE NOT NULL,
+    account_number CHAR(34) UNIQUE NOT NULL,
     phone VARCHAR(20) UNIQUE NOT NULL,
     create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -219,6 +219,7 @@ CREATE INDEX idx_dfc_decision_invoice ON dfc_decision(invoice_id);
 CREATE INDEX idx_dfc_decision_fy ON dfc_decision(fiscal_year);
 CREATE INDEX idx_dfc_decision_by ON dfc_decision(decided_by);
 CREATE INDEX idx_dfc_decision_at ON dfc_decision(decided_at);
+CREATE UNIQUE INDEX idx_supplier_account_number ON supplier(account_number);
 
 -- Index pour les vérifications par année fiscale
 CREATE INDEX idx_invoice_fiscal_year ON invoice(fiscal_year);

@@ -1,6 +1,6 @@
 import { DocumentTextIcon, InformationCircleIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { useState } from 'react';
-import useInvoice from '../../hooks/useInvoice';
+import useInvoice from '../../hooks/features/useInvoice.js';
 
 export default function InvoiceLastNumber({ lastInvoiceNumber, isLoading = false, fiscalYear }) {
     const [showTooltip, setShowTooltip] = useState(false);

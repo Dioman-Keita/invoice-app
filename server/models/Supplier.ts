@@ -1,7 +1,8 @@
-import { errorMonitor } from "events";
 import database from "../config/database";
 import logger from "../utils/Logger";
 import { auditLog } from "../utils/auditLogger";
+import { normalizeAccountNumber, isValidAccountNumber, formatAccountCanonical } from "../../common/helpers/formatAccountNumber";
+
 
 export type CreateSupplierInput = {
     supplier_name: string;
@@ -58,13 +59,8 @@ class Supplier implements SupplierModel {
             const { supplier_name, supplier_account_number, supplier_phone } = supplierData;
             
             // Validation du numéro de compte
-            if (!/^\d{12}$/.test(String(supplier_account_number))) {
+            if (!isValidAccountNumber(normalizeAccountNumber(supplier_account_number))) {
                 throw new Error('Le numéro de compte doit contenir exactement 12 chiffres');
-            }
-
-            // Validation du nom
-            if (!supplier_name || supplier_name.trim().length === 0) {
-                throw new Error('Le nom du fournisseur est obligatoire');
             }
 
             const query = "INSERT INTO supplier(name, account_number, phone) VALUES (?, ?, ?)";

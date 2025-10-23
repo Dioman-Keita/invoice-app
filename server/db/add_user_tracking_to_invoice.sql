@@ -1,4 +1,4 @@
--- Ajouter les colonnes de traçabilité utilisateur à la table invoice
+-- Ajouter les colonnes de traçabilité utilisateur à la table form
 ALTER TABLE invoice 
 ADD COLUMN created_by VARCHAR(50) AFTER status,
 ADD COLUMN created_by_email VARCHAR(100) AFTER created_by,
@@ -17,7 +17,7 @@ ALTER TABLE employee ADD COLUMN department VARCHAR(50) NOT NULL;
 
 
 -- 3) Plafond montant 100 000 000 000
--- Adapter le type pour supporter la valeur maximale
+-- Adapter le types pour supporter la valeur maximale
 ALTER TABLE invoice 
 MODIFY COLUMN amount DECIMAL(12,0) NOT NULL;
 

@@ -2,23 +2,23 @@ import { useForm, useWatch, FormProvider} from "react-hook-form";
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import ValidatedTextarea from "../../components/ValidateTextarea";
-import ValidateSelectInput from "../../components/ValidateSelectInput";
-import ValidateRadioGroup from "../../components/ValidateRadioGroup";
-import ValidateCheckboxGroup from "../../components/ValidateCheckboxGroup";
+import ValidatedTextarea from "../../components/validation/ValidateTextarea.jsx";
+import ValidateSelectInput from "../../components/validation/ValidateSelectInput.jsx";
+import ValidateRadioGroup from "../../components/validation/ValidateRadioGroup.jsx";
+import ValidateCheckboxGroup from "../../components/validation/ValidateCheckboxGroup.jsx";
 import formatDate from "../../utils/formatDate";
-import ValidatedCodeInput from "../../components/ValidatedCodeInput";
-import ValidatedInvoiceNumberInput from "../../components/ValidatedInvoiceNumberInput";
-import ValidatedAmountInput from "../../components/ValidatedAmountInput";
-import ValidateDateInput from "../../components/ValidateDateInput";
-import FormContainer from "../../components/FormContainer";
-import FormSection from "../../components/FormSection";
-import AsyncSubmitBtn from "../../components/AsyncSubmitBtn";
-import { invoiceSchema } from "./InvoiceShema";
-import useToastFeedback from "../../hooks/useToastFeedback";
-import useDateValidation from "../../hooks/useDateValidation";
-import ValidateSupplierInput from "../../components/ValidateSupplierInput";
-import useInvoice from "../../hooks/useInvoice.js";
+import ValidatedCodeInput from "../../components/validation/ValidatedCodeInput.jsx";
+import ValidatedInvoiceNumberInput from "../../components/validation/ValidatedInvoiceNumberInput.jsx";
+import ValidatedAmountInput from "../../components/validation/ValidatedAmountInput.jsx";
+import ValidateDateInput from "../../components/validation/ValidateDateInput.jsx";
+import FormContainer from "../../components/form/FormContainer.jsx";
+import FormSection from "../../components/form/FormSection.jsx";
+import SubmitBtn from "../../components/form/SubmitBtn.jsx";
+import { invoiceSchema } from "../../shema/InvoiceShema.ts";
+import useToastFeedback from "../../hooks/ui/useToastFeedBack.js";
+import useDateValidation from "../../hooks/ui/useDateValidation.js";
+import ValidateSupplierInput from "../../components/validation/ValidateSupplierInput.jsx";
+import useInvoice from "../../hooks/features/useInvoice.js";
 
 function InvoiceForm() {
 
@@ -73,7 +73,7 @@ function InvoiceForm() {
       const result = await saveInvoice(data);
       
       if (result.success) {
-        success("Facture envoyée avec succès");
+        success(result.message);
         setResetTrigger(prev => prev + 1);
         console.log('✅ Succès:', data);
         methods.reset();
@@ -170,7 +170,7 @@ function InvoiceForm() {
               name={"documents"}
             />
           </FormSection>
-          <AsyncSubmitBtn label="Envoyer à la DFC" loadingLabel="Transmission en cours..." loading={loading} />
+          <SubmitBtn label="Envoyer à la DFC" loadingLabel="Transmission en cours..." loading={loading} />
       </FormContainer>
     </FormProvider>
   )

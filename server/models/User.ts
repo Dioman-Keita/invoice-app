@@ -1,5 +1,5 @@
 import database from "../config/database";
-import generateId, { EntityType } from "../services/generateId";
+import generateId, { EntityType } from "../services/GenerateId";
 import { isValidEmail, isValidPasswordStrength } from "../middleware/validator";
 import { BcryptHasher } from "../utils/PasswordHasher";
 import { generateUserToken } from "../services/userToken";

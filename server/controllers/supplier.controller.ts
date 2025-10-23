@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import ApiResponder from "../utils/ApiResponder";
 import supplier, { SupplierRecord, CreateSupplierInput } from "../models/Supplier";
+import { normalizeAccountNumber, isValidAccountNumber, formatAccountCanonical } from "../../common/helpers/formatAccountNumber";
 import logger from '../utils/Logger';
 
 
@@ -24,16 +25,17 @@ export async function createSupplier(
         if (!supplier_account_number) {
             return ApiResponder.badRequest(res, 'Le numéro de compte du fournisseur est requis');
         }
-        if (!/^\d{12}$/.test(supplier_account_number)) {
-            return ApiResponder.badRequest(res, 'Le numéro de compte doit contenir exactement 12 chiffres');
-        }
 
-        const isSupplierExist: SupplierRecord[] = await supplier.findSupplier(supplier_account_number, {findBy: 'account_number'});
+        if (!isValidAccountNumber(normalizeAccountNumber(supplier_account_number))) {
+            return ApiResponder.badRequest(res, 'Le format du numero de compte est invalide (6-34)')
+        }
+        const normalizeAccount = formatAccountCanonical(supplier_account_number);
+        const isSupplierExist: SupplierRecord[] = await supplier.findSupplier(normalizeAccount, {findBy: 'account_number'});
         if (isSupplierExist && isSupplierExist.length > 0) return ApiResponder.badRequest(res, 'Ce fournisseur existe déjà');
 
         const result = await supplier.create({
             supplier_name,
-            supplier_account_number,
+            supplier_account_number: normalizeAccount,
             supplier_phone,
             created_by: user.sup,
             created_by_email: user.email,
@@ -354,7 +356,8 @@ export async function getSupplierByAnyField(
     } catch (err) {
         logger.error('Erreur lors de la recherche de fournisseur par champs', {
             error: err instanceof Error ? err.message : 'unknown error',
-            query: req.query
+            query: req.query,
+            stack: err instanceof Error ? err.stack : 'unknown stack of error'
         });
 
         return ApiResponder.error(res, err);
@@ -391,7 +394,7 @@ export async function findSupplierConflicts(
         }
 
         const supplierConflictsResult = await supplier.findSupplierConflicts(
-            account_number || '', 
+            decodeURIComponent(account_number as string) || '',
             decodeURIComponent(phone as string) || ''
         );
         

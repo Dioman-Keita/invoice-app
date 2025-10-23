@@ -82,7 +82,7 @@ class InvoiceDataValidator {
       { field: 'invoice_nature', name: 'nature de la facture' },
       { field: 'folio', name: 'folio' },
       { field: 'invoice_status', name: 'statut de la facture' },
-      { field: 'invoice_type', name: 'type de facture' }
+      { field: 'invoice_type', name: 'types de facture' }
     ];
 
     requiredFields.forEach(({ field, name }) => {
@@ -242,7 +242,7 @@ class InvoiceDataValidator {
       invoice_nature: 'La nature de la facture',
       folio: 'Le folio',
       invoice_status: 'L\'état de la facture',
-      invoice_type: 'Le type de facture'
+      invoice_type: 'Le types de facture'
     };
     return labels[field] || field;
   }

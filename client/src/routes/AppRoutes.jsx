@@ -1,26 +1,26 @@
 import { Routes, Route } from "react-router-dom";
-import NotFound from "../pages/notFound";
-import Login from "../pages/Login";
-import Home from "../pages/Home";
-import Register from "../pages/Register";
-import Invoice from "../pages/Invoice";
-import Export from "../pages/Export";
-import Search from "../pages/Search";
-import Stats from "../pages/Stats";
-import Print from "../pages/Print";
-import Settings from "../pages/Settings";
-import JoinDFC from "../pages/JoinDFC";
-import DFCFormular from "../pages/DFCFormular";
-import Verify from "../pages/Verify";
-import ResetPassword from "../pages/ResetPassword";
-import ForgotPassword from "../pages/ForgotPassword";
-import Help from "../pages/Help";
-import PrivateRoute from "../components/PrivateRoute";
-import UnauthorizedPage from "../pages/Unauthorized";
-import Dashboard from "../pages/Dashboard";
-import Users from "../pages/Users";
-import StatsSimple from "../pages/StatsSimple";
-import Profile from "../pages/Profile";
+import NotFound from "../pages/globale/NotFound.jsx";
+import Login from "../pages/auth/Login.jsx";
+import Home from "../pages/globale/Home.jsx";
+import Register from "../pages/globale/Register.jsx";
+import Invoice from "../pages/agent/manager/Invoice.jsx";
+import Export from "../pages/globale/Export.jsx";
+import Search from "../pages/globale/Search.jsx";
+import Stats from "../pages/admin/Stats.jsx";
+import Print from "../pages/globale/Print.jsx";
+import Settings from "../pages/admin/Settings.jsx";
+import JoinDFC from "../pages/globale/JoinDFC.jsx";
+import DfcFormular from "../pages/agent/dfc/DfcFormular.jsx";
+import Verify from "../pages/globale/Verify.jsx";
+import ResetPassword from "../pages/auth/ResetPassword.jsx";
+import ForgotPassword from "../pages/auth/ForgotPassword.jsx";
+import Help from "../pages/globale/Help.jsx";
+import PrivateRoute from "../components/global/PrivateRoute.jsx";
+import UnauthorizedPage from "../pages/globale/Unauthorized.jsx";
+import Dashboard from "../pages/admin/Dashboard.jsx";
+import Users from "../pages/admin/Users.jsx";
+import StatsSimple from "../pages/globale/StatsSimple.jsx";
+import Profile from "../pages/globale/Profile.jsx";
 
 function AppRoutes() {
     return (
@@ -119,7 +119,7 @@ function AppRoutes() {
                     requiredRoles={['dfc_agent', 'admin']}
                     customMessage="Zone de traitement DFC réservée aux agents et administrateurs"
                 >
-                    <DFCFormular />
+                    <DfcFormular />
                 </PrivateRoute>
             } />
 

@@ -176,7 +176,7 @@ export async function login(req: Request, res: Response): Promise<Response> {
       return ApiResponder.success(res, { 
         userId: authUser.id, 
         role: authUser.role 
-      }, "Connecté avec succès");
+      }, "Connecté avec succès 🎉");
       
     } catch (error) {
       logger.error(`[${requestId}] Erreur lors de la connexion`, { 

@@ -1,5 +1,0 @@
-projet application de facturation :
-Faire en sorte que la recherche de fournisseur se fasse par numero de telephone
-Une meilleure interface graphique
-Mot de passe : courariva
-Autre mot de passe : dfcwarri

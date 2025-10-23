@@ -71,59 +71,59 @@ input[type=number]::-webkit-out-spin-button {
   z-index: -1;
 }
 .bg-home {
-  background-image: url('client/public/image-coton-5.jpg');
+  background-image: url('../client/public/image-coton-5.jpg');
 }
 
 .bg-invoice {
-  background-image: url('client/public/image-coton-5.jpg');
+  background-image: url('../client/public/image-coton-5.jpg');
 }
 
 .bg-export {
-  background-image: url('client/public/image-coton-5.jpg');
+  background-image: url('../client/public/image-coton-5.jpg');
 }
 
 .bg-joinDFC {
-  background-image: url('client/public/image-coton-5.jpg');
+  background-image: url('../client/public/image-coton-5.jpg');
 }
 
 .bg-print {
-  background-image: url('client/public/image-coton-5.jpg');
+  background-image: url('../client/public/image-coton-5.jpg');
 }
 
 .bg-stats {
-  background-image: url('client/public/image-coton-5.jpg');
+  background-image: url('../client/public/image-coton-5.jpg');
 }
 
 .bg-search {
-  background-image: url('client/public/image-coton-5.jpg');
+  background-image: url('../client/public/image-coton-5.jpg');
 }
 
 .bg-login {
-  background-image: url('client/public/image-coton-5.jpg');
+  background-image: url('../client/public/image-coton-5.jpg');
 }
 
 .bg-register {
-  background-image: url('client/public/image-coton-5.jpg');
+  background-image: url('../client/public/image-coton-5.jpg');
 }
 
 .bg-dfc-formular {
-  background-image: url('client/public/image-coton-6.jpg');
+  background-image: url('../client/public/image-coton-6.jpg');
 }
 
 .bg-settings {
-  background-image: url('client/public/image-coton-7.jpg');
+  background-image: url('../client/public/image-coton-7.jpg');
 }
 .bg-verify {
-  background-image: url('client/public/image-coton-5.jpg');
+  background-image: url('../client/public/image-coton-5.jpg');
 }
 .bg-help {
-  background-image: url('client/public/image-coton-5.jpg');
+  background-image: url('../client/public/image-coton-5.jpg');
 }
 .bg-admin {
-  background-image: url('client/public/image-coton-5.jpg');
+  background-image: url('../client/public/image-coton-5.jpg');
 }
 .bg-unauthorized {
-  background-image: url('client/public/image-coton-9.jpg');
+  background-image: url('../client/public/image-coton-9.jpg');
 }
 
 .bg-profile {
