@@ -6,6 +6,7 @@ Application de gestion de factures (CMDT) avec un frontend React et un backend N
 - Aperçu
 - Pile technique
 - Architecture du projet
+- Prérequis
 - Installation rapide
 - Configuration (.env)
 - Scripts utiles
@@ -14,6 +15,11 @@ Application de gestion de factures (CMDT) avec un frontend React et un backend N
 - Lancer le projet en développement
 - Qualité (lint) et formatage
 - Roadmap (à compléter)
+
+### Prérequis
+- Node.js 18+ et npm
+- MySQL 8+
+- Variables d'environnement configurées dans `server/.env`
 
 ### Aperçu
 - Frontend: React + Vite + Tailwind CSS
@@ -80,7 +86,12 @@ Si front et back sont sur des origines différentes, activer CORS avec `credenti
 Note Vite: un proxy est configuré dans `vite.config.js` pour rediriger `/api` vers `http://localhost:3000`. Ainsi côté client vous pouvez appeler directement `/api/...` pendant le développement.
 
 ### Base de données
-- Voir `server/QUICK_START.md` pour les scripts SQL et les étapes d'initialisation de la base (création du schéma et traçabilité utilisateur).
+- Script SQL: `server/db/db.sql` contient la création du schéma et la traçabilité utilisateur.
+- Importer le script complet:
+  ```bash
+  mysql -u root -p < server/db/db.sql
+  ```
+- Pour plus de détails et des commandes de test (curl), voir `server/QUICK_START.md`.
 
 #### Règles et contraintes récentes
 - Facture:
@@ -110,7 +121,7 @@ npm run dev           # (optionnel) proxy/outil global si présent
 
 # serveur
 cd server
-npm run dev           # démarre l'API en mode dev (ts-node sur server.ts)
+npm run dev           # démarre l'API en mode dev (tsx sur server.ts)
 npm run build         # compile TypeScript
 npm start             # démarre la version compilée
 
