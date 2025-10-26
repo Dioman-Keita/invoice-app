@@ -120,7 +120,7 @@ function Register() {
   };
   
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-gradient-to-br from-blue-50 to-green-50">
+    <div className="min-h-screen flex flex-col md:flex-row bg-register">
       {/* Section illustration */}
       <div className="md:w-1/2 flex items-center justify-center p-8 bg-gradient-to-br from-blue-600 to-green-700 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>

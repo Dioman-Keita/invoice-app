@@ -1,34 +1,17 @@
 import database from "../config/database";
 import logger from "./Logger";
+import { getSetting } from "./helpers/settings";
+import isValidCmdtFormat from "./helpers/cmdtFormat";
+import {
+    initializeFiscalYearCounter as initFyCounter,
+    getCurrentFiscalYearCounter as getFyCounter,
+    updateCmdtCounter as updateFyCmdtCounter,
+    getFiscalYearHistory as getFyHistory,
+    checkYearEndThresholdWarning as checkYearEndWarning
+} from "./helpers/fiscalYearCounter";
 
-type AppSettingMap = {
-    fiscal_year: string;
-    cmdt_format: {
-        padding: number;
-        max: number;
-    };
-    year_end_warning_threshold: number;
-    auto_year_switch: boolean;
-    app_version: string;
-};
-
-export async function getSetting<K extends keyof AppSettingMap>(key: K): Promise<AppSettingMap[K]> {
-    const rows = await database.execute<{setting_value: string}[]>(
-        "SELECT setting_value FROM app_settings WHERE setting_key = ? LIMIT 1",
-        [key]
-    );
-
-    if (!Array.isArray(rows) || rows.length === 0) {
-        logger.warn(`Clé de configuration "${key}" introuvable dans app_settings`);
-        throw new Error(`Clé de configuration "${key}" introuvable dans app_settings`)
-    }
-    return JSON.parse(rows[0].setting_value);
-}
-
-function isValidCmdtFormat(value: string, padding: number): boolean {
-    const regex = new RegExp(`^\\d{${padding}}$`);
-    return regex.test(value);
-}
+// Re-export for backward compatibility with existing imports
+export { getSetting };
 
 class InvoiceLastNumberValidator {
 
@@ -61,63 +44,11 @@ class InvoiceLastNumberValidator {
     }
 
     async initializeFiscalYearCounter(fiscalYear: string): Promise<void> {
-        try {
-            const fiscalYearNum = Number(fiscalYear);
-            const currentYear = new Date().getFullYear();
-    
-            // LOGIQUE MÉTIER : Autoriser années courante et future uniquement
-            if (fiscalYearNum < currentYear) {
-                throw new Error(`Impossible d'initialiser un compteur pour une année antérieure (${fiscalYear}).`);
-            }
-    
-            // Vérifier si le compteur existe déjà
-            const existing = await database.execute(
-                "SELECT id FROM fiscal_year_counter WHERE fiscal_year = ?",
-                [fiscalYear]
-            );
-    
-            if (!Array.isArray(existing) || existing.length === 0) {
-                await database.execute(
-                    "INSERT INTO fiscal_year_counter (fiscal_year, last_cmdt_number) VALUES (?, 0)",
-                    [fiscalYear]
-                );
-    
-                logger.info(`Compteur initialisé pour l'année fiscale ${fiscalYear}`);
-            } else {
-                logger.info(`Compteur pour ${fiscalYear} existe déjà`);
-            }
-        } catch (error) {
-            logger.error('Erreur lors de l\'initialisation du compteur fiscal', {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                fiscalYear
-            });
-            throw error;
-        }
+        return initFyCounter(fiscalYear);
     }
 
     async getCurrentFiscalYearCounter(): Promise<{ fiscal_year: string; last_cmdt_number: number }> {
-        try {
-            const fiscalYear = await getSetting('fiscal_year');
-            const rows = await database.execute<{fiscal_year: string; last_cmdt_number: number}[]>(
-                "SELECT fiscal_year, last_cmdt_number FROM fiscal_year_counter WHERE fiscal_year = ? LIMIT 1",
-                [fiscalYear]
-            );
-
-            if (Array.isArray(rows) && rows.length > 0) {
-                return {
-                    fiscal_year: rows[0].fiscal_year,
-                    last_cmdt_number: rows[0].last_cmdt_number
-                };
-            }
-
-            await this.initializeFiscalYearCounter(fiscalYear);
-            return { fiscal_year: fiscalYear, last_cmdt_number: 0};
-        } catch (error) {
-            logger.error('Erreur lors de la récupération du compteur fiscal', {
-                error: error instanceof Error ? error.message : 'Unknown error'
-            });
-            throw error;
-        }
+        return getFyCounter();
     }
 
     async getNextCmdtNumber(): Promise<{ success: boolean; nextNumber: string; errorMessage?: string }> {
@@ -147,24 +78,9 @@ class InvoiceLastNumberValidator {
             throw error;
         }
     }
-    
+
     async updateCmdtCounter(invoiceNumber: string): Promise<void> {
-        try {
-            const fiscalYear = await getSetting('fiscal_year');
-            const numberValue = parseInt(invoiceNumber);
-
-            await database.execute(
-                "UPDATE fiscal_year_counter SET last_cmdt_number = ? WHERE fiscal_year = ?",
-                [numberValue, fiscalYear]
-            );
-
-            logger.info(`Compteur CMDT mis à jour: ${invoiceNumber} pour l'année ${fiscalYear}`);
-        } catch (error) {
-            logger.error('Erreur lors de la mise à jour du compteur CMDT', {
-                error: error instanceof Error ? error.message : 'Unknown error'
-            });
-            throw error;
-        }
+        return updateFyCmdtCounter(invoiceNumber);
     }
 
     async calculateNextNumberExpected(): Promise<{
@@ -268,34 +184,7 @@ class InvoiceLastNumberValidator {
         lastNumber: number;
         fiscalYear: string
     }> {
-        try {
-            const config = await getSetting('cmdt_format');
-            const threshold = await getSetting('year_end_warning_threshold');
-            const fiscalYear = await getSetting('fiscal_year');
-            const counter = await this.getCurrentFiscalYearCounter();
-
-            const remaining = config.max - counter.last_cmdt_number;
-            const warning = remaining <= threshold;
-
-            if (warning) {
-                logger.warn(`Seuil d'alerte atteint pour ${fiscalYear}: ${counter.last_cmdt_number}/${config.max}. Il reste ${remaining} numéros`);
-            }
-
-            return {
-                warning,
-                remaining,
-                threshold,
-                max: config.max,
-                lastNumber: counter.last_cmdt_number,
-                fiscalYear
-            };
-        } catch (error) {
-            logger.error(`Erreur lors du contrôle du seuil de fin d'année`, {
-                msg: error instanceof Error ? error.message : 'Unknown error',
-                stack: error instanceof Error ? error.stack : 'Unknown stack'
-            });
-            throw error;
-        }
+        return checkYearEndWarning();
     }
 
     async manualFiscalYearSwitch(newYear: string): Promise<{ success: boolean; message: string }> {
@@ -311,7 +200,7 @@ class InvoiceLastNumberValidator {
                     message: 'Le changement manuel d\'année fiscale est désactivé car le mode automatique est activé.'
                 };
             }
-    
+
             // Validation basique
             if (newYear === currentFiscalYear) {
                 return {
@@ -319,7 +208,7 @@ class InvoiceLastNumberValidator {
                     message: `L'année fiscale est déjà définie sur ${newYear}`
                 };
             }
-    
+
             // LOGIQUE MÉTIER : Autoriser uniquement l'année courante ou future
             if (newYearNum < currentYear) {
                 return {
@@ -327,7 +216,7 @@ class InvoiceLastNumberValidator {
                     message: `Impossible de définir une année fiscale antérieure (${newYear}). Seules l'année courante (${currentYear}) et les années futures sont autorisées.`
                 };
             }
-    
+
             // Validation : l'année doit être raisonnable (pas trop dans le futur)
             if (newYearNum > currentYear + 2) {
                 return {
@@ -335,15 +224,15 @@ class InvoiceLastNumberValidator {
                     message: `Impossible de planifier une année fiscale au-delà de ${currentYear + 2}.`
                 };
             }
-    
+
             // ✅ MODIFICATION : Si le compteur existe déjà, c'est parfait !
             const existingCounter = await database.execute<{last_cmdt_number: number}[]>(
                 "SELECT last_cmdt_number FROM fiscal_year_counter WHERE fiscal_year = ?",
                 [newYear]
             );
-    
+
             let counterInfo = "";
-            
+
             if (Array.isArray(existingCounter) && existingCounter.length > 0) {
                 const lastNumber = existingCounter[0].last_cmdt_number;
                 counterInfo = ` Dernier numéro utilisé: ${lastNumber}.`;
@@ -354,20 +243,20 @@ class InvoiceLastNumberValidator {
                 counterInfo = " Nouveau compteur initialisé.";
                 logger.info(`Compteur initialisé avec succès pour la nouvelle année fiscale ${newYear}.`);
             }
-    
+
             // Mettre à jour l'année fiscale
             await database.execute(
                 "UPDATE app_settings SET setting_value = ? WHERE setting_key = 'fiscal_year'",
                 [JSON.stringify(newYear)]
             );
-    
+
             logger.info(`Changement manuel d'année fiscale: ${currentFiscalYear} -> ${newYear}`);
-    
+
             return {
                 success: true,
                 message: `Année fiscale changée avec succès vers ${newYear}.${counterInfo}`
             };
-    
+
         } catch(error) {
             logger.error('Erreur lors du changement manuel d\'année fiscale', {
                 error: error instanceof Error ? error.message : 'Unknown error',
@@ -379,20 +268,9 @@ class InvoiceLastNumberValidator {
             };
         }
     }
-    
-    async getFiscalYearHistory(): Promise<Promise<Array<{fiscal_year: string; last_cmdt_number: number}>>> {
-        try {
-            const rows = await database.execute<{fiscal_year: string; last_cmdt_number: number}[]> (
-                "SELECT fiscal_year, last_cmdt_number FROM fiscal_year_counter ORDER BY fiscal_year DESC"
-            );
 
-            return Array.isArray(rows) ? rows : [];
-        } catch (error) {
-            logger.error('Erreur lors de la récupération de l\'historique fiscal', {
-                error: error instanceof Error ? error.message : 'Unknown error'
-            });
-            return [];
-        }
+    async getFiscalYearHistory(): Promise<Promise<Array<{fiscal_year: string; last_cmdt_number: number}>>> {
+        return getFyHistory();
     }
 
     async getAvailableFiscalYears(): Promise<Array<{ year: string[]; isCurrent: boolean; canActivate: boolean }>> {
@@ -414,6 +292,10 @@ class InvoiceLastNumberValidator {
                 },
                 {
                     year: [(fy + 1).toString()],
+                    isCurrent: false,
+                    canActivate: true
+                }, {
+                    year: [(fy + 2).toString()],
                     isCurrent: false,
                     canActivate: true
                 }

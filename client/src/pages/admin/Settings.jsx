@@ -807,7 +807,7 @@ function Settings() {
                   <div className="bg-purple-50 border border-purple-100 rounded-lg p-4">
                     <p className="text-sm font-medium text-purple-900 mb-1">Dernier numéro</p>
                     <p className="text-xl font-bold text-purple-700">
-                      {warningInfo?.lastNumber ? warningInfo.lastNumber.toString().padStart(4, '0') : '-'}
+                      {warningInfo?.lastNumber || warningInfo?.lastNumber === 0 ? warningInfo.lastNumber.toString().padStart(4, '0') : '-'}
                     </p>
                   </div>
 

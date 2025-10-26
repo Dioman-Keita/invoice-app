@@ -212,7 +212,7 @@ export async function getUserInvoices(
         // Recherche par créateur (pour les admins)
         invoices = await searchInvoicesByCreator(created_by, limit ? parseInt(limit) : undefined, orderBy, fiscal_year || await getSetting('fiscal_year'));
       } else if (search) {
-        // Recherche globale (pour les admins)
+        // Recherche global (pour les admins)
         invoices = await globalSearchInvoices(search, limit ? parseInt(limit) : undefined, orderBy, fiscal_year || await getSetting('fiscal_year'));
       } else {
         // Toutes les factures pour les admins
@@ -503,7 +503,7 @@ async function searchInvoicesByCreator(
 }
 
 /**
- * Recherche globale dans les factures
+ * Recherche global dans les factures
  */
 async function globalSearchInvoices(
   searchTerm: string,
@@ -538,7 +538,7 @@ async function globalSearchInvoices(
     }
     return result || [];
   } catch (error) {
-    logger.error('Erreur lors de la recherche globale des factures', {
+    logger.error('Erreur lors de la recherche global des factures', {
       errorMessage: error instanceof Error ? error.message : 'unknown error',
       searchTerm
     });

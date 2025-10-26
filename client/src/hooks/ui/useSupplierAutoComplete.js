@@ -12,12 +12,13 @@ const SEARCH_TYPES = {
     ANY_FIELD: 'supplier:anyField',
     CONFLICT_GLOBAL: 'conflict:global',
     CONFLICT_PHONE: 'conflict:phone',
-    CONFLICT_ACCOUNT: 'conflict:accountNumber'
+    CONFLICT_ACCOUNT: 'conflict:accountNumber',
 };
 
 const CONFLICT_TYPES = {
     PHONE: 'phone',
-    ACCOUNT_NUMBER: 'account_number'
+    ACCOUNT_NUMBER: 'account_number',
+    BOTH: 'both'
 };
 
 // Validation helpers
@@ -26,7 +27,7 @@ const validateAccountNumber = (accountNumber) =>
     isValidAccountNumber(normalizeAccountNumber(accountNumber));
 
 export function useSupplierAutocomplete() {
-    const [suppliersList, setSuppliersList] = useState({
+    const [suppliersData, setSuppliersData] = useState({
         suppliersSuggestions: [],
         message: null
     });
@@ -42,6 +43,27 @@ export function useSupplierAutocomplete() {
 
     const [loading, setLoading] = useState(false);
     const searchRef = useRef(null);
+
+    // Fonction helper pour dédupliquer les fournisseurs
+    const getUniqueConflictingSuppliers = (conflictData) => {
+        const suppliersMap = new Map();
+        
+        // Ajouter existingSupplier s'il existe
+        if (conflictData.existingSupplier && conflictData.existingSupplier.id) {
+            suppliersMap.set(conflictData.existingSupplier.id, conflictData.existingSupplier);
+        }
+        
+        // Ajouter conflictingSuppliers en évitant les doublons
+        if (conflictData.conflictingSuppliers && Array.isArray(conflictData.conflictingSuppliers)) {
+            conflictData.conflictingSuppliers.forEach(supplier => {
+                if (supplier.id && !suppliersMap.has(supplier.id)) {
+                    suppliersMap.set(supplier.id, supplier);
+                }
+            });
+        }
+        
+        return Array.from(suppliersMap.values());
+    };
 
     // Helper pour les validations communes
     const validateField = (field, value) => {
@@ -60,6 +82,11 @@ export function useSupplierAutocomplete() {
                     throw new Error(`Account number has invalid format: "${value}"`);
                 }
                 break;
+            case 'name':
+                if (value.trim().length < 2) {
+                    throw new Error(`Field must be at least 2 characters. field: "${value}"`);
+                }
+                break;
             default:
                 throw new Error(`Unknown field "${field}"`);
         }
@@ -76,8 +103,11 @@ export function useSupplierAutocomplete() {
         try {
             await asyncFn();
         } catch (error) {
-            console.error(error);
-            throw error;
+            console.error('Supplier autocomplete error:', error);
+            setSuppliersData(prev => ({
+                ...prev,
+                message: 'Erreur lors de la recherche'
+            }));
         } finally {
             setLoading(false);
         }
@@ -85,35 +115,87 @@ export function useSupplierAutocomplete() {
 
     const getSupplierList = useCallback(async (field, value) => {
         await withLoading(async () => {
-            validateField(field, value);
+            try {
+                validateField(field, value);
 
-            const formattedValue = formatFieldValue(field, value);
-            const response = await api.post(
-                `/suppliers/search?field=${encodeURIComponent(field)}&value=${encodeURIComponent(formattedValue)}`
-            );
+                const formattedValue = formatFieldValue(field, value);
+                const serverField = field === 'accountNumber' ? 'account_number' : field;
+                
+                const response = await api.get(
+                    `/suppliers/search?field=${encodeURIComponent(serverField)}&value=${encodeURIComponent(formattedValue)}`
+                );
 
-            setSuppliersList(prev => ({
-                ...prev,
-                suppliersSuggestions: response?.success ? response.data : [],
-                message: response?.success ? response?.data?.message : null,
-            }));
+                console.log('Search response:', response);
+
+                if (response?.success) {
+                    setSuppliersData({
+                        suppliersSuggestions: response.data || [],
+                        message: response.message || null,
+                    });
+                } else {
+                    setSuppliersData({
+                        suppliersSuggestions: [],
+                        message: response?.message || 'Aucun résultat'
+                    });
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                setSuppliersData({
+                    suppliersSuggestions: [],
+                    message: 'Erreur lors de la recherche'
+                });
+            }
         });
     }, []);
 
     const getSupplierListByAnyField = useCallback(async (field, value) => {
         await withLoading(async () => {
-            validateField(field, value);
+            try {
+                validateField(field, value);
 
-            const formattedValue = formatFieldValue(field, value);
-            const response = await api.post(
-                `/suppliers/find?${encodeURIComponent(field)}=${encodeURIComponent(formattedValue)}`
-            );
+                const formattedValue = formatFieldValue(field, value);
+                const serverField = field === 'accountNumber' ? 'account_number' : field;
+                
+                if (field === 'name') {
+                    const response = await api.get(
+                        `/suppliers/find?name=${encodeURIComponent(formattedValue)}`
+                    );
 
-            setSuppliersList(prev => ({
-                ...prev,
-                suppliersSuggestions: response?.success ? response.data : [],
-                message: response?.success ? response?.data?.message : null,
-            }));
+                    if (response?.success) {
+                        setSuppliersData({
+                            suppliersSuggestions: response.data || [],
+                            message: response.message || null,
+                        });
+                    } else {
+                        setSuppliersData({
+                            suppliersSuggestions: [],
+                            message: response?.message || 'Aucun résultat'
+                        });
+                    }
+                } else {
+                    const response = await api.get(
+                        `/suppliers/search?field=${encodeURIComponent(serverField)}&value=${encodeURIComponent(formattedValue)}`
+                    );
+
+                    if (response?.success) {
+                        setSuppliersData({
+                            suppliersSuggestions: response.data || [],
+                            message: response.message || null,
+                        });
+                    } else {
+                        setSuppliersData({
+                            suppliersSuggestions: [],
+                            message: response?.message || 'Aucun résultat'
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Search by any field error:', error);
+                setSuppliersData({
+                    suppliersSuggestions: [],
+                    message: 'Erreur lors de la recherche'
+                });
+            }
         });
     }, []);
 
@@ -127,31 +209,39 @@ export function useSupplierAutocomplete() {
 
     const verifySupplierGlobalConflicts = useCallback(async (accountNumber, phone) => {
         await withLoading(async () => {
-            if (!accountNumber || !phone) {
-                throw new Error(`AccountNumber and phone are required. accountNumber: "${accountNumber}", phone: "${phone}"`);
-            }
+            try {
+                if (!accountNumber || !phone) {
+                    throw new Error(`AccountNumber and phone are required. accountNumber: "${accountNumber}", phone: "${phone}"`);
+                }
 
-            validateField('accountNumber', accountNumber);
-            validateField('phone', phone);
+                validateField('accountNumber', accountNumber);
+                validateField('phone', phone);
 
-            const response = await api.post(
-                `/suppliers/verify-conflicts?account_number=${encodeURIComponent(formatAccountCanonical(accountNumber))}&phone=${encodeURIComponent(phone)}`
-            );
+                const response = await api.get(
+                    `/suppliers/verify-conflicts?account_number=${encodeURIComponent(formatAccountCanonical(accountNumber))}&phone=${encodeURIComponent(phone)}`
+                );
 
-            if (response?.success) {
+                if (response?.success) {
+                    setConflictData({
+                        existingSupplierList: [],
+                        message: null,
+                        conflictType: null,
+                        isGlobalVerification: true,
+                        isPhoneVerification: false,
+                        isAccountVerification: false,
+                    });
+                }
+            } catch (error) {
+                console.log('Conflict error:', error);
+                const conflictData = error?.response?.data?.error || error?.response?.data || {};
+                
+                // CORRECTION : Utiliser la fonction de déduplication
+                const conflictingSuppliers = getUniqueConflictingSuppliers(conflictData);
+
                 setConflictData({
-                    existingSupplierList: response.data || [],
-                    message: response?.data?.message || '',
-                    conflictType: response?.conflictType || null,
-                    isGlobalVerification: true,
-                    isPhoneVerification: false,
-                    isAccountVerification: false,
-                });
-            } else {
-                setConflictData({
-                    existingSupplierList: [],
-                    message: null,
-                    conflictType: null,
+                    existingSupplierList: conflictingSuppliers,
+                    message: error?.response?.data?.message || 'Conflit détecté',
+                    conflictType: conflictData.conflictType || null,
                     isGlobalVerification: true,
                     isPhoneVerification: false,
                     isAccountVerification: false,
@@ -162,37 +252,73 @@ export function useSupplierAutocomplete() {
 
     const verifySupplierPhoneConflicts = useCallback(async (phone) => {
         await withLoading(async () => {
-            validateField('phone', phone);
+            try {
+                validateField('phone', phone);
 
-            const response = await api.post(`/suppliers/verify-conflicts?phone=${encodeURIComponent(phone)}`);
+                const response = await api.get(`/suppliers/verify-conflicts?phone=${encodeURIComponent(phone)}`);
 
-            setConflictData({
-                conflictType: response?.success ? response?.conflictType : null,
-                existingSupplierList: response?.success ? response.data : [],
-                message: response?.success ? response?.data?.message : null,
-                isPhoneVerification: true,
-                isAccountVerification: false,
-                isGlobalVerification: false,
-            });
+                if (response?.success) {
+                    setConflictData({
+                        existingSupplierList: [],
+                        message: null,
+                        conflictType: null,
+                        isPhoneVerification: true,
+                        isAccountVerification: false,
+                        isGlobalVerification: false,
+                    });
+                }
+            } catch (error) {
+                const conflictData = error?.response?.data?.error || error?.response?.data || {};
+                
+                // CORRECTION : Utiliser la fonction de déduplication
+                const conflictingSuppliers = getUniqueConflictingSuppliers(conflictData);
+
+                setConflictData({
+                    existingSupplierList: conflictingSuppliers,
+                    message: error?.response?.data?.message || 'Conflit détecté',
+                    conflictType: conflictData.conflictType || null,
+                    isPhoneVerification: true,
+                    isAccountVerification: false,
+                    isGlobalVerification: false,
+                });
+            }
         });
     }, []);
 
     const verifySupplierAccountNumberConflict = useCallback(async (accountNumber) => {
         await withLoading(async () => {
-            validateField('accountNumber', accountNumber);
+            try {
+                validateField('accountNumber', accountNumber);
 
-            const response = await api.post(
-                `/suppliers/verify-accounts?account_number=${encodeURIComponent(formatAccountCanonical(accountNumber))}`
-            );
+                const response = await api.get(
+                    `/suppliers/verify-conflicts?account_number=${encodeURIComponent(formatAccountCanonical(accountNumber))}`
+                );
 
-            setConflictData({
-                conflictType: response?.success ? response?.conflictType : null,
-                existingSupplierList: response?.success ? response.data : [],
-                message: response?.success ? response?.data?.message : null,
-                isPhoneVerification: false,
-                isAccountVerification: true,
-                isGlobalVerification: false,
-            });
+                if (response?.success) {
+                    setConflictData({
+                        existingSupplierList: [],
+                        message: null,
+                        conflictType: null,
+                        isPhoneVerification: false,
+                        isAccountVerification: true,
+                        isGlobalVerification: false,
+                    });
+                }
+            } catch (error) {
+                const conflictData = error?.response?.data?.error || error?.response?.data || {};
+                
+                // CORRECTION : Utiliser la fonction de déduplication
+                const conflictingSuppliers = getUniqueConflictingSuppliers(conflictData);
+
+                setConflictData({
+                    existingSupplierList: conflictingSuppliers,
+                    message: error?.response?.data?.message || 'Conflit détecté',
+                    conflictType: conflictData.conflictType || null,
+                    isPhoneVerification: false,
+                    isAccountVerification: true,
+                    isGlobalVerification: false,
+                });
+            }
         });
     }, []);
 
@@ -203,8 +329,10 @@ export function useSupplierAutocomplete() {
 
         searchRef.current = setTimeout(async () => {
             if (!field || !searchType || !value) {
-                throw new Error(`Field, value and searchType are required. searchType: "${searchType}", field: "${field}", value: "${value}"`);
+                return;
             }
+
+            console.log('Searching:', { field, value, searchType });
 
             const searchHandlers = {
                 [SEARCH_TYPES.GLOBAL]: () => getSupplierList(field, value),
@@ -229,10 +357,15 @@ export function useSupplierAutocomplete() {
 
             const handler = searchHandlers[searchType];
             if (!handler) {
-                throw new Error(`Unsupported search type: ${searchType}`);
+                console.error(`Unsupported search type: ${searchType}`);
+                return;
             }
 
-            await handler();
+            try {
+                await handler();
+            } catch (error) {
+                console.error('Search error:', error);
+            }
         }, 500);
     }, [
         getSupplierList,
@@ -251,22 +384,21 @@ export function useSupplierAutocomplete() {
     }, []);
 
     const clearSuggestions = useCallback(() => {
-        setSuppliersList(prev => ({
-            ...prev,
+        setSuppliersData({
             suppliersSuggestions: [],
             message: null,
-        }));
+        });
     }, []);
 
     const clearAllConflicts = useCallback(() => {
-        setSupplierConflictingData(prev => ({
-            ...prev,
+        setSupplierConflictingData({
             conflictType: null,
             existingSupplierList: [],
+            message: null,
             isPhoneVerification: false,
             isGlobalVerification: false,
             isAccountVerification: false,
-        }));
+        });
     }, []);
 
     const clearPhoneConflicts = useCallback(() => {
@@ -289,7 +421,9 @@ export function useSupplierAutocomplete() {
         isLoading: loading,
         searchSupplier: debouncedSearchSupplier,
         supplierConflictingData,
-        suppliersList,
+        suppliersSuggestions: suppliersData.suppliersSuggestions,
+        supplierList: suppliersData.suppliersSuggestions,
+        suppliersData,
         clearAllConflicts,
         clearPhoneConflicts,
         clearAccountNumberConflicts,

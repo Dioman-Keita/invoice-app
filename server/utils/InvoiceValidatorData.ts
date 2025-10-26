@@ -2,6 +2,7 @@ import InvoiceLastNumberValidator from "./InvoiceLastNumberValidator";
 import { getSupplierId } from "../controllers/supplier.controller";
 import logger from "./Logger";
 import { formatDate } from "./Formatters";
+import { normalizeAccountNumber, isValidAccountNumber, formatAccountCanonical } from "../../common/helpers/formatAccountNumber";
 
 export interface InvoiceValidationInput {
   invoice_num: string;
@@ -116,12 +117,16 @@ class InvoiceDataValidator {
       }
     }
 
-    // Validation du numéro de compte fournisseur
-    if (data.supplier_account_number && !/^\d{12}$/.test(data.supplier_account_number)) {
-      errors.push({ 
-        field: 'supplier_account_number', 
-        message: 'Le numéro de compte doit contenir exactement 12 chiffres' 
-      });
+    if (data.supplier_account_number) {
+      const normalized = normalizeAccountNumber(String(data.supplier_account_number));
+      if (!isValidAccountNumber(normalized)) {
+        errors.push({
+          field: 'supplier_account_number',
+          message: 'Numéro de compte invalide. Doit contenir 6–34 caractères alphanumériques.'
+        });
+      } else {
+        data.supplier_account_number = formatAccountCanonical(normalized);
+      }
     }
 
     // Validation du montant

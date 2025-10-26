@@ -83,7 +83,7 @@ CREATE TABLE invoice (
     invoice_type ENUM('Ordinaire', 'Transporteur', 'Transitaire') DEFAULT 'Ordinaire',
     invoice_nature ENUM('Paiement', 'Acompte', 'Avoir') DEFAULT 'Paiement',
     invoice_arr_date DATE NOT NULL,
-    invoice_date DATE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    invoice_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     folio ENUM('1 copie', 'Orig + 1 copie', 'Orig + 2 copies', 'Orig + 3 copies') DEFAULT '1 copie',
     amount DECIMAL(12,0) NOT NULL DEFAULT 0,
     create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -108,7 +108,7 @@ CREATE TABLE attachments (
 -- Table des tokens (authentification)
 CREATE TABLE auth_token (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    token VARCHAR(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL UNIQUE,
+    token VARCHAR(767) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL UNIQUE,
     employee_id VARCHAR(50),
     create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

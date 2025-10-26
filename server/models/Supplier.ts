@@ -380,23 +380,25 @@ async findSupplierConflicts(accountNumber: string, phone: string): Promise<{
 
     async searchSuppliersByName(name: string, limit: number = 5): Promise<SupplierRecord[]> {
         try {
+            const safeName = (name || '').toString().trim();
+            const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.min(Math.floor(limit), 50) : 5;
+
             const query = `
                 SELECT * FROM supplier
                 WHERE name LIKE ?
                 ORDER BY
                     CASE
                         WHEN name = ? THEN 1
-                        WHEN name = ? THEN 2
+                        WHEN name LIKE ? THEN 2
                         ELSE 3
                     END,
                     name ASC
-                LIMIT ?
+                LIMIT ${safeLimit}
             `;
             const params = [
-                `%${name}%`,
-                name,
-                `%${name}%`,
-                limit
+                `%${safeName}%`,
+                safeName,
+                `%${safeName}%`
             ];
 
             const rows = await database.execute(query, params);

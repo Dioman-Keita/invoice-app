@@ -257,7 +257,7 @@ export async function searchSuppliers(
             return ApiResponder.badRequest(res, 'Les paramètres field et value sont requis');
         }
 
-        if (!['name', 'account_number', 'phone'].includes(field)) {
+        if (!['name', 'account_number', 'phone'].includes(decodeURIComponent(field))) {
 
             return ApiResponder.badRequest(res, 'Le champ de recherche doit être name, account_number ou phone');
         }
@@ -266,10 +266,10 @@ export async function searchSuppliers(
 
         switch(field) {
             case 'name':
-                suppliers = await supplier.searchSuppliersByName(value);
+                suppliers = await supplier.searchSuppliersByName(decodeURIComponent(value));
                 break;
             case 'account_number':
-                suppliers = await supplier.findSupplier(value, {
+                suppliers = await supplier.findSupplier(decodeURIComponent(value), {
                     findBy: 'account_number',
                     limit: 1
                 });
@@ -323,7 +323,7 @@ export async function getSupplierByAnyField(
         let supplierResult: SupplierRecord | null = null;
 
         if (account_number) {
-            const suppliers = await supplier.findSupplier(account_number, {
+            const suppliers = await supplier.findSupplier(decodeURIComponent(account_number), {
                 findBy: 'account_number',
                 limit: 1
             });
@@ -331,7 +331,7 @@ export async function getSupplierByAnyField(
         }
 
         if (!supplierResult && phone) {
-            const suppliers = await supplier.findSupplier(phone, {
+            const suppliers = await supplier.findSupplier(decodeURIComponent(phone), {
                 findBy: 'phone',
                 limit: 1
             });
@@ -339,7 +339,7 @@ export async function getSupplierByAnyField(
         }
 
         if (!supplierResult && name) {
-            const suppliers = await supplier.searchSuppliersByName(name, 1);
+            const suppliers = await supplier.searchSuppliersByName(decodeURIComponent(name), 1);
             if (suppliers.length > 0) supplierResult = suppliers[0];
         }
 
@@ -398,27 +398,58 @@ export async function findSupplierConflicts(
             decodeURIComponent(phone as string) || ''
         );
         
+        // Si on a deux types de conflits simultanément
+        if (supplierConflictsResult.hasAccountConflict && supplierConflictsResult.hasPhoneConflict) {
+            const accountSupplier = supplierConflictsResult.conflictingSuppliers.find(s => s.account_number === account_number);
+            const phoneSupplier = supplierConflictsResult.conflictingSuppliers.find(s => s.phone === decodeURIComponent(phone as string));
+            
+            // Si c'est le même fournisseur, on utilise un message global
+            if (accountSupplier && phoneSupplier && accountSupplier.id === phoneSupplier.id) {
+                return ApiResponder.badRequest(res, 
+                    `Un fournisseur existe déjà avec ce numéro de compte et ce numéro de téléphone : "${accountSupplier.name}"`, 
+                    {
+                        conflictType: 'both',
+                        existingSupplier: accountSupplier,
+                        conflictingSuppliers: supplierConflictsResult.conflictingSuppliers
+                    }
+                );
+            } else {
+                // Deux fournisseurs différents
+                return ApiResponder.badRequest(res, 
+                    'Conflits détectés : le numéro de compte et le numéro de téléphone sont déjà utilisés par des fournisseurs différents', 
+                    {
+                        conflictType: 'both',
+                        accountConflict: accountSupplier,
+                        phoneConflict: phoneSupplier,
+                        conflictingSuppliers: supplierConflictsResult.conflictingSuppliers
+                    }
+                );
+            }
+        }
+        
+        // Un seul type de conflit
         if (supplierConflictsResult.hasAccountConflict || supplierConflictsResult.hasPhoneConflict) {
             let existingSupplier = null;
             let conflictType = '';
+            let message = '';
             
             if (supplierConflictsResult.hasAccountConflict) {
                 conflictType = 'account_number';
                 existingSupplier = supplierConflictsResult.conflictingSuppliers.find(s => s.account_number === account_number);
-            } else {
-                conflictType = 'phone';
-                existingSupplier = supplierConflictsResult.conflictingSuppliers.find(s => s.phone === decodeURIComponent(phone as string));
+                message = `Ce numéro de compte est déjà utilisé par le fournisseur "${existingSupplier?.name}"`;
             }
             
-            let message = conflictType === 'account_number' 
-            ? `Ce numéro de compte est déjà utilisé par le fournisseur "${existingSupplier?.name}"`
-            : `Ce numéro de téléphone est déjà utilisé par le fournisseur "${existingSupplier?.name}"`;
+            if (supplierConflictsResult.hasPhoneConflict) {
+                conflictType = 'phone';
+                existingSupplier = supplierConflictsResult.conflictingSuppliers.find(s => s.phone === decodeURIComponent(phone as string));
+                message = `Ce numéro de téléphone est déjà utilisé par le fournisseur "${existingSupplier?.name}"`;
+            }
 
             return ApiResponder.badRequest(res, message, {
                 conflictType: conflictType,
-                existingSupplier: existingSupplier // Retourne l'objet complet
+                existingSupplier: existingSupplier,
+                conflictingSuppliers: supplierConflictsResult.conflictingSuppliers
             });
-            
         } 
         
         logger.info(`[${requestId}] Fournisseur vérifié et aucun conflit détecté`);
