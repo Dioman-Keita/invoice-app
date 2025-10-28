@@ -13,7 +13,7 @@ export type AuditLogParams = {
 
 export type ExportLogParams = {
     invoice_id: string | null,
-    format: 'PDF' | 'Excel' | 'CSV' | 'JSON',
+    format: 'PDF' | 'Excel' | 'CSV' | 'JSON' | 'TXT',
     exported_by: string,
 };
 

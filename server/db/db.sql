@@ -74,25 +74,25 @@ CREATE TABLE department (
 
 -- Table des factures
 CREATE TABLE invoice (
-    id VARCHAR(15) PRIMARY KEY,
-    num_cmdt VARCHAR(15) NOT NULL,
-    num_invoice VARCHAR(15) NOT NULL,
-    fiscal_year VARCHAR(4) NOT NULL,
-    invoice_object TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    id VARCHAR(30) PRIMARY KEY,
+    num_cmdt VARCHAR(12) NOT NULL,
+    num_invoice VARCHAR(20) NOT NULL,
+    invoice_object VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     supplier_id INT,
-    invoice_type ENUM('Ordinaire', 'Transporteur', 'Transitaire') DEFAULT 'Ordinaire',
     invoice_nature ENUM('Paiement', 'Acompte', 'Avoir') DEFAULT 'Paiement',
-    invoice_arr_date DATE NOT NULL,
-    invoice_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    invoice_arr_date DATE,
+    invoice_date DATE,
+    invoice_type ENUM('Ordinaire', 'Transporteur', 'Transitaire') DEFAULT 'Ordinaire',
     folio ENUM('1 copie', 'Orig + 1 copie', 'Orig + 2 copies', 'Orig + 3 copies') DEFAULT '1 copie',
-    amount DECIMAL(12,0) NOT NULL DEFAULT 0,
+    amount DECIMAL(18,2) NOT NULL DEFAULT 0,
     create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     status ENUM('Oui', 'Non') DEFAULT 'Non',
     dfc_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending', 
-    created_by VARCHAR(50),
-    created_by_email VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    created_by VARCHAR(30),
+    created_by_email VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     created_by_role ENUM('dfc_agent', 'invoice_manager', 'admin'),
+    fiscal_year VARCHAR(7) NOT NULL,
     FOREIGN KEY (supplier_id) REFERENCES supplier(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES employee(id) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -101,7 +101,7 @@ CREATE TABLE invoice (
 CREATE TABLE attachments (
     id INT PRIMARY KEY AUTO_INCREMENT,
     documents JSON,
-    invoice_id VARCHAR(15) NOT NULL,
+    invoice_id VARCHAR(30) NOT NULL,
     FOREIGN KEY (invoice_id) REFERENCES invoice(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -133,8 +133,8 @@ CREATE TABLE pending_verification (
 -- Table de log des exportations
 CREATE TABLE export_log (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    invoice_id VARCHAR(15),
-    format ENUM('PDF', 'Excel', 'CSV', 'JSON'),
+    invoice_id VARCHAR(30),
+    format ENUM('PDF', 'Excel', 'CSV', 'JSON', 'TXT'),
     exported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     exported_by VARCHAR(50) NOT NULL,
     FOREIGN KEY (invoice_id) REFERENCES invoice(id),
@@ -156,12 +156,12 @@ CREATE TABLE audit_log (
 -- Table des décisions DFC (approbation/rejet) avec commentaires optionnels
 CREATE TABLE dfc_decision (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    invoice_id VARCHAR(15) NOT NULL,
+    invoice_id VARCHAR(30) NOT NULL,
     decision ENUM('approved', 'rejected') NOT NULL,
     comment TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
     decided_by VARCHAR(50) NULL,
     decided_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    fiscal_year VARCHAR(4) NOT NULL,
+    fiscal_year VARCHAR(7) NOT NULL,
     FOREIGN KEY (invoice_id) REFERENCES invoice(id) ON DELETE CASCADE,
     FOREIGN KEY (decided_by) REFERENCES employee(id) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -169,8 +169,8 @@ CREATE TABLE dfc_decision (
 -- table pour gérer les compteurs par année fiscale
 CREATE TABLE fiscal_year_counter (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    fiscal_year VARCHAR(4) NOT NULL,
-    last_cmdt_number INT NOT NULL DEFAULT 0,
+    fiscal_year VARCHAR(7) NOT NULL,
+    last_cmdt_number BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY unique_fiscal_year (fiscal_year)
@@ -191,8 +191,8 @@ CREATE TABLE app_settings (
 -- Table app_settings configuration initiale
 INSERT INTO app_settings (setting_key, setting_value, description) VALUES
 ('fiscal_year', '"2025"', 'Année fiscale en cours'),
-('cmdt_format', '{"padding": 4, "max": 9999}', 'Format des numéros CMDT (immuable)'),
-('year_end_warning_threshold', '200', 'Seuil d avertissement fin d année');
+('cmdt_format', '{"padding": 12, "max": 999999999999}', 'Format des numéros CMDT (support 1 milliard/an)'),
+('year_end_warning_threshold', '100000000', 'Seuil d avertissement fin d année (10% du milliard)');
 
 INSERT INTO app_settings (setting_key, setting_value, description) VALUES
 ('auto_year_switch', 'true', 'Changement automatique d année fiscale');

@@ -98,7 +98,7 @@ function InvoiceForm() {
     >
           <FormSection legend={"FACTURE"}>
             <ValidatedInvoiceNumberInput name="invoice_num" label="Numéro de la facture" placeholder="000000000001"/>
-            <ValidatedCodeInput name="num_cmdt" label="N° CMDT courrier" placeholder="XXXX" initialValue={nextNumberExpected} resetTrigger={resetTrigger}/>
+            <ValidatedCodeInput name="num_cmdt" label="N° CMDT courrier" placeholder="000000000001" initialValue={nextNumberExpected} resetTrigger={resetTrigger} maxLength={12}/>
             <ValidateDateInput name={"invoice_date"}  label={'Date de la facture'}  placeholder={'JJ/MM/AAAA'} />
             <ValidateDateInput name={'invoice_arrival_date'} label={'Date d\'arrivée du courrier'} placeholder={'JJ/MM/AAAA'} />
             <ValidatedAmountInput />

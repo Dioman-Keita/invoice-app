@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useTitle from '../../hooks/ui/useTitle.js';
 import useBackground from '../../hooks/ui/useBackground.js';
 import Footer from '../../components/global/Footer.jsx';
@@ -8,8 +8,8 @@ import {
   DocumentArrowDownIcon, 
   TableCellsIcon, 
   DocumentTextIcon,
-  CalendarIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  CogIcon
 } from '@heroicons/react/24/outline';
 
 function Export() {
@@ -17,22 +17,113 @@ function Export() {
   useBackground('bg-export');
   
   const [exportSettings, setExportSettings] = useState({
-    format: 'pdf',
+    format: 'txt',
     dateRange: 'month',
+    customDates: {
+      start: '',
+      end: '',
+      fiscalYear: 'toute'
+    },
     include: ['factures', 'fournisseurs', 'statistiques'],
     columns: ['numero', 'date', 'montant', 'fournisseur', 'statut']
   });
+
+  const [fiscalYears, setFiscalYears] = useState([]);
+  const [exportHistory, setExportHistory] = useState([]);
 
   const exportOptions = [
     { id: 'factures', label: 'Factures', Icon: DocumentTextIcon },
     { id: 'fournisseurs', label: 'Fournisseurs', Icon: TableCellsIcon },
     { id: 'statistiques', label: 'Statistiques', Icon: ChartBarIcon },
-    { id: 'transactions', label: 'Transactions', Icon: CalendarIcon }
+    { id: 'settings', label: 'Paramètres de l\'application', Icon: CogIcon }
   ];
 
-  const handleExport = () => {
-    console.log('Exporting with settings:', exportSettings);
-    // Logique d'exportation ici
+  const handleExport = async () => {
+    try {
+      // Build query parameters from settings
+      const params = new URLSearchParams();
+      params.set('type', exportSettings.include[0] || 'invoices'); // Use first selected
+      params.set('format', exportSettings.format);
+      
+      // Add date filters
+      if (exportSettings.dateRange === 'custom') {
+        if (exportSettings.customDates.start) params.set('dateFrom', exportSettings.customDates.start);
+        if (exportSettings.customDates.end) params.set('dateTo', exportSettings.customDates.end);
+        if (exportSettings.customDates.fiscalYear && exportSettings.customDates.fiscalYear !== 'toute') {
+          params.set('fiscal_year', exportSettings.customDates.fiscalYear);
+        }
+      }
+      
+      // Trigger download
+      const response = await fetch(`/api/export/advanced?${params.toString()}`, {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      });
+
+      if (!response.ok) throw new Error('Erreur lors de l\'export');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `export-${exportSettings.include[0]}-${new Date().toISOString().split('T')[0]}.${exportSettings.format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      // Refresh history
+      await loadExportHistory();
+    } catch (err) {
+      console.error('Erreur export:', err);
+      alert('Erreur lors de l\'export des données');
+    }
+  };
+
+  const loadFiscalYears = async () => {
+    try {
+      const response = await fetch('/api/fiscal-years', {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setFiscalYears(data.data || []);
+      }
+    } catch (err) {
+      console.error('Erreur chargement années fiscales:', err);
+    }
+  };
+
+  const loadExportHistory = async () => {
+    try {
+      const response = await fetch('/api/export/history', {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setExportHistory(data.data || []);
+      }
+    } catch (err) {
+      console.error('Erreur chargement historique:', err);
+    }
+  };
+
+  // Load data on mount
+  useEffect(() => {
+    loadFiscalYears();
+    loadExportHistory();
+  }, []);
+
+  const handleCustomDateChange = (field, value) => {
+    setExportSettings({
+      ...exportSettings,
+      customDates: {
+        ...exportSettings.customDates,
+        [field]: value
+      }
+    });
   };
 
   return (
@@ -53,11 +144,11 @@ function Export() {
           <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-md p-6 mb-8">
             <h2 className="text-xl font-semibold mb-6">Options d'exportation</h2>
             
-            {/* Format d'exportation */}
+            {/* Format d'exportation - CSV changé en TXT */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-3">Format d'export</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {['pdf', 'excel', 'csv', 'json'].map((format) => (
+                {['pdf', 'excel', 'txt', 'json'].map((format) => (
                   <button
                     key={format}
                     onClick={() => setExportSettings({...exportSettings, format})}
@@ -96,6 +187,56 @@ function Export() {
                   </button>
                 ))}
               </div>
+
+              {/* Contenu personnalisé qui s'affiche seulement quand "Personnalisée" est sélectionnée */}
+              {exportSettings.dateRange === 'custom' && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Date de début */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date de début
+                      </label>
+                      <input
+                        type="date"
+                        value={exportSettings.customDates.start}
+                        onChange={(e) => handleCustomDateChange('start', e.target.value)}
+                        className="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {/* Date de fin */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date de fin
+                      </label>
+                      <input
+                        type="date"
+                        value={exportSettings.customDates.end}
+                        onChange={(e) => handleCustomDateChange('end', e.target.value)}
+                        className="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {/* Année fiscale */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Année fiscale
+                      </label>
+                      <select
+                        value={exportSettings.customDates.fiscalYear}
+                        onChange={(e) => handleCustomDateChange('fiscalYear', e.target.value)}
+                        className="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                      >
+                        <option value="toute">Toute</option>
+                        {fiscalYears.map(year => (
+                          <option key={year} value={year}>{year}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Données à inclure */}
@@ -136,17 +277,28 @@ function Export() {
           <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold mb-6">Historique des exports</h2>
             <div className="space-y-3">
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div>
-                    <p className="font-medium">Export_{new Date().toISOString().split('T')[0]}_{item}.pdf</p>
-                    <p className="text-sm text-gray-500">Exporté le {new Date().toLocaleDateString()}</p>
+              {exportHistory.length > 0 ? (
+                exportHistory.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                    <div>
+                      <p className="font-medium">Export_{item.invoice_id}_{new Date(item.exported_at).toISOString().split('T')[0]}.{item.format.toLowerCase()}</p>
+                      <p className="text-sm text-gray-500">Exporté le {new Date(item.exported_at).toLocaleDateString()}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{item.format}</span>
+                      <button className="text-green-600 hover:text-green-800 font-medium">
+                        Télécharger
+                      </button>
+                    </div>
                   </div>
-                  <button className="text-green-600 hover:text-green-800 font-medium">
-                    Télécharger
-                  </button>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <DocumentArrowDownIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>Aucun export trouvé</p>
+                  <p className="text-sm">Vos exports apparaîtront ici</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>

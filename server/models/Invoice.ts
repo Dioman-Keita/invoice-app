@@ -1,6 +1,6 @@
 import database from "../config/database";
 import logger from "../utils/Logger";
-import generateId from "../services/GenerateId";
+import generateId, { updateFiscalYearCounter } from '../services/GenerateId';
 import { formatDate } from "../utils/Formatters";
 import { auditLog } from "../utils/auditLogger";
 import { getSetting } from "../utils/InvoiceLastNumberValidator";
@@ -123,6 +123,9 @@ class Invoice implements InvoiceModel {
                 email: invoiceData.created_by_email,
                 role: invoiceData.created_by_role
             })
+
+            // Mettre à jour le compteur d'année fiscale
+            await updateFiscalYearCounter(fiscalYear);
 
             return {
                 success: true,

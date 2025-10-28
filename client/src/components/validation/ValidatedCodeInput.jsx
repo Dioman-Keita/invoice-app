@@ -2,7 +2,7 @@ import { useFormContext } from "react-hook-form";
 import useProgressiveValidation from "../../hooks/ui/useProgressiveValidation.js";
 import { useState, useRef, useEffect } from "react";
 
-function ValidatedCodeInput({ name, label, placeholder, initialValue, resetTrigger }) {
+function ValidatedCodeInput({ name, label, placeholder, initialValue, resetTrigger, maxLength = 12 }) {
   const { validateLength, validatePattern } = useProgressiveValidation();
   const {
     register,
@@ -20,7 +20,7 @@ function ValidatedCodeInput({ name, label, placeholder, initialValue, resetTrigg
   // Préremplir avec la valeur initiale du serveur et gérer la réinitialisation après submit
   useEffect(() => {
     if (initialValue) {
-      const formattedValue = initialValue.toString().padStart(4, '0');
+      const formattedValue = initialValue.toString().padStart(maxLength, '0');
       
       // Réinitialisation après submit
       if (isSubmitSuccessful || resetTrigger !== previousResetTriggerRef.current) {
@@ -46,9 +46,9 @@ function ValidatedCodeInput({ name, label, placeholder, initialValue, resetTrigg
     const raw = e.target.value.replace(/[^\d]/g, "");
     
     // Détecter une incohérence si l'utilisateur modifie la valeur du serveur
-    if (initialValue && raw !== initialValue.toString().padStart(4, '0') && raw.length === 4) {
+    if (initialValue && raw !== initialValue.toString().padStart(maxLength, '0') && raw.length === maxLength) {
       setHasIncoherence(true);
-    } else if (initialValue && raw === initialValue.toString().padStart(4, '0')) {
+    } else if (initialValue && raw === initialValue.toString().padStart(maxLength, '0')) {
       setHasIncoherence(false);
     }
     
@@ -58,14 +58,14 @@ function ValidatedCodeInput({ name, label, placeholder, initialValue, resetTrigg
     }
     
     // Validation de la longueur
-    const lengthValidation = validateLength(raw, 4, "Code", {
+    const lengthValidation = validateLength(raw, maxLength, "Code", {
       warningThreshold: 1.0,
       infoThreshold: 0.75,
       showCount: false
     });
     
     if (lengthValidation.shouldTruncate) {
-      const truncated = raw.slice(0, 4);
+      const truncated = raw.slice(0, maxLength);
       e.target.value = truncated;
       setValue(name, truncated, { shouldValidate: true, shouldDirty: true });
       setCurrentValue(truncated);
@@ -77,20 +77,20 @@ function ValidatedCodeInput({ name, label, placeholder, initialValue, resetTrigg
   };
 
   const getValueStatus = () => {
-    // Validation stricte : doit être exactement 4 chiffres
-    if (currentValue.length > 0 && currentValue.length !== 4) {
+    // Validation stricte : doit être exactement {maxLength} chiffres
+    if (currentValue.length > 0 && currentValue.length !== maxLength) {
       return { 
         type: "error", 
-        message: "❌ Le code doit contenir exactement 4 chiffres" 
+        message: `❌ Le code doit contenir exactement ${maxLength} chiffres` 
       };
     }
     
     // Si le code est complet
-    if (currentValue.length === 4) {
+    if (currentValue.length === maxLength) {
       const currentNum = parseInt(currentValue);
       
       // Si l'utilisateur a modifié la valeur du serveur
-      if (initialValue && currentValue !== initialValue.toString().padStart(4, '0')) {
+      if (initialValue && currentValue !== initialValue.toString().padStart(maxLength, '0')) {
         return { 
           type: "warning", 
           message: "⚠ Numéro modifié. Vérifiez qu'il n'existe pas déjà." 
@@ -110,7 +110,7 @@ function ValidatedCodeInput({ name, label, placeholder, initialValue, resetTrigg
   const resetToServerValue = () => {
     if (!initialValue) return;
     
-    const serverValue = initialValue.toString().padStart(4, '0');
+    const serverValue = initialValue.toString().padStart(maxLength, '0');
     setValue(name, serverValue, { 
       shouldValidate: true, 
       shouldDirty: true,
@@ -131,7 +131,7 @@ function ValidatedCodeInput({ name, label, placeholder, initialValue, resetTrigg
       <input
         type="text"
         inputMode="numeric"
-        pattern="\d{4}"
+        pattern={`\d{${maxLength}}`}
         placeholder={placeholder}
         {...register(name)}
         id={name}
@@ -163,8 +163,8 @@ function ValidatedCodeInput({ name, label, placeholder, initialValue, resetTrigg
         
         {/* Info format */}
         <span className="text-gray-500 text-xs block">
-          Format: 4 chiffres 
-          {initialValue && ` - Numéro valide: ${initialValue.toString().padStart(4, '0')}`}
+          Format: {maxLength} chiffres 
+          {initialValue && ` - Numéro valide: ${initialValue.toString().padStart(maxLength, '0')}`}
           {!initialValue && " - Chargement du numéro..."}
         </span>
       </div>
@@ -180,7 +180,7 @@ function ValidatedCodeInput({ name, label, placeholder, initialValue, resetTrigg
             onClick={resetToServerValue}
             className="text-xs bg-green-100 hover:bg-green-200 text-green-800 px-2 py-1 rounded border border-green-300 transition-colors"
           >
-            ↶ Rétablir le numéro valide : {initialValue.toString().padStart(4, '0')}
+            ↶ Rétablir le numéro valide : {initialValue.toString().padStart(maxLength, '0')}
           </button>
         </div>
       )}

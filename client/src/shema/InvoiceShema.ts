@@ -14,10 +14,10 @@ const allowedDocument = [
 ] as const;
 
 export const supplierNameRegex = /^[\p{L}\d\s\-'&]+$/u;
-const fourDigitCode = z
+const twelveDigitCode = z
     .string()
     .min(1, "Champ requis")
-    .regex(/^\d{4}$/, "Doit contenir exactement 4 chiffres (ex. 0001)");
+    .regex(/^\d{12}$/, "Doit contenir exactement 12 chiffres (ex. 000000000001)");
 
 // ----------------------
 // Schéma principal
@@ -27,7 +27,7 @@ export const invoiceSchema = z.object({
         .string()
         .min(1, "Champ requis")
         .regex(/^\d{1,12}$/, "Doit contenir 1 à 12 chiffres"),
-    num_cmdt: fourDigitCode,
+    num_cmdt: twelveDigitCode,
     invoice_date: z
         .string()
         .min(1, "La date réelle de la facture est requie")

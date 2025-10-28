@@ -2,7 +2,7 @@ import { DocumentTextIcon, InformationCircleIcon, ChartBarIcon } from '@heroicon
 import { useState } from 'react';
 import useInvoice from '../../hooks/features/useInvoice.js';
 
-export default function InvoiceLastNumber({ lastInvoiceNumber, isLoading = false, fiscalYear }) {
+export default function InvoiceLastNumber({ lastInvoiceNumber, isLoading = false, fiscalYear, displayLength = 12 }) {
     const [showTooltip, setShowTooltip] = useState(false);
     
     console.log('🎯 InvoiceLastNumber avec props:', lastInvoiceNumber, isLoading, fiscalYear);
@@ -33,7 +33,7 @@ export default function InvoiceLastNumber({ lastInvoiceNumber, isLoading = false
                             {isLoading ? (
                                 <span className="animate-pulse">...</span>
                             ) : (
-                                `#${lastInvoiceNumber || '0000'}`
+                                `#${lastInvoiceNumber ? lastInvoiceNumber.toString().padStart(displayLength, '0') : '0'.repeat(displayLength)}`
                             )}
                         </span>
                     </div>

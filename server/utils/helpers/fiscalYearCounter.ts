@@ -45,7 +45,7 @@ export async function getCurrentFiscalYearCounter(): Promise<{ fiscal_year: stri
     if (Array.isArray(rows) && rows.length > 0) {
       return {
         fiscal_year: rows[0].fiscal_year,
-        last_cmdt_number: rows[0].last_cmdt_number
+        last_cmdt_number: Number(rows[0].last_cmdt_number)
       };
     }
 
@@ -83,8 +83,10 @@ export async function getFiscalYearHistory(): Promise<Array<{fiscal_year: string
     const rows = await database.execute<{fiscal_year: string; last_cmdt_number: number}[]> (
       "SELECT fiscal_year, last_cmdt_number FROM fiscal_year_counter ORDER BY fiscal_year DESC"
     );
-
-    return Array.isArray(rows) ? rows : [];
+    return rows.map(row => ({
+      ...row,
+      last_cmdt_number: Number(row.last_cmdt_number)
+    }));
   } catch (error) {
     logger.error("Erreur lors de la récupération de l'historique fiscal", {
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -107,7 +109,7 @@ export async function checkYearEndThresholdWarning(): Promise<{
     const fiscalYear = await getSetting('fiscal_year');
     const counter = await getCurrentFiscalYearCounter();
 
-    const remaining = config.max - counter.last_cmdt_number;
+    const remaining = config.max - Number(counter.last_cmdt_number);
     const warning = remaining <= threshold;
 
     if (warning) {
@@ -119,7 +121,7 @@ export async function checkYearEndThresholdWarning(): Promise<{
       remaining,
       threshold,
       max: config.max,
-      lastNumber: counter.last_cmdt_number,
+      lastNumber: Number(counter.last_cmdt_number),
       fiscalYear
     };
   } catch (error) {
