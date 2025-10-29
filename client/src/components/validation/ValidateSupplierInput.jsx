@@ -1,3 +1,4 @@
+// components
 import { useRef, useEffect, useCallback, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { useInputFilters } from "../../hooks/ui/useInputFilter.js";
@@ -57,7 +58,6 @@ function ValidateSupplierInput() {
     const shouldShowConflicts = supplierConflictingData?.existingSupplierList?.length > 0;
     const shouldShowSuggestions = isSuggestionsOpen && supplierList?.length > 0 && !shouldShowConflicts;
 
-    // CORRECTION : Déclarer handleSupplierSelect en premier
     const handleSupplierSelect = useCallback((supplier) => {
         setValue('supplier_name', supplier.name, { shouldValidate: true });
         setValue('supplier_phone', supplier.phone, { shouldValidate: true });
@@ -76,7 +76,7 @@ function ValidateSupplierInput() {
     useEffect(() => {
         if (supplierConflictingData && supplierConflictingData.existingSupplierList?.length > 0) {
             const conflicts = { name: null, phone: null, account: null };
-            
+
             supplierConflictingData.existingSupplierList.forEach(supplier => {
                 if (supplierConflictingData.conflictType === 'phone' || supplierConflictingData.conflictType === 'both') {
                     conflicts.phone = supplier;
@@ -88,7 +88,7 @@ function ValidateSupplierInput() {
                     conflicts.name = supplier;
                 }
             });
-            
+
             setFieldConflicts(conflicts);
             setIsSuggestionsOpen(false);
         } else {
@@ -101,19 +101,19 @@ function ValidateSupplierInput() {
      */
     const checkConflicts = useCallback((field, value) => {
         if (!selectedSupplier) return;
-        
+
         // Gestion spéciale pour le nom
         if (field === 'name') {
             const isAccountSame = supplierAccount === selectedSupplier.account_number;
             const isPhoneSame = supplierPhone === selectedSupplier.phone;
-            
+
             if (isAccountSame && isPhoneSame && value !== selectedSupplier.name) {
                 const cacheKey = 'name_global';
-                
+
                 if (debounceTimers.current[cacheKey]) {
                     clearTimeout(debounceTimers.current[cacheKey]);
                 }
-                
+
                 debounceTimers.current[cacheKey] = setTimeout(() => {
                     if (supplierAccount && supplierPhone) {
                         searchSupplier('name', `${supplierAccount},${supplierPhone}`, 'conflict:global');
@@ -122,95 +122,92 @@ function ValidateSupplierInput() {
             }
             return;
         }
-        
+
         const cacheKey = field === 'phone' ? 'phone' : 'account';
         const originalValue = field === 'phone' ? selectedSupplier.phone : selectedSupplier.account_number;
-        
+
         // CAS 1: Retour à la valeur originale
         if (value === originalValue) {
             if (debounceTimers.current[cacheKey]) {
                 clearTimeout(debounceTimers.current[cacheKey]);
                 delete debounceTimers.current[cacheKey];
             }
-            
+
             setTimeout(() => {
-                const isAllOriginal = supplierAccount === selectedSupplier.account_number && 
-                                     supplierPhone === selectedSupplier.phone;
-                
+                const isAllOriginal = supplierAccount === selectedSupplier.account_number &&
+                    supplierPhone === selectedSupplier.phone;
+
                 if (isAllOriginal) {
                     clearAllConflicts();
                 }
             }, 300);
-            
+
             lastCheckedValues.current[cacheKey] = value;
             return;
         }
 
         // CAS 2: Éviter les vérifications identiques
         if (lastCheckedValues.current[cacheKey] === value) return;
-        
+
         if (debounceTimers.current[cacheKey]) {
             clearTimeout(debounceTimers.current[cacheKey]);
         }
-        
+
         lastCheckedValues.current[cacheKey] = value;
-        
+
         // CAS 3: Vérification avec debounce
         debounceTimers.current[cacheKey] = setTimeout(() => {
             const currentAccount = supplierAccount;
             const currentPhone = supplierPhone;
-            
+
             const isAccountValid = currentAccount && currentAccount.length >= 6;
             const isPhoneValid = currentPhone && currentPhone.includes('+223') && currentPhone.replace(/\s/g, '').length === 14;
-            
+
             if (!isAccountValid || !isPhoneValid) return;
-            
+
             if (field === 'phone') {
                 searchSupplier('phone', value, 'conflict:phone');
             } else if (field === 'accountNumber') {
                 searchSupplier('accountNumber', value, 'conflict:accountNumber');
             }
-            
+
             setTimeout(() => {
                 const latestAccount = supplierAccount;
                 const latestPhone = supplierPhone;
-                
+
                 const latestAccountValid = latestAccount && latestAccount.length >= 6;
                 const latestPhoneValid = latestPhone && latestPhone.includes('+223') && latestPhone.replace(/\s/g, '').length === 14;
-                
+
                 if (latestAccountValid && latestPhoneValid) {
                     searchSupplier('phone', `${latestAccount},${latestPhone}`, 'conflict:global');
                 }
             }, 400);
         }, 600);
-        
+
     }, [selectedSupplier, supplierAccount, supplierPhone, searchSupplier, clearAllConflicts]);
 
-    // CORRECTION : Gestion améliorée de la navigation clavier avec pavé directionnel complet
+    // CORRECTION : Gestion améliorée de la navigation clavier
     const handleKeyDown = useCallback((e) => {
         // Navigation uniquement si les suggestions sont ouvertes
         if (!shouldShowSuggestions) return;
 
-        // CORRECTION : Support complet du pavé directionnel
-        const isNavigationKey = e.key.startsWith('Arrow') || 
-                               e.key === 'Enter' || 
-                               e.key === 'Escape' || 
-                               e.key === 'Tab' ||
-                               // Support du pavé numérique directionnel
-                               e.code === 'Numpad8' || // ↑
-                               e.code === 'Numpad2' || // ↓
-                               e.code === 'Numpad4' || // ←
-                               e.code === 'Numpad6' || // →
-                               e.code === 'NumpadEnter';
+        const isNavigationKey = e.key.startsWith('Arrow') ||
+            e.key === 'Enter' ||
+            e.key === 'Escape' ||
+            e.key === 'Tab' ||
+            e.code === 'Numpad8' ||
+            e.code === 'Numpad2' ||
+            e.code === 'Numpad4' ||
+            e.code === 'Numpad6' ||
+            e.code === 'NumpadEnter';
 
         if (!isNavigationKey) return;
 
         e.preventDefault();
 
-        // CORRECTION : Mapping des touches du pavé numérique vers les flèches
         const keyMap = {
             'Numpad8': 'ArrowUp',
-            'Numpad2': 'ArrowDown', 
+            'Numpad2': 'ArrowDown',
             'Numpad4': 'ArrowLeft',
             'Numpad6': 'ArrowRight',
             'NumpadEnter': 'Enter'
@@ -218,7 +215,6 @@ function ValidateSupplierInput() {
 
         const mappedKey = keyMap[e.code] || e.key;
 
-        // CORRECTION : Déclaration des variables en dehors du switch
         let direction;
         let newIndex;
         let currentRow;
@@ -227,12 +223,11 @@ function ValidateSupplierInput() {
         switch (mappedKey) {
             case 'ArrowDown':
             case 'Numpad2':
-                // Navigation vers le bas
                 direction = 1;
                 newIndex = focusedSuggestionIndex + direction;
-                
+
                 if (newIndex >= supplierList.length) {
-                    setFocusedSuggestionIndex(0); // Retour au début
+                    setFocusedSuggestionIndex(0);
                 } else {
                     setFocusedSuggestionIndex(newIndex);
                 }
@@ -240,12 +235,11 @@ function ValidateSupplierInput() {
 
             case 'ArrowUp':
             case 'Numpad8':
-                // Navigation vers le haut
                 direction = -1;
                 newIndex = focusedSuggestionIndex + direction;
-                
+
                 if (newIndex < 0) {
-                    setFocusedSuggestionIndex(supplierList.length - 1); // Aller à la fin
+                    setFocusedSuggestionIndex(supplierList.length - 1);
                 } else {
                     setFocusedSuggestionIndex(newIndex);
                 }
@@ -253,22 +247,18 @@ function ValidateSupplierInput() {
 
             case 'ArrowRight':
             case 'Numpad6':
-                // Navigation vers la droite (navigation par colonnes)
                 if (focusedSuggestionIndex === -1) {
                     setFocusedSuggestionIndex(0);
                 } else {
-                    // Calculer la position actuelle dans la grille (3 colonnes)
                     currentRow = Math.floor(focusedSuggestionIndex / 3);
                     currentCol = focusedSuggestionIndex % 3;
-                    
-                    // Aller à la colonne suivante
+
                     if (currentCol < 2) {
                         newIndex = focusedSuggestionIndex + 1;
                         if (newIndex < supplierList.length) {
                             setFocusedSuggestionIndex(newIndex);
                         }
                     } else {
-                        // Si on est à la dernière colonne, aller à la première colonne de la ligne suivante
                         newIndex = (currentRow + 1) * 3;
                         if (newIndex < supplierList.length) {
                             setFocusedSuggestionIndex(newIndex);
@@ -279,20 +269,16 @@ function ValidateSupplierInput() {
 
             case 'ArrowLeft':
             case 'Numpad4':
-                // Navigation vers la gauche (navigation par colonnes)
                 if (focusedSuggestionIndex === -1) {
                     setFocusedSuggestionIndex(supplierList.length - 1);
                 } else {
-                    // Calculer la position actuelle dans la grille (3 colonnes)
                     currentRow = Math.floor(focusedSuggestionIndex / 3);
                     currentCol = focusedSuggestionIndex % 3;
-                    
-                    // Aller à la colonne précédente
+
                     if (currentCol > 0) {
                         newIndex = focusedSuggestionIndex - 1;
                         setFocusedSuggestionIndex(newIndex);
                     } else {
-                        // Si on est à la première colonne, aller à la dernière colonne de la ligne précédente
                         newIndex = (currentRow - 1) * 3 + 2;
                         if (newIndex >= 0) {
                             setFocusedSuggestionIndex(newIndex);
@@ -323,9 +309,10 @@ function ValidateSupplierInput() {
         }
     }, [shouldShowSuggestions, supplierList, focusedSuggestionIndex, handleSupplierSelect]);
 
+    // CORRECTION MAJEURE : Gestionnaires d'input simplifiés sans modifier e.target.value
     const handleNameInput = useCallback((e) => {
         const value = e.target.value;
-        
+
         const validation = validateLength(value, 45, "Nom du fournisseur", {
             warningThreshold: 0.89,
             infoThreshold: 0.67,
@@ -334,9 +321,10 @@ function ValidateSupplierInput() {
         });
 
         const finalValue = validation.shouldTruncate ? value.slice(0, 45) : value;
-        e.target.value = finalValue;
+
+        // CORRECTION : Utiliser setValue uniquement
         setValue('supplier_name', finalValue, { shouldValidate: true });
-        
+
         if (finalValue && finalValue.length >= 2) {
             searchSupplier('name', finalValue, 'supplier:global');
             setIsSuggestionsOpen(true);
@@ -359,7 +347,6 @@ function ValidateSupplierInput() {
                 lastToastTime.current = now;
             }
             const truncatedValue = cleanedValue.slice(0, 34);
-            e.target.value = truncatedValue;
             setValue('supplier_account_number', truncatedValue, { shouldValidate: true });
             return;
         }
@@ -367,7 +354,6 @@ function ValidateSupplierInput() {
         const invalidChars = /[^A-Za-z0-9]/g;
         if (invalidChars.test(cleanedValue)) {
             const filteredValue = cleanedValue.replace(invalidChars, '');
-            e.target.value = filteredValue;
             setValue('supplier_account_number', filteredValue, { shouldValidate: true });
 
             const now = Date.now();
@@ -379,27 +365,39 @@ function ValidateSupplierInput() {
         }
 
         const finalValue = cleanedValue.toUpperCase();
-        e.target.value = finalValue;
         setValue('supplier_account_number', finalValue, { shouldValidate: true });
 
         setTimeout(() => trigger('supplier_account_number'), 0);
+
+        // CORRECTION : MÊME LOGIQUE QUE LE TÉLÉPHONE
         if (finalValue && finalValue.length >= 6) {
+            // 1. Vérification immédiate du compte (comme pour le téléphone)
             searchSupplier('accountNumber', finalValue, 'conflict:accountNumber');
+
+            // 2. Vérification globale si téléphone valide (EXACTEMENT comme pour le téléphone)
+            if (supplierPhone && supplierPhone.includes('+223') && supplierPhone.replace(/\s/g, '').length >= 10 && supplierPhone.replace(/\s/g, '').length < 13) {
+                setTimeout(() => {
+                    searchSupplier('accountNumber', `${finalValue},${supplierPhone}`, 'conflict:global');
+                }, 200);
+            }
         }
 
         checkConflicts('accountNumber', finalValue);
-    }, [setValue, trigger, showError, searchSupplier, checkConflicts]);
+    }, [setValue, trigger, showError, searchSupplier, checkConflicts, supplierPhone]);
 
     const handlePhoneInput = useCallback((e) => {
-        filterPhone(e);
-        const value = e.target.value;
+        const filteredEvent = filterPhone(e);
+        const value = filteredEvent ? filteredEvent.target.value : e.target.value;
+
         setValue('supplier_phone', value, { shouldValidate: true });
-        
+
         setTimeout(() => trigger('supplier_phone'), 0);
-        
+
         if (value && value.includes('+223')) {
+            // 1. Vérification immédiate du téléphone
             searchSupplier('phone', value, 'conflict:phone');
-            
+
+            // 2. Vérification globale si compte valide
             if (supplierAccount && supplierAccount.length >= 6) {
                 setTimeout(() => {
                     searchSupplier('phone', `${supplierAccount},${value}`, 'conflict:global');
@@ -410,20 +408,17 @@ function ValidateSupplierInput() {
         checkConflicts('phone', value);
     }, [filterPhone, setValue, trigger, searchSupplier, checkConflicts, supplierAccount]);
 
-    // CORRECTION : Gestion du focus et navigation améliorée
     const handleInputFocus = useCallback(() => {
         if (supplierList?.length > 0 && !shouldShowConflicts) {
             setIsSuggestionsOpen(true);
         }
-        
-        // Réinitialiser l'index de focus quand on change de champ
+
         setFocusedSuggestionIndex(-1);
     }, [supplierList, shouldShowConflicts]);
 
     // CORRECTION : Navigation avec les touches du pavé numérique directionnel
     useEffect(() => {
         const handleNumpadNavigation = (e) => {
-            // Vérifier si c'est une touche du pavé numérique directionnel
             if (!shouldShowSuggestions) return;
 
             const numpadKeys = {
@@ -437,16 +432,14 @@ function ValidateSupplierInput() {
             const mappedKey = numpadKeys[e.code];
             if (mappedKey) {
                 e.preventDefault();
-                
-                // Créer un nouvel événement avec la touche mappée
+
                 const newEvent = new KeyboardEvent('keydown', {
                     key: mappedKey,
                     code: mappedKey,
                     bubbles: true,
                     cancelable: true
                 });
-                
-                // Déclencher l'événement sur l'input actif
+
                 const activeElement = document.activeElement;
                 if (activeElement) {
                     activeElement.dispatchEvent(newEvent);
@@ -627,9 +620,9 @@ function ValidateSupplierInput() {
 
     return (
         <div className="mb-1" ref={containerRef}>
-            <div className="flex flex-col md:flex-row gap-4 w-full relative">
-
-                {/* Champ Nom du fournisseur */}
+            {/* CORRECTION : Layout égal pour tous les champs */}
+            <div className="flex flex-col md:flex-row gap-4 w-full">
+                {/* Tous les champs ont la même largeur */}
                 <div className="flex-1 min-w-0">
                     <label htmlFor="supplier_name" className="block text-sm font-medium text-gray-700 mb-1">
                         Nom complet du fournisseur *
@@ -657,30 +650,29 @@ function ValidateSupplierInput() {
                             </div>
                         )}
                     </div>
-                    
+
                     {errors['supplier_name'] && (
                         <p className='text-red-600 text-sm mt-1 break-words animate-fadeIn'>
                             {errors['supplier_name'].message}
                         </p>
                     )}
-                    
+
                     <div className="flex justify-between items-center mt-1">
                         <div className="text-xs text-gray-500">
                             {supplierName?.length || 0}/45 caractères
                         </div>
                         {supplierName && supplierName.length > 0 && (
                             <div className={`text-xs ${
-                                supplierName.length > 40 ? 'text-red-500' : 
-                                supplierName.length > 30 ? 'text-orange-500' : 'text-green-500'
+                                supplierName.length > 40 ? 'text-red-500' :
+                                    supplierName.length > 30 ? 'text-orange-500' : 'text-green-500'
                             }`}>
-                                {supplierName.length > 40 ? 'Presque plein' : 
-                                 supplierName.length > 30 ? 'Bon' : 'Parfait'}
+                                {supplierName.length > 40 ? 'Presque plein' :
+                                    supplierName.length > 30 ? 'Bon' : 'Parfait'}
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Champ Téléphone */}
                 <div className="flex-1 min-w-0">
                     <label htmlFor="supplier_phone" className="block text-sm font-medium text-gray-700 mb-1">
                         Téléphone *
@@ -712,7 +704,6 @@ function ValidateSupplierInput() {
                     </div>
                 </div>
 
-                {/* Champ Numéro de compte */}
                 <div className="flex-1 min-w-0">
                     <label htmlFor="supplier_account_number" className="block text-sm font-medium text-gray-700 mb-1">
                         Numéro de compte *
@@ -743,11 +734,11 @@ function ValidateSupplierInput() {
                         </div>
                         {supplierAccount && supplierAccount.length > 0 && (
                             <div className={`text-xs ${
-                                supplierAccount.length >= 30 ? 'text-green-500' : 
-                                supplierAccount.length >= 20 ? 'text-orange-500' : 'text-gray-500'
+                                supplierAccount.length >= 30 ? 'text-green-500' :
+                                    supplierAccount.length >= 20 ? 'text-orange-500' : 'text-gray-500'
                             }`}>
-                                {supplierAccount.length >= 30 ? 'Longueur OK' : 
-                                 supplierAccount.length >= 20 ? 'Moyen' : 'Trop court'}
+                                {supplierAccount.length >= 30 ? 'Longueur OK' :
+                                    supplierAccount.length >= 20 ? 'Moyen' : 'Trop court'}
                             </div>
                         )}
                     </div>
@@ -760,11 +751,9 @@ function ValidateSupplierInput() {
                 </div>
             </div>
 
-            {/* PANEL UNIFIÉ : Soit suggestions, soit conflits */}
-            
-            {/* Suggestions */}
+            {/* Suggestions - Logique d'auto-complétion intacte */}
             {shouldShowSuggestions && (
-                <div 
+                <div
                     ref={suggestionsRef}
                     className="absolute z-50 left-0 right-0 mt-3 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-80 overflow-y-auto"
                 >
@@ -785,7 +774,7 @@ function ValidateSupplierInput() {
                                     </div>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 type="button"
                                 onClick={() => setIsSuggestionsOpen(false)}
                                 className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-2 transition-colors"
@@ -805,8 +794,8 @@ function ValidateSupplierInput() {
                                 onClick={() => handleSupplierSelect(s)}
                                 onMouseEnter={() => setFocusedSuggestionIndex(idx)}
                                 className={`p-4 text-left transition-all duration-200 border-b border-r border-gray-100 hover:bg-blue-50 group ${
-                                    focusedSuggestionIndex === idx 
-                                        ? 'bg-blue-50 border-l-4 border-l-blue-500 shadow-inner' 
+                                    focusedSuggestionIndex === idx
+                                        ? 'bg-blue-50 border-l-4 border-l-blue-500 shadow-inner'
                                         : 'hover:border-l-4 hover:border-l-blue-300'
                                 }`}
                             >
@@ -825,8 +814,8 @@ function ValidateSupplierInput() {
                                             </div>
                                         </div>
                                         <div className={`ml-2 text-sm font-medium transition-colors ${
-                                            focusedSuggestionIndex === idx 
-                                                ? 'text-blue-600' 
+                                            focusedSuggestionIndex === idx
+                                                ? 'text-blue-600'
                                                 : 'text-gray-400 group-hover:text-blue-500'
                                         }`}>
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -870,7 +859,6 @@ function ValidateSupplierInput() {
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                {/* CORRECTION : Instructions complètes pour le pavé directionnel */}
                                 Utilisez les flèches ↑↓←→ ou Numpad 8/2/4/6 pour naviguer, Entrée pour sélectionner
                             </div>
                             <div>
@@ -883,7 +871,7 @@ function ValidateSupplierInput() {
 
             {/* Conflits unifiés */}
             <UnifiedConflictPanel />
-                    
+
             {/* Message de feedback des suggestions */}
             {suppliersData.message && !isSuggestionsOpen && !shouldShowConflicts && (
                 <div className="mt-2 text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
