@@ -1,4 +1,3 @@
-// components/Verify.jsx - Version corrigée avec timeout de 5s
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/auth/useAuth.js';

@@ -6,7 +6,7 @@ export type AuditAction = 'INSERT' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'SELECT';
 export type AuditLogParams = {
     action: AuditAction,
     table_name: string,
-    record_id: string | null,
+    record_id?: string,
     description?: string | null,
     performed_by?: string | null,
 };

@@ -79,12 +79,15 @@ http://localhost:3000/api/
 │   ├── token             (GET) - Vérification token
 │   └── admin/create-user (POST) - Création utilisateur (admin)
 ├── invoices/
-│   ├── last-num        (GET) - Dernier numéro enregistré (agent, manager)
-│   ├── next-num        (GET) - Prochain numéro attendu (manager, admin)
-│   ├── /               (GET, POST) - Lister / Créer (protégé, traçabilité)
-│   ├── /:id            (GET) - Détail avec vérification permissions
-│   ├── update/:id      (POST) - Mise à jour (manager, admin)
-│   └── delete/:id      (POST) - Suppression (admin)
+│   ├── last-num            (GET)  - Dernier numéro enregistré (agent, manager)
+│   ├── next-num            (GET)  - Prochain numéro attendu (manager, admin)
+│   ├── /                   (GET, POST) - Lister / Créer (protégé, traçabilité)
+│   ├── /:id                (GET)  - Détail avec vérification permissions
+│   ├── update/:id          (POST) - Mise à jour (manager, admin)
+│   ├── delete/:id          (POST) - Suppression (admin)
+│   ├── dfc/pending         (GET)  - Factures DFC en attente (agent, manager)
+│   ├── :id/dfc/approve     (POST) - Approuver facture DFC (agent, manager)
+│   └── :id/dfc/reject      (POST) - Rejeter facture DFC (agent, manager)
 ├── supplier/
 │   ├── (POST)               - Créer fournisseur (manager, admin)
 │   ├── delete/:id (POST)    - Supprimer fournisseur (admin)
@@ -95,6 +98,14 @@ http://localhost:3000/api/
 │   ├── search (GET)         - Recherche flexible (manager, admin)
 │   ├── find (GET)           - Recherche multi-champs (manager, admin)
 │   └── verify-conflicts (GET) - Vérifier conflits (agent, manager)
+├── search/
+│   ├── invoices (GET)       - Recherche avancée de factures (agent, manager)
+│   ├── suppliers (GET)      - Recherche avancée de fournisseurs (agent, manager)
+│   └── relational (GET)     - Recherche relationnelle (agent, manager)
+├── export/
+│   ├── advanced (GET)       - Export avancé selon filtres (agent, manager)
+│   └── history (GET)        - Historique des exports (agent, manager)
+├── fiscal-years        (GET) - Années fiscales disponibles (agent, manager)
 ├── protected          (GET) - test auth
 └── health             (GET) - test serveur
 ```

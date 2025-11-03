@@ -4,12 +4,103 @@ import logger from "./Logger";
 export type Pagination = { page: number; limit: number };
 export type Order = { order_by: string; order_direction: 'asc' | 'desc' };
 
-export type QueryResult<T = any> = {
+export type QueryResult<T = unknown> = {
   rows: T[];
   meta: { total: number; page: number; limit: number };
 };
 
-function toInt(value: any, fallback: number): number {
+type CountRow = { cnt: number };
+
+export type SearchInvoicesParams = Partial<{
+  page: number | string;
+  limit: number | string;
+  order_by: string;
+  order_direction: string;
+  search: string;
+  fiscal_year: string;
+  num_invoice: string;
+  num_cmdt: string;
+  supplier_name: string;
+  invoice_type: string;
+  invoice_nature: string;
+  dfc_status: string;
+  dateFrom: string;
+  dateTo: string;
+  amountMin: string | number;
+  amountMax: string | number;
+  include_supplier: string | boolean;
+  include_attachments: string | boolean;
+  include_dfc: string | boolean;
+}>;
+
+export type InvoiceSearchRow = Record<string, unknown> & {
+  id: string;
+  num_cmdt: string;
+  num_invoice: string;
+};
+
+export type SearchSuppliersParams = Partial<{
+  page: number | string;
+  limit: number | string;
+  order_by: string;
+  order_direction: string;
+  search: string;
+  supplier_name: string;
+  account_number: string;
+  phone: string;
+  supplier_created_from: string;
+  supplier_created_to: string;
+  supplier_with_invoices: string | boolean;
+  has_active_invoices: string | boolean;
+}>;
+
+export type SupplierRow = Record<string, unknown> & { id: string };
+
+export type SearchRelationalParams = Partial<{
+  page: number | string;
+  limit: number | string;
+  order_by: string;
+  order_direction: string;
+  search: string;
+  fiscal_year: string;
+  invoice_type: string;
+  invoice_nature: string;
+  dfc_status: string;
+  dateFrom: string;
+  dateTo: string;
+  amountMin: string | number;
+  amountMax: string | number;
+  group_by: string;
+  group_by_supplier: string | boolean;
+  supplier_with_invoices: string | boolean;
+  invoice_with_attachments: string | boolean;
+  invoice_with_dfc_decision: string | boolean;
+  supplier_invoice_count_min: string | number;
+  supplier_invoice_count_max: string | number;
+  supplier_total_amount_min: string | number;
+  supplier_total_amount_max: string | number;
+}>;
+
+export type RelationalGroupedRow = {
+  supplier_id: string;
+  supplier_name: string;
+  supplier_account: string;
+  invoice_count: number;
+  total_amount: string;
+  avg_amount: string;
+  last_invoice_date: string;
+};
+
+export type RelationalFlatRow = {
+  supplier_name: string;
+  num_invoice: string;
+  num_cmdt: string;
+  amount: string;
+  invoice_arr_date: string;
+  dfc_status: string;
+};
+
+function toInt(value: unknown, fallback: number): number {
   const n = parseInt(String(value), 10);
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
@@ -40,7 +131,7 @@ function looksLikeAccount(value: string): boolean {
 }
 
 export class QueryBuilder {
-  static async searchInvoices(q: any): Promise<QueryResult> {
+  static async searchInvoices(q: SearchInvoicesParams): Promise<QueryResult<InvoiceSearchRow>> {
     const page = toInt(q.page, 1);
     const limit = toInt(q.limit, 10);
     const offset = (page - 1) * limit;
@@ -49,11 +140,12 @@ export class QueryBuilder {
     const allowedOrder = new Set([
       'create_at','invoice_arr_date','amount','num_cmdt','num_invoice','supplier_name'
     ]);
-    const orderBy = allowedOrder.has(q.order_by) ? q.order_by : 'create_at';
+    const orderByCandidate = String(q.order_by || '');
+    const orderBy = allowedOrder.has(orderByCandidate) ? orderByCandidate : 'create_at';
     const orderDir = normalizeOrder(q.order_direction);
 
     const conditions: string[] = [];
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     try {
       // Global search over invoice and supplier fields with heuristics
@@ -61,7 +153,7 @@ export class QueryBuilder {
         const term = String(q.search).trim();
         const like = `%${term}%`;
         const orParts: string[] = [];
-        const orParams: any[] = [];
+        const orParams: unknown[] = [];
 
         // Heuristics: system reference (id) -> num_cmdt (system counter) -> num_invoice (intra)
         if (isInvoiceRef(term)) {
@@ -145,12 +237,12 @@ export class QueryBuilder {
 
       logger.info('QueryBuilder.searchInvoices start', { filters: q, page, limit, orderBy, orderDir });
       logger.info('QueryBuilder.searchInvoices SQL', { sql: selectQuery, params });
-      let rows: any = await database.execute(selectQuery, params);
+      let rows = await database.execute<InvoiceSearchRow[] | InvoiceSearchRow>(selectQuery, params);
       if (rows && !Array.isArray(rows)) rows = [rows];
-      const countRows: any = await database.execute(countQuery, params);
-      const total = Array.isArray(countRows) ? (countRows[0]?.cnt || 0) : (countRows?.cnt || 0);
+      const countRows = await database.execute<CountRow[] | CountRow>(countQuery, params);
+      const total = Array.isArray(countRows) ? (countRows[0]?.cnt || 0) : ((countRows as CountRow)?.cnt || 0);
 
-      return { rows: rows || [], meta: { total, page, limit } };
+      return { rows: (rows as InvoiceSearchRow[]) || [], meta: { total, page, limit } };
     } catch (error) {
       logger.error('QueryBuilder.searchInvoices error', {
         errorMessage: error instanceof Error ? error.message : 'unknown error',
@@ -161,24 +253,25 @@ export class QueryBuilder {
     }
   }
 
-  static async searchSuppliers(q: any): Promise<QueryResult> {
+  static async searchSuppliers(q: SearchSuppliersParams): Promise<QueryResult<SupplierRow>> {
     const page = toInt(q.page, 1);
     const limit = toInt(q.limit, 10);
     const offset = (page - 1) * limit;
 
     const allowedOrder = new Set(['create_at','name','account_number']);
-    const orderBy = allowedOrder.has(q.order_by) ? q.order_by : 'create_at';
+    const orderByCandidate = String(q.order_by || '');
+    const orderBy = allowedOrder.has(orderByCandidate) ? orderByCandidate : 'create_at';
     const orderDir = normalizeOrder(q.order_direction);
 
     const conditions: string[] = [];
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     try {
       if (q.search) {
         const term = String(q.search).trim();
         const like = `%${term}%`;
         const orParts: string[] = [];
-        const orParams: any[] = [];
+        const orParams: unknown[] = [];
         // Placeholder: name, account, phone
         if (looksLikeAccount(term)) { orParts.push('s.account_number LIKE ?'); orParams.push(like); }
         if (isPhone(term)) { orParts.push('s.phone LIKE ?'); orParams.push(like); }
@@ -216,12 +309,12 @@ export class QueryBuilder {
       const count = `SELECT COUNT(DISTINCT s.id) AS cnt ${base}`;
 
       logger.info('QueryBuilder.searchSuppliers start', { filters: q, page, limit, orderBy, orderDir });
-      let rows: any = await database.execute(select, params);
+      let rows = await database.execute<SupplierRow[] | SupplierRow>(select, params);
       if (rows && !Array.isArray(rows)) rows = [rows];
-      const countRows: any = await database.execute(count, params);
-      const total = Array.isArray(countRows) ? (countRows[0]?.cnt || 0) : (countRows?.cnt || 0);
+      const countRows = await database.execute<CountRow[] | CountRow>(count, params);
+      const total = Array.isArray(countRows) ? (countRows[0]?.cnt || 0) : ((countRows as CountRow)?.cnt || 0);
 
-      return { rows: rows || [], meta: { total, page, limit } };
+      return { rows: (rows as SupplierRow[]) || [], meta: { total, page, limit } };
     } catch (error) {
       logger.error('QueryBuilder.searchSuppliers error', {
         errorMessage: error instanceof Error ? error.message : 'unknown error',
@@ -232,26 +325,27 @@ export class QueryBuilder {
     }
   }
 
-  static async searchRelational(q: any): Promise<QueryResult> {
+  static async searchRelational(q: SearchRelationalParams): Promise<QueryResult<RelationalGroupedRow | RelationalFlatRow>> {
     const page = toInt(q.page, 1);
     const limit = toInt(q.limit, 10);
     const offset = (page - 1) * limit;
 
     const allowedOrder = new Set(['total_amount','invoice_count','last_invoice_date','supplier_name','avg_amount','supplier_account']);
-    const orderBy = allowedOrder.has(q.order_by) ? q.order_by : 'total_amount';
+    const orderByCandidate = String(q.order_by || '');
+    const orderBy = allowedOrder.has(orderByCandidate) ? orderByCandidate : 'total_amount';
     const orderDir = normalizeOrder(q.order_direction);
 
     const groupBySupplier = String(q.group_by) === 'supplier' || String(q.group_by_supplier) === 'true';
 
     const conditions: string[] = [];
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     try {
       if (q.search) {
         const term = String(q.search).trim();
         const like = `%${term}%`;
         const orParts: string[] = [];
-        const orParams: any[] = [];
+        const orParams: unknown[] = [];
         // Placeholder: Fournisseur, montant, référence...
         if (isNumeric(term)) { orParts.push('CAST(i.amount AS DECIMAL(18,2)) = ?'); orParams.push(term.replace(',', '.')); }
         if (isInvoiceRef(term)) { orParts.push('i.num_invoice LIKE ?'); orParams.push(like); }
@@ -319,11 +413,11 @@ export class QueryBuilder {
         const count = `SELECT COUNT(DISTINCT s.id) AS cnt ${base}`;
 
         logger.info('QueryBuilder.searchRelational start (grouped)', { filters: q, page, limit, orderBy, orderDir });
-        let rows: any = await database.execute(select, params);
+        let rows = await database.execute<RelationalGroupedRow[] | RelationalGroupedRow>(select, params);
         if (rows && !Array.isArray(rows)) rows = [rows];
-        const countRows: any = await database.execute(count, params);
-        const total = Array.isArray(countRows) ? (countRows[0]?.cnt || 0) : (countRows?.cnt || 0);
-        return { rows: rows || [], meta: { total, page, limit } };
+        const countRows = await database.execute<CountRow[] | CountRow>(count, params);
+        const total = Array.isArray(countRows) ? (countRows[0]?.cnt || 0) : ((countRows as CountRow)?.cnt || 0);
+        return { rows: (rows as RelationalGroupedRow[]) || [], meta: { total, page, limit } };
       } else {
         const base = `FROM invoice i LEFT JOIN supplier s ON s.id = i.supplier_id ${where}`;
         const select = `SELECT 
@@ -339,11 +433,11 @@ export class QueryBuilder {
         const count = `SELECT COUNT(*) AS cnt ${base}`;
 
         logger.info('QueryBuilder.searchRelational start (flat)', { filters: q, page, limit, orderBy, orderDir });
-        let rows: any = await database.execute(select, params);
+        let rows = await database.execute<RelationalFlatRow[] | RelationalFlatRow>(select, params);
         if (rows && !Array.isArray(rows)) rows = [rows];
-        const countRows: any = await database.execute(count, params);
-        const total = Array.isArray(countRows) ? (countRows[0]?.cnt || 0) : (countRows?.cnt || 0);
-        return { rows: rows || [], meta: { total, page, limit } };
+        const countRows = await database.execute<CountRow[] | CountRow>(count, params);
+        const total = Array.isArray(countRows) ? (countRows[0]?.cnt || 0) : ((countRows as CountRow)?.cnt || 0);
+        return { rows: (rows as RelationalFlatRow[]) || [], meta: { total, page, limit } };
       }
     } catch (error) {
       logger.error('QueryBuilder.searchRelational error', {

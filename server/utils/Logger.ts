@@ -26,8 +26,6 @@ class Logger {
                 fs.mkdirSync(this.logDirectory, { recursive: true });
             }
         } catch (error) {
-            // As a last resort, print to console if we cannot create log dir
-            // eslint-disable-next-line no-console
             console.error('Impossible de créer le répertoire de logs:', error);
         }
     }
@@ -59,7 +57,6 @@ class Logger {
         try {
             fs.appendFileSync(this.getLogFilePath(), line + "\n", { encoding: 'utf8' });
         } catch (error) {
-            // eslint-disable-next-line no-console
             console.error('Erreur lors de l\'écriture du log dans le fichier:', error);
         }
     }
@@ -68,7 +65,6 @@ class Logger {
         const line = this.formatLine(level, message, meta);
         this.writeToFile(line);
         if (level === 'ERROR') {
-            // eslint-disable-next-line no-console
             console.error(line);
         }
     }

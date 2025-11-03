@@ -2,7 +2,7 @@ import  bcrypt from 'bcrypt';
 
 export interface PasswordHasher {
     hash(password: string): Promise<string>;
-    verify(password: string, hash: string): Promise<Boolean>;
+    verify(password: string, hash: string): Promise<boolean>;
 }
 
 export const BcryptHasher: PasswordHasher = {

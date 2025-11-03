@@ -1,31 +1,16 @@
 import database from "../config/database";
-import generateId, { EntityType } from "../services/GenerateId";
+import idGenerator, { EntityType } from "../core/generators/IdGenerator";
 import { isValidEmail, isValidPasswordStrength } from "../middleware/validator";
 import { BcryptHasher } from "../utils/PasswordHasher";
 import { generateUserToken } from "../services/userToken";
 import { GmailEmailSender } from "../services/emailService";
 import { NotificationFactory } from "../services/notificationFactory";
+import { getSetting } from "../helpers/settings";
 import logger from "../utils/Logger";
 import { auditLog } from "../utils/auditLogger";
+import { UserType, LoginCredentials, User, UserRole, DBError } from "../types";
+import { VerifyCredentialsResult } from "../types/responses/auth";
 
-export type UserType = {
-    firstName: string,
-    lastName: string,
-    email: string,
-    password: string,
-    employeeId: string,
-    role: UserRole,
-    phone: string,
-    department: string,
-}
-
-export type LoginType = {
-    email: string,
-    password: string,
-    role: string,
-}
-export type User = UserType & { id: string, create_at: string, update_at: string, isVerified: 0 | 1, isActive: 0 | 1 };
-export type UserRole = 'invoice_manager' | 'admin' | 'dfc_agent';
 
 export class UserModel {
     private id: string | null = null;
@@ -134,6 +119,7 @@ export class UserModel {
             this.role = role;
             this.phone = phone;
             this.department = department;
+            const fiscalYear = await getSetting('fiscal_year');
     
             if (!isValidEmail(this.email)) return { success: false, message: "Email invalide", field: "email" };
             if (!isValidPasswordStrength(password)) return { success: false, message: "Mot de passe trop faible", field: "password" };
@@ -172,13 +158,13 @@ export class UserModel {
                 }
             }
 
-            this.id = await generateId(this.entity);
+            this.id = await idGenerator.generateId(this.entity);
             this.hash = await BcryptHasher.hash(password);
     
             // 1️⃣ Insertion dans pending_verification
             await conn.execute(
-                "INSERT INTO pending_verification(id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department) VALUES(?,?,?,?,?,?,?,?,?)",
-                [this.id, this.firstName, this.lastName, this.email, this.hash, this.employeeId, this.role, this.phone, this.department]
+                "INSERT INTO pending_verification(id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department, fiscalYear) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                [this.id, this.firstName, this.lastName, this.email, this.hash, this.employeeId, this.role, this.phone, this.department, fiscalYear]
             );
     
             // 2️⃣ Envoi de l'email
@@ -191,8 +177,8 @@ export class UserModel {
     
             // 3️⃣ Transfert vers employee
             await conn.execute(`
-                INSERT INTO employee(id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department)
-                SELECT id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department
+                INSERT INTO employee(id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department, fiscalYear)
+                SELECT id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department, fiscalYear
                 FROM pending_verification WHERE id = ?
             `, [this.id]);
     
@@ -206,7 +192,7 @@ export class UserModel {
             logger.error("Erreur création utilisateur", { error });
             return { success: false, message: "Erreur interne. Veuillez réessayer plus tard." };
         } finally {
-            await conn.release();
+            conn.release();
         }
     }
     
@@ -215,7 +201,7 @@ export class UserModel {
     async findUser(target: string, findType: 'email' | 'id' = 'id'): Promise<User[]> {
         try {
             let query: string;
-            let params: any[];
+            let params: unknown[];
             
             if (findType === 'email') {
                 query = "SELECT * FROM employee WHERE email = ? LIMIT 1";
@@ -225,17 +211,11 @@ export class UserModel {
                 params = [target];
             }
             
-            const result = await database.execute(query, params);
-            let userRows = result[0] as any[];
+            const result = await database.execute<User[] | User>(query, params);
+            let userRows = (Array.isArray(result) ? result : (result ? [result] : [])) as User[];
             
             // ✅ GARANTIR que c'est toujours un tableau
-            if (!Array.isArray(userRows)) {
-                if (userRows && typeof userRows === 'object') {
-                    userRows = [userRows]; // Convertir l'objet en tableau
-                } else {
-                    userRows = [];
-                }
-            }
+            // userRows est déjà normalisé
             if (userRows.length > 0) {
                 await auditLog({
                     action: 'SELECT',
@@ -256,7 +236,7 @@ export class UserModel {
         }
     }
 
-    async verifyCredentials(data: LoginType): Promise<{id: string, email: string, role: UserRole} | null> {
+    async verifyCredentials(data: LoginCredentials): Promise<VerifyCredentialsResult> {
         try {
             // Validation basique
             if (!data.email || !data.password) {
@@ -342,9 +322,10 @@ export class UserModel {
             };
             
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            const errorCode = (error as any)?.code || (error as any)?.errno;
-            
+            const dbError = error as DBError;
+            const errorMessage = dbError.message || 'Unknown error';
+            const errorCode = dbError.code || dbError.errno;
+        
             console.log('🔧 ERREUR - Message:', errorMessage);
             console.log('🔧 ERREUR - Code:', errorCode);
             
@@ -358,7 +339,7 @@ export class UserModel {
                     code: errorCode
                 });
                 // Retourner un objet spécial pour indiquer une erreur de connexion
-                return { error: 'DATABASE_CONNECTION_ERROR' } as any;
+                return { error: 'DATABASE_CONNECTION_ERROR' };
             }
             
             logger.error("Erreur critique dans verifyCredentials", { 

@@ -1,6 +1,8 @@
-import InvoiceLastNumberValidator from "./InvoiceLastNumberValidator";
+import InvoiceLastNumberValidator from "../core/rules/InvoiceNumberRule";
 import { getSupplierId } from "../controllers/supplier.controller";
 import logger from "./Logger";
+import { CreateInvoiceDto, InvoiceNature, InvoiceType, FolioType } from "../types";
+import type { UserDto } from "../types/dto/UserDto";
 import { formatDate } from "./Formatters";
 import { normalizeAccountNumber, isValidAccountNumber, formatAccountCanonical } from "../../common/helpers/formatAccountNumber";
 
@@ -18,7 +20,7 @@ export interface InvoiceValidationInput {
   invoice_status: string;
   invoice_type: string;
   invoice_object?: string;
-  documents?: any;
+  documents?: string[];
 }
 
 export interface ValidationResult {
@@ -28,7 +30,7 @@ export interface ValidationResult {
     message: string;
     suggestion?: string;
   }>;
-  validatedData?: any;
+  validatedData?: CreateInvoiceDto;
 }
 
 export interface SupplierValidationResult {
@@ -41,7 +43,7 @@ class InvoiceDataValidator {
   
   async validateInvoiceData(
     data: InvoiceValidationInput, 
-    user: any
+    user: UserDto
   ): Promise<ValidationResult> {
     const errors: Array<{ field: string; message: string; suggestion?: string }> = [];
 
@@ -71,7 +73,10 @@ class InvoiceDataValidator {
     };
   }
 
-  private validateRequiredFields(data: InvoiceValidationInput, errors: Array<any>): void {
+  private validateRequiredFields(
+    data: InvoiceValidationInput,
+    errors: Array<{ field: string; message: string; suggestion?: string }>
+  ): void {
     const requiredFields = [
       { field: 'invoice_num', name: 'numéro de facture' },
       { field: 'num_cmdt', name: 'numéro CMDT' },
@@ -93,7 +98,10 @@ class InvoiceDataValidator {
     });
   }
 
-  private async validateFormats(data: InvoiceValidationInput, errors: Array<any>): Promise<void> {
+  private async validateFormats(
+    data: InvoiceValidationInput,
+    errors: Array<{ field: string; message: string; suggestion?: string }>
+  ): Promise<void> {
     // Validation du numéro de facture
     if (data.invoice_num) {
       const validationResult = await InvoiceLastNumberValidator.validateInvoiceNumberUniqueness(data.invoice_num);
@@ -141,7 +149,10 @@ class InvoiceDataValidator {
     }
   }
 
-  private validateBusinessLogic(data: InvoiceValidationInput, errors: Array<any>): void {
+  private validateBusinessLogic(
+    data: InvoiceValidationInput,
+    errors: Array<{ field: string; message: string; suggestion?: string }>
+  ): void {
     // Validation des enumérations
     const validEnums = {
       invoice_nature: ['Paiement', 'Acompte', 'Avoir'],
@@ -172,7 +183,7 @@ class InvoiceDataValidator {
             message: 'La date d\'arrivée de la facture ne peut pas être antérieure à la date réelle de la facture' 
           });
         }
-      } catch (error) {
+      } catch {
         errors.push({ 
           field: 'invoice_arrival_date', 
           message: 'Format de date invalide' 
@@ -183,8 +194,8 @@ class InvoiceDataValidator {
 
   private async validateSupplier(
     data: InvoiceValidationInput, 
-    user: any, 
-    errors: Array<any>
+    user: UserDto, 
+    errors: Array<{ field: string; message: string; suggestion?: string }>
   ): Promise<SupplierValidationResult> {
     try {
       const supplierResult = await getSupplierId({ 
@@ -221,20 +232,20 @@ class InvoiceDataValidator {
   private prepareValidatedData(
     data: InvoiceValidationInput, 
     supplierId: number, 
-    user: any
-  ) {
+    user: UserDto
+  ): CreateInvoiceDto {
     return {
       num_cmdt: data.num_cmdt,
-      invoice_num: data.invoice_num,
-      invoice_object: data.invoice_object,
-      invoice_nature: data.invoice_nature,
+      invoice_num: String(data.invoice_num),
+      invoice_object: data.invoice_object ?? '',
+      invoice_nature: data.invoice_nature as InvoiceNature,
       invoice_arrival_date: data.invoice_arrival_date,
       invoice_date: data.invoice_date,
-      invoice_type: data.invoice_type,
-      folio: data.folio,
-      invoice_amount: data.invoice_amount,
-      status: data.invoice_status || 'Non',
-      documents: data.documents,
+      invoice_type: data.invoice_type as InvoiceType,
+      folio: data.folio as FolioType,
+      invoice_amount: String(data.invoice_amount),
+      status: (data.invoice_status === 'Oui' ? 'Oui' : 'Non'),
+      documents: data.documents || [],
       supplier_id: supplierId,
       created_by: user.sup,
       created_by_email: user.email,

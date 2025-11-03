@@ -63,7 +63,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 // Gestion des erreurs globaux
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error, req: Request, res: Response) => {
     logger.error('Erreur non gérée', { error: err.message, stack: err.stack});
     ApiResponder.error(res, err);
 });

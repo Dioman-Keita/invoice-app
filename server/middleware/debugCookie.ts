@@ -1,4 +1,3 @@
-// middleware/debugCookies.ts
 import type { Response, Request, NextFunction } from 'express';
 import logger from '../utils/Logger';
 

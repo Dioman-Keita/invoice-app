@@ -14,10 +14,26 @@ const allowedDocument = [
 ] as const;
 
 export const supplierNameRegex = /^[\p{L}\d\s\-'&]+$/u;
-const twelveDigitCode = z
-    .string()
+// Version moderne avec pipe()
+const numCmdtSchema = z.string()
     .min(1, "Champ requis")
-    .regex(/^\d{12}$/, "Doit contenir exactement 12 chiffres (ex. 000000000001)");
+    .pipe(
+        z.string().regex(/^\d+$/, "Doit contenir uniquement des chiffres")
+    )
+    .pipe(
+        z.string().refine((value) => {
+            const num = parseInt(value, 10);
+            if (isNaN(num)) return false;
+
+            if (num <= 999) {
+                return /^\d{4}$/.test(value) && value === num.toString().padStart(4, '0');
+            }
+
+            return /^\d{1,12}$/.test(value) && num <= 999999999999;
+        }, {
+            message: "Format invalide. Pour 0001-0999: 4 chiffres (ex. 0001). Pour 1000+: 1-12 chiffres (max 999 999 999 999)"
+        })
+    );
 
 // ----------------------
 // Schéma principal
@@ -27,7 +43,7 @@ export const invoiceSchema = z.object({
         .string()
         .min(1, "Champ requis")
         .regex(/^\d{1,12}$/, "Doit contenir 1 à 12 chiffres"),
-    num_cmdt: twelveDigitCode,
+    num_cmdt: numCmdtSchema,
     invoice_date: z
         .string()
         .min(1, "La date réelle de la facture est requie")

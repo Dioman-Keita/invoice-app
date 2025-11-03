@@ -1,5 +1,5 @@
 import express from "express";
-import { isValidEmail, isValidPassword } from "../middleware/validator";
+import { isValidEmail } from "../middleware/validator";
 import { createUser, login, getCurrentToken, forgotPassword, logout, resetUserPassword, verifyRegistrationToken, getUserProfil, silentRefresh } from "../controllers/user.controller";
 import authGuard from "../middleware/authGuard";
 import { requireAdmin } from "../middleware/roleGuard";

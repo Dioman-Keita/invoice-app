@@ -10,7 +10,7 @@ import {
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
-function JoinDFC() {
+function JoinDfc() {
   useTitle('CMDT - Devenir agent DFC');
   useBackground('bg-joinDFC');
   const [formData, setFormData] = useState({
@@ -413,4 +413,4 @@ function JoinDFC() {
   );
 }
 
-export default JoinDFC;
+export default JoinDfc;

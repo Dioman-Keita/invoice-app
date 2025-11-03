@@ -1,35 +1,25 @@
 import ApiResponder from "../utils/ApiResponder";
 import database from "../config/database";
-import Invoice, { InvoiceRecordType, UpdateInvoiceData } from "../models/Invoice";
-import InvoiceLastNumberValidator from "../utils/InvoiceLastNumberValidator";
-import InvoiceValidatorData from "../utils/InvoiceValidatorData";
+import InvoiceLastNumberValidator from "../core/rules/InvoiceNumberRule";
+import InvoiceValidatorData from "../utils/InvoiceRuleInput";
+import Invoice from "../models/Invoice";
 import type { Response, Request } from 'express';
 import logger from "../utils/Logger";
 import { canAccessInvoice } from "../middleware/roleGuard";
-import { getSetting } from '../utils/InvoiceLastNumberValidator'
+import { getSetting } from "../helpers/settings";
 import { ActivityTracker } from "../utils/ActivityTracker";
-
-type SearchInvoiceQueryParams = {
-    supplier_id?: string;
-    account_number?: string;
-    phone?: string;
-    status?: string;
-    created_by?: string;
-    limit?: string;
-    orderBy?: 'desc' | 'asc';
-    search?: string;
-    fiscal_year?: string;
-};
+import { InvoiceInputDto, InvoiceRecord, UpdateInvoiceDto, SearchInvoiceQueryParams } from "../types";
+import { AuthenticatedRequest } from "../types/express/request";
 
 export async function createInvoice(
-  req: Request<unknown, unknown, any>,
+  req: Request<unknown, unknown, InvoiceInputDto>,
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
   
   try {
     // Récupérer l'utilisateur connecté depuis req.user
-    const user = (req as any).user;
+    const user = (req as AuthenticatedRequest).user;
     
     if (!user) {
       logger.warn(`[${requestId}] Tentative de création de facture sans utilisateur authentifié`);
@@ -72,9 +62,6 @@ export async function createInvoice(
       return ApiResponder.error(res, result.data);
     }
 
-    // Mettre à jour le compteur CMDT
-    await InvoiceLastNumberValidator.updateCmdtCounter(data.num_cmdt);
-
     logger.info(`[${requestId}] Facture créée avec succès 🎯`, {
       userId: user.sup, 
       email: user.email,
@@ -114,7 +101,7 @@ export async function getInvoice(
   const requestId = req.headers['x-request-id'] || 'unknown';
   
   try {
-    const user = (req as any).user;
+    const user = (req as AuthenticatedRequest).user;
     
     if (!user) {
       logger.warn(`[${requestId}] Tentative d'accès à une facture sans utilisateur authentifié`);
@@ -174,7 +161,7 @@ export async function getUserInvoices(
   const requestId = req.headers['x-request-id'] || 'unknown';
   
   try {
-    const user = (req as any).user;
+    const user = (req as AuthenticatedRequest).user;
     
     if (!user) {
       logger.warn(`[${requestId}] Tentative de récupération des factures sans utilisateur authentifié`);
@@ -183,7 +170,7 @@ export async function getUserInvoices(
 
     const { supplier_id, account_number, phone, status, created_by, limit, orderBy, search, fiscal_year } = req.query;
 
-    let invoices: InvoiceRecordType[] = [];
+    let invoices: InvoiceRecord[] = [];
 
     // Si c'est un admin, on peut chercher par différents critères
     if (user.role === 'admin') {
@@ -257,7 +244,7 @@ export async function searchInvoices(
   const requestId = req.headers['x-request-id'] || 'unknown';
   
   try {
-    const user = (req as any).user;
+    const user = (req as AuthenticatedRequest).user;
     
     if (!user) {
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
@@ -275,7 +262,7 @@ export async function searchInvoices(
       return ApiResponder.forbidden(res, 'Permissions insuffisantes pour cette recherche');
     }
 
-    let invoices: InvoiceRecordType[] = [];
+    let invoices: InvoiceRecord[] = [];
     let searchType = '';
 
     if (supplier_id) {
@@ -334,13 +321,13 @@ export async function searchInvoices(
 }
 
 export async function updateInvoice(
-  req: Request<{ id: string }, unknown, Partial<UpdateInvoiceData>>,
+  req: Request<{ id: string }, unknown, Partial<UpdateInvoiceDto>>,
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
   
   try {
-    const user = (req as any).user;
+    const user = (req as AuthenticatedRequest).user;
     
     if (!user) {
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
@@ -370,12 +357,21 @@ export async function updateInvoice(
       return ApiResponder.forbidden(res, 'Accès refusé à cette facture');
     }
 
-    // Préparer les données de mise à jour
-    const updateInvoiceData = {
-      ...existingInvoice,
-      ...updateData,
+    // Préparer les données de mise à jour (mapper correctement les champs requis)
+    const updateInvoiceData: UpdateInvoiceDto = {
       id: existingInvoice.id,
-      created_by: existingInvoice.created_by, // Garder le créateur original
+      invoice_num: updateData.invoice_num ?? existingInvoice.num_invoice,
+      invoice_object: updateData.invoice_object ?? existingInvoice.invoice_object,
+      supplier_id: Number(updateData.supplier_id ?? existingInvoice.supplier_id),
+      invoice_nature: updateData.invoice_nature ?? existingInvoice.invoice_nature,
+      invoice_arrival_date: updateData.invoice_arrival_date ?? existingInvoice.invoice_arr_date,
+      invoice_date: updateData.invoice_date ?? existingInvoice.invoice_date,
+      invoice_type: updateData.invoice_type ?? existingInvoice.invoice_type,
+      folio: updateData.folio ?? existingInvoice.folio,
+      invoice_amount: updateData.invoice_amount ?? existingInvoice.amount,
+      status: updateData.status ?? existingInvoice.status,
+      documents: updateData.documents ?? [],
+      created_by: existingInvoice.created_by,
       created_by_email: existingInvoice.created_by_email,
       created_by_role: existingInvoice.created_by_role
     };
@@ -411,7 +407,7 @@ export async function deleteInvoice(
   const requestId = req.headers['x-request-id'] || 'unknown';
   
   try {
-    const user = (req as any).user;
+    const user = (req as AuthenticatedRequest).user;
     
     if (!user) {
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
@@ -478,7 +474,7 @@ async function searchInvoicesByCreator(
   limit?: number,
   orderBy: 'desc' | 'asc' = 'desc',
   fiscalYear?: string
-): Promise<InvoiceRecordType[]> {
+): Promise<InvoiceRecord[]> {
   try {
     const query = `
       SELECT * FROM invoice 
@@ -487,7 +483,7 @@ async function searchInvoicesByCreator(
       ${limit ? `LIMIT ${limit}` : ''}
     `;
     const params = fiscalYear ? [createdBy, fiscalYear] : [createdBy];
-    const result = await (Invoice as any).database.execute(query, params);
+    const result = await database.execute<InvoiceRecord[] | InvoiceRecord>(query, params);
     
     if (result && !Array.isArray(result)) {
       return [result];
@@ -510,7 +506,7 @@ async function globalSearchInvoices(
   limit?: number,
   orderBy: 'desc' | 'asc' = 'desc',
   fiscalYear?: string
-): Promise<InvoiceRecordType[]> {
+): Promise<InvoiceRecord[]> {
   try {
     const query = `
       SELECT i.* FROM invoice i
@@ -531,7 +527,7 @@ async function globalSearchInvoices(
     ];
     const finalParams = fiscalYear ? [...params, fiscalYear] : params;
     
-    const result = await (Invoice as any).database.execute(query, finalParams);
+    const result = await database.execute<InvoiceRecord[] | InvoiceRecord>(query, finalParams);
     
     if (result && !Array.isArray(result)) {
       return [result];
@@ -546,11 +542,11 @@ async function globalSearchInvoices(
   }
 }
 
-export async function getLastInvoiceNumber(req: Request, res: Response): Promise<Response> {
+export async function getLastInvoiceNumber(req: AuthenticatedRequest, res: Response): Promise<Response> {
   const requestId = req.headers['x-request-id'];
   
   try {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user || !user.sup) {
       logger.warn(`[${requestId}] Tentative d'accès aux ressources par un utilisateur non authentifié`);
       return ApiResponder.unauthorized(res, 'Accès interdit');
@@ -587,11 +583,11 @@ export async function getLastInvoiceNumber(req: Request, res: Response): Promise
   }
 }
 
-export async function getNextInvoiceNumber(req: Request, res: Response): Promise<Response> {
+export async function getNextInvoiceNumber(req: AuthenticatedRequest, res: Response): Promise<Response> {
   const requestId = req.headers['x-request-id'];
   
   try {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user || !user.sup) {
       logger.warn(`[${requestId}] Tentative d'accès aux ressources par un utilisateur non authentifié`);
       return ApiResponder.unauthorized(res, 'Accès interdit');
@@ -637,7 +633,7 @@ export async function getDfcPendingInvoices(
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
   try {
-    const user = (req as any).user;
+    const user = (req as AuthenticatedRequest).user;
     if (!user) {
       logger.warn(`[${requestId}] Tentative d'accès aux factures DFC sans utilisateur authentifié`);
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
@@ -670,7 +666,7 @@ export async function approveDfcInvoice(
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
   try {
-    const user = (req as any).user;
+    const user = (req as AuthenticatedRequest).user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     const { id } = req.params;
     if (!id) return ApiResponder.badRequest(res, 'ID de la facture requis');
@@ -681,8 +677,8 @@ export async function approveDfcInvoice(
     }
 
     const fiscalYear = await getSetting('fiscal_year');
-    const body: any = (req as any).body || {};
-    await (database as any).execute(
+    const body = (req as AuthenticatedRequest).body || {};
+    await database.execute(
       "INSERT INTO dfc_decision(invoice_id, decision, comment, decided_by, fiscal_year) VALUES (?,?,?,?,?)",
       [id, 'approved', body.comments || null, user.sup, fiscalYear]
     );
@@ -704,7 +700,7 @@ export async function rejectDfcInvoice(
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
   try {
-    const user = (req as any).user;
+    const user = (req as AuthenticatedRequest).user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     const { id } = req.params;
     if (!id) return ApiResponder.badRequest(res, 'ID de la facture requis');
@@ -715,8 +711,8 @@ export async function rejectDfcInvoice(
     }
 
     const fiscalYear = await getSetting('fiscal_year');
-    const body: any = (req as any).body || {};
-    await (database as any).execute(
+    const body = req.body || {};
+    await database.execute(
       "INSERT INTO dfc_decision(invoice_id, decision, comment, decided_by, fiscal_year) VALUES (?,?,?,?,?)",
       [id, 'rejected', body.comments || null, user.sup, fiscalYear]
     );

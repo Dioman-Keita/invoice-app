@@ -9,7 +9,7 @@ import Search from "../pages/global/Search.jsx";
 import Stats from "../pages/admin/Stats.jsx";
 import Print from "../pages/global/Print.jsx";
 import Settings from "../pages/admin/Settings.jsx";
-import JoinDFC from "../pages/global/JoinDFC.jsx";
+import JoinDfc from "../pages/global/JoinDfc.jsx";
 import DfcFormular from "../pages/agent/dfc/DfcFormular.jsx";
 import Verify from "../pages/global/Verify.jsx";
 import ResetPassword from "../pages/auth/ResetPassword.jsx";
@@ -93,7 +93,7 @@ function AppRoutes() {
                 <PrivateRoute
                     requiredRoles={['admin', 'invoice_manager']}
                     customMessage="Accès réservé aux gestionnaires de facturation et administrateurs système"
-                ><JoinDFC /></PrivateRoute>
+                ><JoinDfc /></PrivateRoute>
             } />
 
 

@@ -1,4 +1,3 @@
-// context/NotificationContext.jsx
 import { useState } from 'react';
 import { NotificationContext } from './NotificationContext';
 

@@ -243,21 +243,21 @@ function Export() {
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-3">Données à inclure</label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {exportOptions.map(({ id, label, Icon }) => (
-                  <label key={id} className="flex items-center p-4 rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-colors duration-200 cursor-pointer">
+                {exportOptions.map((opt) => (
+                  <label key={opt.id} className="flex items-center p-4 rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-colors duration-200 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={exportSettings.include.includes(id)}
+                      checked={exportSettings.include.includes(opt.id)}
                       onChange={(e) => {
                         const newInclude = e.target.checked
-                          ? [...exportSettings.include, id]
-                          : exportSettings.include.filter(item => item !== id);
+                          ? [...exportSettings.include, opt.id]
+                          : exportSettings.include.filter(item => item !== opt.id);
                         setExportSettings({...exportSettings, include: newInclude});
                       }}
                       className="rounded border-gray-300 text-green-600 focus:ring-green-500"
                     />
-                    <Icon className="w-5 h-5 ml-3 mr-2 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-700">{label}</span>
+                    <opt.Icon className="w-5 h-5 ml-3 mr-2 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-700">{opt.label}</span>
                   </label>
                 ))}
               </div>

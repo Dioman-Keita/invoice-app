@@ -1,5 +1,5 @@
 // ----------------------
-// Helpers pour le numéro de compte
+// Helpers for account number validation
 // ----------------------
 export function normalizeAccountNumber(input: string): string {
     return input.replace(/[\s\-_]+/g, '').toUpperCase().trim();

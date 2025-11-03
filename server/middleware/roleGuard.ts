@@ -1,18 +1,20 @@
 import type { Response, Request, NextFunction } from 'express';
 import ApiResponder from '../utils/ApiResponder';
 import logger from '../utils/Logger';
+import { AuthenticatedRequest } from '../types/express/request';
+import { UserDto } from '../types/dto/UserDto';
 
 // Types de rôles autorisés
 type AllowedRole = 'admin' | 'invoice_manager' | 'dfc_agent';
 
 // Fonction pour créer un middleware de vérification de rôle
 export function requireRole(allowedRoles: AllowedRole[]) {
-    return (req: Request, res: Response, next: NextFunction) => {
+    return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
         const requestId = req.headers['x-request-id'] || 'unknown';
         
         try {
             // Récupérer l'utilisateur depuis req.user (peuplé par authGuard)
-            const user = (req as any).user;
+            const user = req.user;
             
             if (!user) {
                 logger.warn(`[${requestId}] Tentative d'accès sans utilisateur authentifié`);
@@ -51,20 +53,20 @@ export const requireAgentOrManager = requireRole(['dfc_agent', 'invoice_manager'
 export const requireAnyRole = requireRole(['admin', 'invoice_manager', 'dfc_agent']);
 
 // Fonction utilitaire pour vérifier les permissions dans les contrôleurs
-export function hasRole(user: any, allowedRoles: AllowedRole[]): boolean {
+export function hasRole(user: UserDto, allowedRoles: AllowedRole[]): boolean {
     return user && allowedRoles.includes(user.role as AllowedRole);
 }
 
 // Fonctions utilitaires spécifiques
-export function isAdmin(user: any): boolean {
+export function isAdmin(user: UserDto): boolean {
     return hasRole(user, ['admin']);
 }
 
-export function isManagerOrAdmin(user: any): boolean {
+export function isManagerOrAdmin(user: UserDto): boolean {
     return hasRole(user, ['admin', 'invoice_manager']);
 }
 
-export function canAccessInvoice(user: any, invoiceOwnerId: string): boolean {
+export function canAccessInvoice(user: UserDto, invoiceOwnerId: string): boolean {
     return isAdmin(user) || user.sup === invoiceOwnerId;
 }
 

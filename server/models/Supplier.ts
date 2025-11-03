@@ -2,45 +2,20 @@ import database from "../config/database";
 import logger from "../utils/Logger";
 import { auditLog } from "../utils/auditLogger";
 import { normalizeAccountNumber, isValidAccountNumber, formatAccountCanonical } from "../../common/helpers/formatAccountNumber";
+import { getSetting } from "../helpers/settings";
+import { SupplierRecord, CreateSupplierInput, UpdateSupplierData, SupplierConflictResult, SupplierSearchParams } from "../types";
+import {  ResultSetHeader } from 'mysql2';
 
-
-export type CreateSupplierInput = {
-    supplier_name: string;
-    supplier_account_number: string;
-    supplier_phone: string;
-    created_by?: string;
-    created_by_email?: string;
-    created_by_role?: string;
-}
-
-export type SupplierRecord = {
-    id: number;
-    name: string;
-    account_number: string;
-    phone: string;
-    create_at: string;
-    update_at: string;
-}
-
-export type UpdateSupplierData = Omit<SupplierRecord, 'create_at' | 'update_at'>;
 
 export interface SupplierModel {
     create(supplierData: CreateSupplierInput): Promise<{success: boolean; data?: unknown; id?: number}>;
-    findSupplier(id: number | string, config: {
-        findBy: 'id' | 'account_number' | 'phone' | 'all';
-        limit?: number;
-        orderBy?: 'desc' | 'asc';
-    }): Promise<SupplierRecord[]>;
+    findSupplier(id: number | string, config: SupplierSearchParams): Promise<SupplierRecord[]>;
     findExactSupplier(
         accountNumber: string, 
         phone: string, 
         name: string
     ): Promise<SupplierRecord[]>;
-    findSupplierConflicts(accountNumber: string, phone: string): Promise<{
-        hasAccountConflict: boolean;
-        hasPhoneConflict: boolean;
-        conflictingSuppliers: SupplierRecord[];
-    }>;
+    findSupplierConflicts(accountNumber: string, phone: string): Promise<SupplierConflictResult>;
     deleteSupplier(id: number): Promise<{success: boolean}>;
     updateSupplier(data: UpdateSupplierData): Promise<{success: boolean}>;
     searchSuppliersByName(name: string, limit: number): Promise<SupplierRecord[]>; 
@@ -56,21 +31,23 @@ class Supplier implements SupplierModel {
     async create(supplierData: CreateSupplierInput): Promise<{success: boolean; data?: unknown; id?: number}> {
 
         try {
-            const { supplier_name, supplier_account_number, supplier_phone } = supplierData;
+            const { supplier_name, supplier_account_number, supplier_phone, created_by, created_by_role, created_by_email } = supplierData;
             
             // Validation du numéro de compte
             if (!isValidAccountNumber(normalizeAccountNumber(supplier_account_number))) {
                 throw new Error('Le numéro de compte doit contenir exactement 12 chiffres');
             }
 
-            const query = "INSERT INTO supplier(name, account_number, phone) VALUES (?, ?, ?)";
-            const params = [supplier_name, supplier_account_number, supplier_phone];
+            const fiscalYear = await getSetting('fiscal_year');
+
+            const query = "INSERT INTO supplier(name, account_number, phone, fiscal_year, created_by, created_by_role, created_email) VALUES (?,?,?)";
+            const params = [supplier_name, formatAccountCanonical(supplier_account_number), supplier_phone, fiscalYear, created_by, created_by_role, created_by_email];
 
             const connection = await database.getConnection();
-            const result = await connection.execute(query, params);
+            const result = await connection.execute<ResultSetHeader>(query, params);
 
             // Récupérer l'ID auto-généré (selon l'implémentation de votre base de données)
-            const generatedId = (result[0] as any).insertId
+            const generatedId = result[0].insertId
 
             if (!generatedId || generatedId === 0) {
                 throw new Error('Aucun ID généré lors de la création du fournisseur');
@@ -120,7 +97,7 @@ class Supplier implements SupplierModel {
     } = { findBy: 'id', orderBy: 'asc' }): Promise<SupplierRecord[]> {
         try {
             let query = "";
-            let params: any[] = [];
+            let params: unknown[] = [];
             const validOrderBy = config.orderBy === 'asc' ? 'asc' : 'desc';
 
             switch (config.findBy) {
@@ -156,7 +133,7 @@ class Supplier implements SupplierModel {
                     throw new Error('Type de recherche non supporté');
             }
 
-            const rows = await database.execute(query, params);
+            const rows = await database.execute<SupplierRecord[] | SupplierRecord>(query, params);
 
             // Normaliser le résultat en tableau
             const result = Array.isArray(rows) ? rows : (rows ? [rows] : []);
@@ -200,7 +177,7 @@ class Supplier implements SupplierModel {
                 LIMIT 1
             `;
             const params = [accountNumber, phone, name];
-            const rows = await database.execute(query, params);
+            const rows = await database.execute<SupplierRecord[] | SupplierRecord>(query, params);
 
             return Array.isArray(rows) ? rows : (rows ? [rows] : []);
         } catch (error) {
@@ -247,7 +224,7 @@ async findSupplierConflicts(accountNumber: string, phone: string): Promise<{
         // Joindre les conditions avec OR
         query += conditions.join(' OR ');
 
-        const rows = await database.execute(query, params);
+        const rows = await database.execute<SupplierRecord[] | SupplierRecord>(query, params);
         const suppliers = Array.isArray(rows) ? rows : (rows ? [rows] : []);
 
         // Vérifier les conflits seulement pour les paramètres fournis
@@ -401,7 +378,7 @@ async findSupplierConflicts(accountNumber: string, phone: string): Promise<{
                 `%${safeName}%`
             ];
 
-            const rows = await database.execute(query, params);
+            const rows = await database.execute<SupplierRecord[] | SupplierRecord>(query, params);
             return Array.isArray(rows) ? rows : (rows ? [rows] : []);
         } catch (error) {
             logger.error('Erreur lors de la recherche de fournisseurs par nom', {
@@ -420,7 +397,7 @@ async findSupplierConflicts(accountNumber: string, phone: string): Promise<{
     }): Promise<SupplierRecord | null> {
         try {
             const conditions: string[] = [];
-            const params: any[] = [];
+            const params: unknown[] = [];
 
             if (filters.name) {
                 conditions.push('name = ?');
@@ -439,7 +416,7 @@ async findSupplierConflicts(accountNumber: string, phone: string): Promise<{
             }
 
             const query = `SELECT * FROM supplier WHERE ${conditions.join(' OR ')} LIMIT 1`;
-            const rows = await database.execute(query, params);
+            const rows = await database.execute<SupplierRecord[] | SupplierRecord>(query, params);
 
             const result = Array.isArray(rows) ? rows : (rows ? [rows] : []);
             return result.length > 0 ? result[0] : null;

@@ -47,7 +47,7 @@ class Database {
         }
     }
 
-    async execute<T = any>(query: string, params: unknown[] = []): Promise<T> {
+    async execute<T = unknown>(query: string, params: unknown[] = []): Promise<T> {
         let connection: PoolConnection | null = null;
         try {
             connection = await this.getConnection();

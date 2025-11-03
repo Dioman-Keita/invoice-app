@@ -2,8 +2,9 @@ import ApiResponder from "../utils/ApiResponder";
 import type { Response, Request, NextFunction } from 'express';
 import { verifyUserToken } from "../services/userToken";
 import logger from "../utils/Logger";
+import { AuthenticatedRequest } from "../types/express/request";
 
-export default function authGuard(req: Request, res: Response, next: NextFunction) {
+export default function authGuard(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     const requestId = req.headers['x-request-id'] || 'unknow';
     console.log('🔐 authGuard - Cookies received:', req.cookies);
     
@@ -28,12 +29,12 @@ export default function authGuard(req: Request, res: Response, next: NextFunctio
         const payload = verifyUserToken(accessToken);
         console.log('✅ authGuard - Token valid, payload:', payload);
         
-        (req as any).user = payload;
+        req.user = payload;
         logger.info(`[${requestId}] Token valide et utilisateur auhtentifié`, {email: payload.email});
         next();
     } catch (error) {
         console.log('❌ authGuard - Token invalid:', error);
-        (req as any).user = null;
+        req.user = undefined;
         logger.error(`[${requestId}] Une erreur est survenue lors de la verification du token`, {
             errorMessage: error instanceof Error ? error.message : 'unknown error',
             stack: error instanceof Error ? error.stack : 'unknown stack of error',

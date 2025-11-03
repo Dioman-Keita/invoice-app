@@ -33,8 +33,8 @@ class UserDataValidator {
     all: ['Finance', 'Comptabilité', 'Contrôle de gestion', 'Audit interne', 'Facturation', 'Comptabilité Client', 'Gestion des factures']
   };
 
-  // Rôles autorisés
-  private readonly validRoles = ['invoice_manager', 'dfc_agent', 'admin'];
+  // Rôles autorisés à l'inscription (admin exclu)
+  private readonly validRoles = ['invoice_manager', 'dfc_agent'];
 
   async validateUserCreation(data: UserValidationInput): Promise<ValidationResult> {
     const errors: Array<{ field: string; message: string }> = [];
@@ -75,7 +75,10 @@ class UserDataValidator {
     };
   }
 
-  private validateRequiredFields(data: UserValidationInput, errors: Array<any>): void {
+  private validateRequiredFields(
+    data: UserValidationInput,
+    errors: Array<{ field: string; message: string }>
+  ): void {
     const requiredFields = [
       { field: 'firstName', name: 'prénom' },
       { field: 'lastName', name: 'nom' },
@@ -94,7 +97,10 @@ class UserDataValidator {
     });
   }
 
-  private validateFormats(data: UserValidationInput, errors: Array<any>): void {
+  private validateFormats(
+    data: UserValidationInput,
+    errors: Array<{ field: string; message: string }>
+  ): void {
     // Validation prénom
     if (data.firstName && !/^[A-Za-zÀ-ÖØ-öø-ÿ \-']+$/.test(data.firstName)) {
       errors.push({ field: 'firstName', message: 'Le format du prénom est invalide' });
@@ -126,7 +132,10 @@ class UserDataValidator {
     }
   }
 
-  private validateBusinessLogic(data: UserValidationInput, errors: Array<any>): void {
+  private validateBusinessLogic(
+    data: UserValidationInput,
+    errors: Array<{ field: string; message: string }>
+  ): void {
     // Validation rôle
     if (data.role && !this.validRoles.includes(data.role)) {
       errors.push({ 

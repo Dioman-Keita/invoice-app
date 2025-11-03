@@ -2,12 +2,14 @@ import type { Request, Response } from 'express';
 import ApiResponder from '../utils/ApiResponder';
 import logger from '../utils/Logger';
 import database from '../config/database';
-import InvoiceLastNumberValidator, { getSetting } from '../utils/InvoiceLastNumberValidator';
+import InvoiceLastNumberValidator from '../core/rules/InvoiceNumberRule';
+import { getSetting} from "../helpers/settings";
+import { AuthenticatedRequest } from '../types/express/request';
 
-export async function getFiscalSettingsInfo(req: Request, res: Response): Promise<Response> {
+export async function getFiscalSettingsInfo(req: AuthenticatedRequest, res: Response): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
   try {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
 
     // Lecture des paramètres
@@ -49,10 +51,10 @@ export async function getFiscalSettingsInfo(req: Request, res: Response): Promis
   }
 }
 
-export async function setAutoYearSwitch(req: Request, res: Response): Promise<Response> {
+export async function setAutoYearSwitch(req: AuthenticatedRequest, res: Response): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
   try {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
 
     const { enable } = req.body as { enable?: boolean };
@@ -102,10 +104,10 @@ export async function setAutoYearSwitch(req: Request, res: Response): Promise<Re
   }
 }
 
-export async function manualFiscalYearSwitch(req: Request, res: Response): Promise<Response> {
+export async function manualFiscalYearSwitch(req: AuthenticatedRequest, res: Response): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
   try {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
 
     const { newYear } = req.body as { newYear?: string };

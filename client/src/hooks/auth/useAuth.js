@@ -14,7 +14,7 @@ export function useAuth() {
         rememberMe: false
     });
     
-    const { success, error } = useToastFeedback();
+    const { success } = useToastFeedback();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -108,7 +108,7 @@ export function useAuth() {
                 }));
             } else {
                 // Autres erreurs - log seulement en mode développement
-                if (process.env.NODE_ENV === 'development') {
+                if (import.meta.env.MODE === 'development') {
                     console.error('🔐 Auth status error:', error);
                 }
                 setAuthState(prev => ({
@@ -126,7 +126,7 @@ export function useAuth() {
         } finally {
             isCheckingRef.current = false;
         }
-    }, [authState.isAuthenticated]);
+    }, [authState.isAuthenticated, MIN_CHECK_INTERVAL]);
 
     // Renouvellement silencieux intelligent
     const silentRefresh = useCallback(async () => {
@@ -157,7 +157,7 @@ export function useAuth() {
                     expiresIn: null,
                     rememberMe: false
                 }));
-            } else if (process.env.NODE_ENV === 'development') {
+            } else if (import.meta.env.MODE === 'development') {
                 // Log seulement en mode développement pour les autres erreurs
                 console.error('🔐 Silent refresh error:', err);
             }
@@ -182,7 +182,7 @@ export function useAuth() {
 
             console.log('🔐 Surveillance intelligente démarrée');
         }
-    }, [authState.isAuthenticated, checkAuthStatus]);
+    }, [authState.isAuthenticated, checkAuthStatus, CHECK_INTERVAL]);
 
     // Arrêt de la surveillance
     const stopPeriodicCheck = useCallback(() => {
@@ -323,7 +323,7 @@ export function useAuth() {
                 message 
             };
         }
-    }, [success, error, checkAuthStatus]);
+    }, [checkAuthStatus]);
 
     // Login amélioré avec gestion rememberMe
     const login = useCallback(async (credentials) => {
@@ -518,6 +518,7 @@ export function useAuth() {
         resetPassword,
         startPeriodicCheck,
         stopPeriodicCheck,
-        silentRefresh
+        silentRefresh,
+        REFRESH_THRESHOLD
     ]);
 }

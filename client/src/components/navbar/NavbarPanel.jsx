@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// Import des icônes Heroicons
 import {
   DocumentArrowDownIcon,
   ChartBarIcon,
@@ -26,6 +25,7 @@ function NavbarPanel({ isOpen, onClose }) {
       const raw = localStorage.getItem('cmdt:favorites');
       return raw ? JSON.parse(raw) : [];
     } catch (e) {
+      console.log(e);
       return [];
     }
   });
@@ -72,7 +72,7 @@ function NavbarPanel({ isOpen, onClose }) {
   `;
 
   // Menu de base pour les utilisateurs non connectés
-  const baseMenuItems = [
+  const baseMenuItems = useMemo(() => ([
     { label: 'Exporter en PDF', icon: <DocumentArrowDownIcon className="w-6 h-6" />, action: 'export' },
     { label: 'Statistiques', icon: <ChartBarIcon className="w-6 h-6" />, action: 'stats' },
     { label: 'Nouvelle facture', icon: <DocumentPlusIcon className="w-6 h-6" />, action: 'newInvoice' },
@@ -83,18 +83,17 @@ function NavbarPanel({ isOpen, onClose }) {
     { label: 'Accueil', icon: <HomeIcon className="w-6 h-6" />, action: 'home' },
     { label: 'Mon Profil', icon: <UserIcon className="w-6 h-6" />, action: 'profile' },
     { label: 'Aide & Support', icon: <QuestionMarkCircleIcon className="w-6 h-6" />, action: 'help' }
-
-  ];
+  ]), []);
 
   // Menu admin uniquement
-  const adminMenuItems = [
+  const adminMenuItems = useMemo(() => ([
     { label: 'Tableau de bord', icon: <ChartBarIcon className="w-6 h-6" />, action: 'dashboard' },
     { label: 'Gestion des utilisateurs', icon: <UserGroupIcon className="w-6 h-6" />, action: 'users' },
     { label: 'Statistiques avancées', icon: <ChartBarIcon className="w-6 h-6" />, action: 'adminStats' },
-  ];
+  ]), []);
 
   // Options supplémentaires (GitHub)
-  const additionalItems = [
+  const additionalItems = useMemo(() => ([
     { 
       label: 'Code Source GitHub', 
       icon: (
@@ -105,11 +104,11 @@ function NavbarPanel({ isOpen, onClose }) {
       action: 'github',
       external: true 
     }
-  ];
+  ]), []);
 
   const availableActions = useMemo(() => {
     return [...baseMenuItems, ...adminMenuItems, ...additionalItems];
-  }, []);
+  }, [baseMenuItems, adminMenuItems, additionalItems]);
 
   const toggleFavorite = (action) => {
     setFavoriteActions((prev) =>

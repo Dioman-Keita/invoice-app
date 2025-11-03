@@ -90,7 +90,7 @@ function Register() {
       }
     } catch (error) {
       console.error('Erreurs de validation : ', error);
-      error(result.message || "Erreur lors de l'inscription");
+      error(error.message || "Erreur lors de l'inscription");
     } finally {
       setLoading(false);
     }

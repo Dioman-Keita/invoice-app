@@ -11,6 +11,10 @@ CREATE TABLE supplier (
     name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
     account_number CHAR(34) UNIQUE NOT NULL,
     phone VARCHAR(20) UNIQUE NOT NULL,
+    created_by VARCHAR(50) NULL,
+    created_by_email VARCHAR(100) NULL,
+    created_by_role ENUM('dfc_agent', 'invoice_manager', 'admin'),
+    fiscal_year VARCHAR(7) NULL,
     create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -26,6 +30,7 @@ CREATE TABLE employee (
     role ENUM('dfc_agent', 'invoice_manager', 'admin') DEFAULT 'invoice_manager',
     phone VARCHAR(45),
     department VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    fiscal_year VARCHAR(7) NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     update_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     isVerified BOOLEAN DEFAULT FALSE,
@@ -89,7 +94,7 @@ CREATE TABLE invoice (
     update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     status ENUM('Oui', 'Non') DEFAULT 'Non',
     dfc_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending', 
-    created_by VARCHAR(30),
+    created_by VARCHAR(50),
     created_by_email VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     created_by_role ENUM('dfc_agent', 'invoice_manager', 'admin'),
     fiscal_year VARCHAR(7) NOT NULL,
@@ -126,6 +131,7 @@ CREATE TABLE pending_verification (
     role ENUM('dfc_agent', 'invoice_manager', 'admin') DEFAULT 'invoice_manager',
     phone VARCHAR(45),
     department VARCHAR(50) NOT NULL,
+    fiscal_year VARCHAR(7) NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     update_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -176,6 +182,16 @@ CREATE TABLE fiscal_year_counter (
     UNIQUE KEY unique_fiscal_year (fiscal_year)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- Table pour gérer les compteurs d'employés par année fiscale
+CREATE TABLE employee_fiscal_year_counter (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    fiscal_year VARCHAR(7) NOT NULL,
+    last_employee_number BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_employee_fiscal_year (fiscal_year)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- table enregistrant les parametres critiques de l'application
 CREATE TABLE app_settings (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -191,17 +207,10 @@ CREATE TABLE app_settings (
 -- Table app_settings configuration initiale
 INSERT INTO app_settings (setting_key, setting_value, description) VALUES
 ('fiscal_year', '"2025"', 'Année fiscale en cours'),
-('cmdt_format', '{"padding": 12, "max": 999999999999}', 'Format des numéros CMDT (support 1 milliard/an)'),
-('year_end_warning_threshold', '100000000', 'Seuil d avertissement fin d année (10% du milliard)');
-
-INSERT INTO app_settings (setting_key, setting_value, description) VALUES
-('auto_year_switch', 'true', 'Changement automatique d année fiscale');
-
-INSERT INTO app_settings(setting_key, setting_value, description) VALUES
-('app_theme', '{"theme": "light"}', 'Paramètres d apparence de l application');
-
--- Version de l'application
-INSERT INTO app_settings (setting_key, setting_value, description) VALUES
+('cmdt_format', '{"padding": 4, "max": 999999999999}', 'Format des numéros CMDT (support 1 milliard/an)'),
+('year_end_warning_threshold', '100000000', 'Seuil d avertissement fin d année (10% du milliard)'),
+('auto_year_switch', 'true', 'Changement automatique d année fiscale'),
+('app_theme', '{"theme": "light"}', 'Paramètres d apparence de l application'),
 ('app_version', '"1.0.0"', 'Version de l application');
 
 -- Index
@@ -225,6 +234,12 @@ CREATE UNIQUE INDEX idx_supplier_account_number ON supplier(account_number);
 CREATE INDEX idx_invoice_fiscal_year ON invoice(fiscal_year);
 CREATE INDEX idx_invoice_cmdt_fiscal ON invoice(fiscal_year, num_cmdt);
 CREATE INDEX idx_invoice_num_invoice_fiscal ON invoice(fiscal_year, num_invoice);
+
+-- Index pour la performance des compteurs par année fiscal
+CREATE INDEX idx_employee_fiscal_year ON employee(fiscal_year);
+CREATE INDEX idx_fiscal_year_counter_year ON fiscal_year_counter(fiscal_year);
+CREATE INDEX idx_employee_fiscal_year_counter_year ON employee_fiscal_year_counter(fiscal_year);
+CREATE INDEX idx_pending_verification_fiscal_year ON pending_verification(fiscal_year);
 
 -- Vues sur les audits
 CREATE VIEW view_audit_log AS SELECT * FROM audit_log;

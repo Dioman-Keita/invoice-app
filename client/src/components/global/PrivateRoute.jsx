@@ -1,4 +1,3 @@
-// components/PrivateRoute.jsx
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/auth/useAuth.js';
 import { useLocation, Navigate } from 'react-router-dom';
@@ -13,7 +12,7 @@ const getFrenchRoleName = (role) => {
     return roleNames[role] || role;
 };
 
-const getRoleSpecificMessage = (requiredRole, userRole) => {
+const getRoleSpecificMessage = (requiredRole) => {
     const roleNames = {
         'admin': 'administrateur',
         'invoice_manager': 'gestionnaire de factures', 
@@ -32,7 +31,7 @@ const getRoleSpecificMessage = (requiredRole, userRole) => {
     }
 };
 
-const getGenericRoleMessage = (requiredRoles, userRole) => {
+const getGenericRoleMessage = (requiredRoles) => {
     const roleNames = requiredRoles.map(role => {
         const names = {
             'admin': 'administrateurs',
@@ -70,12 +69,10 @@ export default function PrivateRoute({
     useEffect(() => {
         if (!isLoading && isInitialized) {
             let hasAccess = true;
-            let accessMessage = '';
 
             // Vérifier l'authentification
             if (requireAuth && !isAuthenticated) {
                 hasAccess = false;
-                accessMessage = 'Authentication required';
                 setMessage('Veuillez vous connecter pour accéder à cette page');
             } 
             // Vérifier les rôles si nécessaire

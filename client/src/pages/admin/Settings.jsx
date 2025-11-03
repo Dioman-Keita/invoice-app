@@ -31,7 +31,7 @@ function Settings() {
   const [yearSwitchInfo, setYearSwitchInfo] = useState(null);
   const [activeModal, setActiveModal] = useState(null);
   const [selectedYear, setSelectedYear] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [serverSettings, setServerSettings] = useState(null);
   const [warningInfo, setWarningInfo] = useState(null);
   const [errorMsg, setErroMsg] = useState(null);

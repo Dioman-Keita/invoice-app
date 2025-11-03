@@ -1,4 +1,3 @@
-// components/CMDTNotification.jsx
 import { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react';
 

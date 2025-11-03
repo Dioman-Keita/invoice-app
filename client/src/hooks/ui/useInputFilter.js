@@ -1,4 +1,3 @@
-// hooks/useInputFilters.js
 import useProgressiveValidation from './useProgressiveValidation.js';
 
 export const useInputFilters = () => {

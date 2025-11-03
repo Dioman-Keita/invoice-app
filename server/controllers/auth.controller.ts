@@ -1,10 +1,11 @@
 import type { Response, Request } from "express";
 import ApiResponder from "../utils/ApiResponder";
 import { ActivityTracker } from "../utils/ActivityTracker";
+import { AuthenticatedRequest } from "../types/express/request";
 
-export async function checkAuthStatus(req: Request, res: Response): Promise<Response> {
+export async function checkAuthStatus(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
-        const user = (req as any).user;
+        const user = req.user;
         const rememberMe = req.cookies.rememberMe === 'true'
         const activityTracker = new ActivityTracker(undefined, rememberMe);
         console.log('🔐 checkAuthStatus - user object:', user); // Debug

@@ -1,8 +1,10 @@
 import type { Request, Response } from 'express';
 import ApiResponder from "../utils/ApiResponder";
-import supplier, { SupplierRecord, CreateSupplierInput } from "../models/Supplier";
+import { SupplierRecord, CreateSupplierInput } from "../types";
+import supplier from '../models/Supplier';
 import { normalizeAccountNumber, isValidAccountNumber, formatAccountCanonical } from "../../common/helpers/formatAccountNumber";
 import logger from '../utils/Logger';
+import { AuthenticatedRequest } from '../types/express/request';
 
 
 type SupplierIdParams = { id: string };
@@ -12,7 +14,7 @@ export async function createSupplier(
     res: Response
 ): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
-    const user = (req as any).user;
+    const user = (req as AuthenticatedRequest).user;
     try {
         const { supplier_name, supplier_account_number = '', supplier_phone = '' } = req.body || {};
         if (!user || !user.sup) {
@@ -374,7 +376,7 @@ export async function findSupplierConflicts(
     const requestId = req.headers['x-request-id'] || 'unknown';
 
     try {
-        const user = (req as any).user;
+        const user = (req as AuthenticatedRequest).user;
 
         if (!user || !user.sup) {
             logger.warn(`[${requestId}] Tentative d'accès aux ressources par un utilisateur non authentifié`);

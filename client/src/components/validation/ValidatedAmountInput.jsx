@@ -89,6 +89,7 @@ function ValidatedAmountInput({ name = "invoice_amount", label = "Montant de la 
         placeholder={placeholder}
         value={displayValue}
         id={name}
+        {...register(name)}
         onChange={handleInput}
         className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none ${
           errors[name] 

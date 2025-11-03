@@ -1,90 +1,201 @@
 openapi: 3.0.3
 info:
   title: CMDT Invoice API
-  version: 1.0.0
-  description: API de gestion de factures (auth via JWT en cookie HttpOnly)
+  version: 2.0.0
+  description: |
+    API de gestion de factures avec authentification JWT via cookie HttpOnly.
+    
+    ## Rôles disponibles
+    - `admin` : Accès complet à toutes les fonctionnalités
+    - `invoice_manager` : Gestion des factures et fournisseurs
+    - `dfc_agent` : Gestion des factures DFC
+
 servers:
   - url: http://localhost:3000/api
     description: Développement local
+
+# Configuration de sécurité globale (surchargeable au niveau des opérations)
 security:
   - cookieAuth: []
+
 components:
+  # Schémas de sécurité
   securitySchemes:
     cookieAuth:
       type: apiKey
       in: cookie
       name: auth_token
+      description: JWT stocké dans un cookie HttpOnly
+
+  # Schémas de données
   schemas:
     ErrorResponse:
       type: object
       properties:
+        success: 
+          type: boolean
+          example: false
         message:
           type: string
-      required: [message]
+          example: "Une erreur s'est produite"
+        errors:
+          type: array
+          items:
+            type: string
+          example: ["Le champ email est requis"]
+      required: [success, message]
+
     User:
       type: object
       properties:
         id:
           type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
         email:
           type: string
           format: email
+          example: "user@example.com"
         firstName:
           type: string
+          example: "Jean"
         lastName:
           type: string
+          example: "Dupont"
         role:
           type: string
           enum: [admin, invoice_manager, dfc_agent]
+          example: "invoice_manager"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, email, firstName, lastName, role]
+
+    # Schémas de requête
     RegisterRequest:
       type: object
       properties:
-        email: { type: string, format: email }
-        password: { type: string, format: password }
-        firstName: { type: string }
-        lastName: { type: string }
-        role: { type: string, enum: [admin, invoice_manager, dfc_agent] }
-        terms: { type: boolean }
+        email: 
+          type: string 
+          format: email
+          example: "user@example.com"
+        password: 
+          type: string 
+          format: password
+          minLength: 8
+          example: "MotDePasse123!"
+        firstName: 
+          type: string
+          minLength: 2
+          example: "Jean"
+        lastName: 
+          type: string
+          minLength: 2
+          example: "Dupont"
+        role: 
+          type: string 
+          enum: [admin, invoice_manager, dfc_agent]
+          example: "invoice_manager"
+        terms: 
+          type: boolean
+          example: true
       required: [email, password, firstName, lastName, role, terms]
+      additionalProperties: false
+
     LoginRequest:
       type: object
       properties:
-        email: { type: string, format: email }
-        password: { type: string, format: password }
-        role: { type: string, enum: [admin, invoice_manager, dfc_agent] }
-        rememberMe: { type: boolean }
-      required: [email, password, role]
+        email: 
+          type: string 
+          format: email
+          example: "user@example.com"
+        password: 
+          type: string 
+          format: password
+          example: "MotDePasse123!"
+        rememberMe:
+          type: boolean
+          example: true
+      required: [email, password]
+      additionalProperties: false
+
+    # Schémas de réponses
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          description: JWT d'authentification (également envoyé en cookie)
+      required: [success, user]
+
     AuthStatusResponse:
       type: object
       properties:
-        isAuthenticated: { type: boolean }
-        user: { $ref: '#/components/schemas/User' }
-        shouldRefresh: { type: boolean }
-        expiresIn: { type: integer }
-        rememberMe: { type: boolean }
+        isAuthenticated: 
+          type: boolean
+          example: true
+        user: 
+          $ref: '#/components/schemas/User'
+
+    # Schémas pour les factures
     Invoice:
       type: object
       properties:
-        id: { type: string }
-        num_invoice: { type: string, maxLength: 12 }
-        amount: { type: number, maximum: 100000000000 }
-        status: { type: string }
-        createdBy: { type: string }
-        createdAt: { type: string, format: date-time }
-    CreateInvoiceRequest:
-      type: object
-      properties:
-        num_invoice: { type: string, maxLength: 12 }
-        amount: { type: number, maximum: 100000000000 }
-        supplierId: { type: string }
-      required: [num_invoice, amount, supplierId]
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        amount:
+          type: number
+          format: float
+        status:
+          type: string
+          enum: [draft, pending, approved, rejected, paid]
+        supplierId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, number, amount, status, supplierId]
+
+    # Schémas pour les fournisseurs
     Supplier:
       type: object
       properties:
-        id: { type: string }
-        name: { type: string }
-        account_number: { type: string, pattern: '^[0-9]{12}$' }
-        phone: { type: string }
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        address:
+          type: string
+        taxId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, name, email]
 paths:
   /health:
     get:
@@ -513,3 +624,101 @@ paths:
         '200': { description: Année fiscale changée }
         '400': { description: Requête invalide ou auto-switch activé }
         '403': { description: Accès refusé }
+
+  /invoices/dfc/pending:
+    get:
+      summary: Lister les factures DFC en attente pour l'année fiscale courante
+      responses:
+        '200':
+          description: Liste des factures DFC en attente
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Invoice' }
+
+  /invoices/{id}/dfc/approve:
+    post:
+      summary: Approuver une facture DFC
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Facture approuvée }
+        '404': { description: Introuvable }
+
+  /invoices/{id}/dfc/reject:
+    post:
+      summary: Rejeter une facture DFC
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comments: { type: string }
+      responses:
+        '200': { description: Facture rejetée }
+        '404': { description: Introuvable }
+
+  /search/invoices:
+    get:
+      summary: Recherche avancée de factures
+      responses:
+        '200':
+          description: Résultats
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Invoice' }
+
+  /search/suppliers:
+    get:
+      summary: Recherche avancée de fournisseurs
+      responses:
+        '200':
+          description: Résultats
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Supplier' }
+
+  /search/relational:
+    get:
+      summary: Recherche relationnelle (factures/fournisseurs)
+      responses:
+        '200': { description: Résultats relationnels }
+
+  /export/history:
+    get:
+      summary: Historique des exports
+      responses:
+        '200': { description: Historique }
+
+  /export/advanced:
+    get:
+      summary: Export avancé selon filtres
+      responses:
+        '200': { description: Export généré }
+
+  /fiscal-years:
+    get:
+      summary: Années fiscales disponibles
+      responses:
+        '200':
+          description: Liste des années fiscales
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: string }

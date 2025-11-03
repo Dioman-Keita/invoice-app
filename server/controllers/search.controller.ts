@@ -5,14 +5,17 @@ import { QueryBuilder } from '../utils/QueryBuilder';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import { exportLog } from '../utils/auditLogger';
+import { AuthenticatedRequest } from '../types/express/request';
+import database from '../config/database';
+import { InvoiceRecord } from '../types';
 
 export async function advancedInvoiceSearch(
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
   try {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
 
     const result = await QueryBuilder.searchInvoices(req.query);
@@ -28,12 +31,12 @@ export async function advancedInvoiceSearch(
 }
 
 export async function advancedSupplierSearch(
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
   try {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
 
     const result = await QueryBuilder.searchSuppliers(req.query);
@@ -49,12 +52,12 @@ export async function advancedSupplierSearch(
 }
 
 export async function relationalSearch(
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
   try {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
 
     const result = await QueryBuilder.searchRelational(req.query);
@@ -69,7 +72,7 @@ export async function relationalSearch(
   }
 }
 
-function toCSV(rows: any[]): string {
+function toCSV(rows: Record<string, unknown>[]): string {
   if (!rows || rows.length === 0) return '';
   const headers = Object.keys(rows[0]);
   const lines = [headers.join(',')];
@@ -86,12 +89,12 @@ function toCSV(rows: any[]): string {
 }
 
 export async function getExportHistory(
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
   try {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
 
     logger.info('getExportHistory user', { userId: user.sup, userKeys: Object.keys(user) });
@@ -109,7 +112,7 @@ export async function getExportHistory(
       return ApiResponder.success(res, [], 'Aucun export trouvé');
     }
     
-    const rows: any = await (require('../config/database').default.execute(query, [user.sup]));
+    const rows = await database.execute<Array<{ invoice_id: string; format: string; exported_at: string }>>(query, [user.sup]);
 
     return ApiResponder.success(res, rows, 'Historique des exports récupéré');
   } catch (error) {
@@ -122,18 +125,17 @@ export async function getExportHistory(
 }
 
 export async function getFiscalYears(
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
   try {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
 
     const query = 'SELECT fiscal_year FROM fiscal_year_counter ORDER BY fiscal_year DESC';
-    const rows: any = await (require('../config/database').default.execute(query));
-
-    const fiscalYears = rows.map((row: any) => row.fiscal_year);
+    const rows = await database.execute<Array<{ fiscal_year: string }>>(query);
+    const fiscalYears = rows.map((row) => row.fiscal_year);
 
     return ApiResponder.success(res, fiscalYears, 'Années fiscales récupérées');
   } catch (error) {
@@ -146,15 +148,15 @@ export async function getFiscalYears(
 }
 
 export async function advancedExport(
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response
-): Promise<any> {
+): Promise<unknown> {
   const requestId = req.headers['x-request-id'] || 'unknown';
   try {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
 
-    const { type = 'invoices', format = 'xlsx' } = req.query as any;
+    const { type = 'invoices', format = 'xlsx' } = req.query;
 
     let result;
     if (type === 'suppliers') {
@@ -176,10 +178,11 @@ export async function advancedExport(
       const worksheet = workbook.addWorksheet('Export');
       
       if (result.rows.length > 0) {
-        const headers = Object.keys(result.rows[0]);
+        const headers = Object.keys(result.rows[0] as Record<string, unknown>);
         worksheet.addRow(headers);
         result.rows.forEach(row => {
-          worksheet.addRow(headers.map(h => row[h] ?? ''));
+          const r = row as Record<string, unknown>;
+          worksheet.addRow(headers.map(h => r[h] ?? ''));
         });
         
         // Auto-width columns
@@ -205,7 +208,7 @@ export async function advancedExport(
       doc.moveDown();
 
       if (result.rows.length > 0) {
-        const headers = Object.keys(result.rows[0]);
+        const headers = Object.keys(result.rows[0] as Record<string, unknown>);
         let y = doc.y;
         // Headers
         headers.forEach((h, i) => {
@@ -214,9 +217,10 @@ export async function advancedExport(
         y += 20;
         // Rows
         result.rows.forEach(row => {
+          const r = row as Record<string, unknown>;
           if (y > 700) { doc.addPage(); y = 50; }
           headers.forEach((h, i) => {
-            doc.text(String(row[h] ?? ''), 50 + i * 100, y, { width: 90 });
+            doc.text(String(r[h] ?? ''), 50 + i * 100, y, { width: 90 });
           });
           y += 15;
         });

@@ -19,136 +19,203 @@ http://localhost:3000/api
 - **Body** : `{ email, password, firstName, lastName, role, terms }`
 - **Response** : Email de vérification envoyé
 - **Protection** : Aucune
-- **Validation** : Email valide, termes acceptés, mots de passe identiques
+- **Rôles** : Tous
 
 ### **POST** `/auth/forgot-password`
 - **Description** : Demande de réinitialisation de mot de passe
 - **Body** : `{ email }`
 - **Response** : Email de réinitialisation envoyé
 - **Protection** : Aucune
-- **Tracking** : `SEND_PASSWORD_RESET_EMAIL`
 
 ### **POST** `/auth/reset-password`
-- **Description** : Réinitialisation du mot de passe avec token
-- **Body** : `{ token, newPassword }`
-- **Response** : Mot de passe mis à jour
+- **Description** : Réinitialisation du mot de passe
+- **Body** : `{ token, password }`
+- **Response** : Confirmation de réinitialisation
 - **Protection** : Aucune
-- **Tracking** : `RESET_PASSWORD`
 
-### **GET** `/auth/status`
-- **Description** : Statut d'authentification avec gestion d'inactivité
-- **Headers** : Cookie `auth_token`
-- **Response** : `{ isAuthenticated, user, shouldRefresh, expiresIn, rememberMe }`
+### **POST** `/auth/logout`
+- **Description** : Déconnexion de l'utilisateur
+- **Response** : Confirmation de déconnexion
 - **Protection** : `authGuard`
-- **Fonctionnalité** : Vérification d'inactivité (5min/30min)
 
 ### **POST** `/auth/silent-refresh`
 - **Description** : Rafraîchissement silencieux du token
-- **Headers** : Cookie `auth_token`
-- **Response** : Nouveau token si session valide
+- **Response** : Nouveau token
 - **Protection** : `authGuard`
-- **Tracking** : `REFRESH_SESSION`
 
-### **GET** `/auth/profile`
-- **Description** : Profil de l'utilisateur connecté
-- **Headers** : Cookie `auth_token`
-- **Response** : Données complètes de l'utilisateur
+### **GET** `/auth/status`
+- **Description** : Vérification de l'état d'authentification
+- **Response** : Statut de l'utilisateur
 - **Protection** : `authGuard`
-- **Tracking** : `VIEW_PROFILE`
-
-### **POST** `/auth/logout`
-- **Description** : Déconnexion avec nettoyage des activités
-- **Headers** : Cookie `auth_token`
-- **Response** : Suppression des cookies + nettoyage BDD
-- **Protection** : Aucune
-- **Tracking** : `LOGOUT` + suppression des activités
-
-### **GET** `/auth/token`
-- **Description** : Vérification du token actuel
-- **Headers** : Cookie `auth_token`
-- **Response** : `{ token, payload }`
-- **Protection** : Aucune
+- **Tracking** : `REFRESH_PROFILE`
 
 ### **POST** `/auth/admin/create-user`
-- **Description** : Création d'utilisateur (admin seulement)
-- **Body** : Données utilisateur
-- **Response** : Utilisateur créé
+- **Description** : Création d'utilisateur (admin uniquement)
+- **Body** : `{ email, password, firstName, lastName, role }`
+- **Response** : Détails de l'utilisateur créé
 - **Protection** : `authGuard` + `requireAdmin`
+- **Rôles** : `admin`
 
-## 📄 **Routes de Factures**
+## 📄 **Gestion des Factures**
+
+### **GET** `/invoices`
+- **Description** : Lister les factures
+- **Query Params** : `status`, `supplierId`, `dateFrom`, `dateTo`
+- **Response** : Liste des factures
+- **Protection** : `authGuard` + `requireAgentOrManager`
+- **Rôles** : `dfc_agent`, `invoice_manager`
 
 ### **GET** `/invoices/last-num`
-- **Description** : Récupérer le dernier numéro de facture enregistré
-- **Response** : `{ lastInvoiceNumber }`
-- **Protection** : `authGuard`
+- **Description** : Récupérer le dernier numéro de facture
+- **Response** : `{ lastNumber: string }`
+- **Protection** : `authGuard` + `requireAgentOrManager`
 - **Rôles** : `dfc_agent`, `invoice_manager`
 
 ### **GET** `/invoices/next-num`
-- **Description** : Récupérer le prochain numéro attendu par le système
-- **Response** : `{ nextInvoiceNumber }`
-- **Protection** : `authGuard`
+- **Description** : Récupérer le prochain numéro de facture attendu
+- **Response** : `{ nextNumber: string }`
+- **Protection** : `authGuard` + `requireManagerOrAdmin`
 - **Rôles** : `invoice_manager`, `admin`
 
-### **GET** `/invoices`
-- **Description** : Lister les factures avec filtrage par rôle
-- **Response** : Liste des factures (propres factures; toutes si admin)
-- **Protection** : `authGuard`
+### **GET** `/invoices/dfc/pending`
+- **Description** : Lister les factures en attente DFC
+- **Response** : Liste des factures en attente
+- **Protection** : `authGuard` + `requireAgentOrManager`
+- **Rôles** : `dfc_agent`, `invoice_manager`
+
+### **POST** `/invoices`
+- **Description** : Créer une nouvelle facture
+- **Body** : Données de la facture
+- **Response** : Facture créée
+- **Protection** : `authGuard` + `requireAgentOrManager`
+- **Rôles** : `dfc_agent`, `invoice_manager`
+
+### **POST** `/invoices/:id/dfc/approve`
+- **Description** : Approuver une facture DFC
+- **Response** : Confirmation d'approbation
+- **Protection** : `authGuard` + `requireAgentOrManager`
+- **Rôles** : `dfc_agent`, `invoice_manager`
+
+### **POST** `/invoices/:id/dfc/reject`
+- **Description** : Rejeter une facture DFC
+- **Body** : `{ comments?: string }`
+- **Response** : Confirmation de rejet
+- **Protection** : `authGuard` + `requireAgentOrManager`
+- **Rôles** : `dfc_agent`, `invoice_manager`
 
 ### **GET** `/invoices/:id`
 - **Description** : Récupérer une facture spécifique
 - **Response** : Détails de la facture
-- **Protection** : `authGuard` + vérification des permissions
-
-### **POST** `/invoices`
-- **Description** : Créer une facture avec traçabilité
-- **Body** : Données de la facture
-- **Response** : Facture créée avec métadonnées utilisateur
-- **Protection** : `authGuard`
-- **Traçabilité** : `SUBMIT_INVOICE` + association automatique à l'utilisateur
-- **Validation** : Numéro de facture (12 chiffres max), montant (100M max)
+- **Protection** : `authGuard` + `requireAgentOrManager`
+- **Rôles** : `dfc_agent`, `invoice_manager`
 
 ### **POST** `/invoices/update/:id`
 - **Description** : Mettre à jour une facture
-- **Body** : Champs modifiables de la facture
-- **Protection** : `authGuard`
+- **Body** : Données mises à jour de la facture
+- **Response** : Facture mise à jour
+- **Protection** : `authGuard` + `requireManagerOrAdmin`
 - **Rôles** : `invoice_manager`, `admin`
 
 ### **POST** `/invoices/delete/:id`
 - **Description** : Supprimer une facture
-- **Protection** : `authGuard`
+- **Response** : Confirmation de suppression
+- **Protection** : `authGuard` + `requireAdmin`
 - **Rôles** : `admin`
 
-### **GET** `/invoices/dfc/pending`
-- **Description** : Lister les factures DFC en attente pour l'année fiscale courante
-- **Response** : Liste des factures DFC en attente + `fiscalYear`
-- **Protection** : `authGuard`
+## 👥 **Gestion des Fournisseurs**
+
+### **POST** `/supplier`
+- **Description** : Créer un fournisseur
+- **Protection** : `authGuard` + `requireManagerOrAdmin`
+- **Rôles** : `invoice_manager`, `admin`
+
+### **POST** `/supplier/delete/:id`
+- **Description** : Supprimer un fournisseur (simulation DELETE)
+- **Protection** : `authGuard` + `requireAdmin`
+- **Rôles** : `admin`
+
+### **GET** `/supplier`
+- **Description** : Lister tous les fournisseurs
+- **Protection** : `authGuard` + `requireAgentOrManager`
 - **Rôles** : `dfc_agent`, `invoice_manager`
 
-### **POST** `/invoices/:id/dfc/approve`
-- **Description** : Approuver une facture DFC (année fiscale courante uniquement)
-- **Body** : `{ comments?: string }`
-- **Response** : Confirmation d'approbation
-- **Protection** : `authGuard`
+### **GET** `/supplier/phone`
+- **Description** : Rechercher un fournisseur par téléphone (`?phone=`)
+- **Protection** : `authGuard` + `requireAgentOrManager`
 - **Rôles** : `dfc_agent`, `invoice_manager`
 
-### **POST** `/invoices/:id/dfc/reject`
-- **Description** : Rejeter une facture DFC (année fiscale courante uniquement)
-- **Body** : `{ comments?: string }`
-- **Response** : Confirmation de rejet
-- **Protection** : `authGuard`
+### **GET** `/supplier/:id`
+- **Description** : Récupérer un fournisseur spécifique
+- **Protection** : `authGuard` + `requireAgentOrManager`
 - **Rôles** : `dfc_agent`, `invoice_manager`
 
-### **GET** `/invoices`
-- **Description** : Lister les factures avec filtrage par rôle
-- **Response** : Liste des factures (ses propres factures, ou toutes si admin)
-- **Protection** : `authGuard`
-- **Filtrage** : Automatique selon le rôle (admin voit tout, autres voient leurs factures)
+### **GET** `/suppliers/search`
+- **Description** : Recherche flexible par champ (`?field=&value=`)
+- **Protection** : `authGuard` + `requireManagerOrAdmin`
+- **Rôles** : `invoice_manager`, `admin`
 
-### **GET** `/invoices/:id`
-- **Description** : Récupérer une facture spécifique
-- **Response** : Détails de la facture
-- **Protection** : `authGuard` + vérification des permissions
-- **Vérification** : L'utilisateur doit être propriétaire ou admin
+### **GET** `/suppliers/find`
+- **Description** : Recherche multi-champs (ex: `?name=ABC&account_number=123`)
+- **Protection** : `authGuard` + `requireManagerOrAdmin`
+- **Rôles** : `invoice_manager`, `admin`
+
+### **GET** `/suppliers/verify-conflicts`
+- **Description** : Vérifier les conflits (numéro de compte / téléphone)
+- **Protection** : `authGuard` + `requireAgentOrManager`
+- **Rôles** : `dfc_agent`, `invoice_manager`
+
+## 🔍 **Recherche avancée et Export**
+
+### **GET** `/search/invoices`
+- **Description** : Recherche avancée de factures
+- **Protection** : `authGuard` + `requireAgentOrManager`
+- **Rôles** : `dfc_agent`, `invoice_manager`
+
+### **GET** `/search/suppliers`
+- **Description** : Recherche avancée de fournisseurs
+- **Protection** : `authGuard` + `requireAgentOrManager`
+- **Rôles** : `dfc_agent`, `invoice_manager`
+
+### **GET** `/search/relational`
+- **Description** : Recherche relationnelle (factures/fournisseurs)
+- **Protection** : `authGuard` + `requireAgentOrManager`
+- **Rôles** : `dfc_agent`, `invoice_manager`
+
+### **GET** `/export/advanced`
+- **Description** : Export avancé (CSV/Excel) basé sur filtres
+- **Protection** : `authGuard` + `requireAgentOrManager`
+- **Rôles** : `dfc_agent`, `invoice_manager`
+
+### **GET** `/export/history`
+- **Description** : Historique des exports effectués
+- **Protection** : `authGuard` + `requireAgentOrManager`
+- **Rôles** : `dfc_agent`, `invoice_manager`
+
+### **GET** `/fiscal-years`
+- **Description** : Récupérer les années fiscales disponibles
+- **Protection** : `authGuard` + `requireAgentOrManager`
+- **Rôles** : `dfc_agent`, `invoice_manager`
+
+## ⚙️ **Paramètres fiscaux**
+
+### **GET** `/settings/fiscal`
+- **Description** : Informations fiscales courantes (année fiscale, format CMDT, compteur, seuils, alerte, etc.)
+- **Protection** : `authGuard`
+- **Rôles** : `dfc_agent`, `invoice_manager`, `admin`
+
+### **POST** `/settings/auto-year-switch`
+- **Description** : Activer/Désactiver la bascule automatique d'année fiscale
+- **Body** : `{ enable: boolean }`
+- **Protection** : `authGuard` + `requireAdmin`
+- **Rôles** : `admin`
+
+### **POST** `/settings/fiscal-year/switch`
+- **Description** : Bascule manuelle d'année fiscale
+- **Body** : `{ newYear: string }`
+- **Protection** : `authGuard` + `requireAdmin`
+- **Rôles** : `admin`
+
+
 
 ## 🛡️ **Routes de Test**
 
@@ -265,74 +332,3 @@ const deleteInvoice = async (id) => {
 6. **Tracking d'activité** : Toutes les actions sont enregistrées dans `user_activity`
 7. **Rafraîchissement** : Tokens renouvelés automatiquement avant expiration
 8. **Validation** : React Hook Form + Zod côté client, validation serveur stricte
-
-## 📦 **Routes Fournisseurs**
-
-### **POST** `/supplier`
-- **Description** : Créer un fournisseur
-- **Protection** : `authGuard`
-- **Rôles** : `invoice_manager`, `admin`
-
-### **POST** `/supplier/delete/:id`
-- **Description** : Supprimer un fournisseur
-- **Protection** : `authGuard`
-- **Rôles** : `admin`
-
-### **GET** `/supplier`
-- **Description** : Lister les fournisseurs
-- **Protection** : `authGuard`
-- **Rôles** : `dfc_agent`, `invoice_manager`
-
-### **GET** `/supplier/phone`
-- **Description** : Rechercher par téléphone
-- **Protection** : `authGuard`
-- **Rôles** : `dfc_agent`, `invoice_manager`
-
-### **GET** `/supplier/:id`
-- **Description** : Récupérer un fournisseur spécifique
-- **Protection** : `authGuard`
-- **Rôles** : `dfc_agent`, `invoice_manager`
-
-### **GET** `/suppliers/search`
-- **Description** : Recherche flexible par champ
-- **Protection** : `authGuard`
-- **Rôles** : `invoice_manager`, `admin`
-
-### **GET** `/suppliers/find`
-- **Description** : Recherche multi-champs
-- **Protection** : `authGuard`
-- **Rôles** : `invoice_manager`, `admin`
-
-### **GET** `/suppliers/verify-conflicts`
-- **Description** : Vérifier conflits par numéro de compte/téléphone
-- **Protection** : `authGuard`
-- **Rôles** : `dfc_agent`, `invoice_manager`
-
-## ⚙️ **Routes Paramètres (Settings)**
-
-### **GET** `/settings/fiscal`
-- **Description** : Informations fiscales courantes (année fiscale, format CMDT, compteur, années disponibles, seuils, alerte)
-- **Protection** : `authGuard`
-- **Rôles** : `dfc_agent`, `invoice_manager`, `admin`
-- **Response** :
-  - `fiscalYear` (string)
-  - `cmdt_format` `{ padding, max }`
-  - `auto_year_switch` (boolean)
-  - `year_end_warning_threshold` (number)
-  - `counter` `{ fiscal_year, last_cmdt_number, remaining, max }`
-  - `availableYears` `[{ year: string[], isCurrent: boolean, canActivate: boolean }]`
-  - `warningInfo`
-
-### **POST** `/settings/auto-year-switch`
-- **Description** : Activer/Désactiver la bascule automatique d'année fiscale
-- **Body** : `{ enable: boolean }`
-- **Protection** : `authGuard`
-- **Rôles** : `admin`
-- **Note** : Lorsque activé, toute bascule manuelle est bloquée côté serveur
-
-### **POST** `/settings/fiscal-year/switch`
-- **Description** : Bascule manuelle d'année fiscale
-- **Body** : `{ newYear: string }`
-- **Protection** : `authGuard`
-- **Rôles** : `admin`
-- **Règle métier** : Refusée si `auto_year_switch` est activé; année antérieure interdite; année future limitée (≤ courant + 2)

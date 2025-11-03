@@ -1,4 +1,4 @@
-import type { ActivityType } from "../services/userToken";
+import type { ActivityType } from "../types/dto/UserDto";
 import database, { DatabaseInstance } from "../config/database";
 import logger from "./Logger";
 import { auditLog } from "./auditLogger";

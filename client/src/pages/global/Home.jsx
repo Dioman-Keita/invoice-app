@@ -12,7 +12,7 @@ function Home() {
   useBackground('bg-home', 'body');
   
   // Récupération sécurisée de l'état d'authentification
-  const { isAuthenticated, user, isLoading, isInitialized } = useAuth();
+  const { isAuthenticated, isLoading, isInitialized } = useAuth();
   
   // État local pour gérer l'affichage
   const [showContent, setShowContent] = useState(false);

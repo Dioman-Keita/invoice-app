@@ -9,7 +9,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 export default defineConfig([
     globalIgnores(['dist']),
 
-    // Configuration pour JavaScript/JSX
+    // Configuration for JavaScript/JSX
     {
         files: ['**/*.{js,jsx}'],
         extends: [
@@ -31,7 +31,7 @@ export default defineConfig([
         },
     },
 
-    // Configuration pour TypeScript/TSX
+    // Configuration for TypeScript/TSX
     {
         files: ['**/*.{ts,tsx}'],
         languageOptions: {
@@ -50,7 +50,7 @@ export default defineConfig([
         },
         rules: {
             ...tseslint.configs.recommended.rules,
-            // Règles TypeScript personnalisées
+            // custom rules TypeScript
             '@typescript-eslint/no-unused-vars': ['error', {
                 varsIgnorePattern: '^[A-Z_]'
             }],

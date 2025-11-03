@@ -21,6 +21,7 @@ Application de gestion de factures enterprise-ready avec support pour **1 millia
 ---
 
 ## 📋 Overview
+<a id="overview"></a>
 
 Système complet de gestion de factures CMDT avec :
 - **Scalability extrême** : Support 1 milliard de factures/an par année fiscale
@@ -32,6 +33,7 @@ Système complet de gestion de factures CMDT avec :
 ---
 
 ## ✨ Key Features
+<a id="key-features"></a>
 
 ### 🚀 **Billion-Scale Architecture**
 - **Format ID scalable** : `INV-FY2025-000000001` (12 chiffres séquentiels)
@@ -68,6 +70,7 @@ Système complet de gestion de factures CMDT avec :
 ---
 
 ## 🛠 Tech Stack
+<a id="tech-stack"></a>
 
 ### Frontend
 ```
@@ -104,6 +107,7 @@ MySQL 8+ enterprise-ready
 ---
 
 ## 🏗 Project Architecture
+<a id="project-architecture"></a>
 
 ```
 invoice-app/
@@ -141,6 +145,7 @@ invoice-app/
 ---
 
 ## ⚡ Prerequisites
+<a id="prerequisites"></a>
 
 - **Node.js** 18+ et npm 9+
 - **MySQL** 8+ (support VARCHAR(30), BIGINT)
@@ -149,6 +154,7 @@ invoice-app/
 ---
 
 ## 🚀 Quick Installation
+<a id="quick-installation"></a>
 
 ```bash
 # Clone repository
@@ -167,6 +173,7 @@ mysql -u root -p < server/db/db.sql
 ---
 
 ## ⚙️ Configuration
+<a id="configuration"></a>
 
 Créer `server/.env` :
 
@@ -195,6 +202,7 @@ AUTO_YEAR_SWITCH=true
 ---
 
 ## 🗄 Database Setup
+<a id="database-setup"></a>
 
 ### Import Schema
 ```bash
@@ -234,6 +242,7 @@ WHERE id NOT LIKE 'INV-FY%';
 ---
 
 ## 👨‍💻 Development
+<a id="development"></a>
 
 ```bash
 # Terminal 1: Backend (Express + TypeScript)
@@ -254,51 +263,64 @@ mysql -u root -p cmdt_invoice_db
 ---
 
 ## 📡 API Documentation
+<a id="api-documentation"></a>
 
 ### Authentication Endpoints
 ```http
-POST /auth/login           # Login avec remember me
-POST /auth/register        # Inscription
-POST /auth/logout          # Déconnexion
-GET  /auth/status          # Statut session
-GET  /auth/profile         # Profil utilisateur
-POST /auth/admin/create    # Création utilisateur (admin)
+POST /auth/login                 # Connexion (rememberMe)
+POST /auth/register              # Inscription
+POST /auth/forgot-password       # Demande réinitialisation
+POST /auth/reset-password        # Réinitialisation avec token
+POST /auth/silent-refresh        # Rafraîchissement silencieux
+GET  /auth/status                # Statut session (protégé)
+GET  /auth/profile               # Profil utilisateur (protégé)
+GET  /auth/token                 # Token courant
+POST /auth/logout                # Déconnexion
+POST /auth/admin/create-user     # Création utilisateur (admin)
 ```
 
 ### Invoice Endpoints (Billion-Scale Ready)
 ```http
-GET  /invoices/last-num    # Dernier numéro (12 chiffres)
-GET  /invoices/next-num    # Prochain numéro attendu
-GET  /invoices?fy=2025     # Liste par année fiscale
-GET  /invoices/:id         # Détail facture
-POST /invoices             # Création (ID auto-généré)
-PUT  /invoices/:id         # Mise à jour
-DEL  /invoices/:id         # Suppression (admin)
+GET  /invoices/last-num          # Dernier numéro
+GET  /invoices/next-num          # Prochain numéro attendu
+GET  /invoices                   # Liste (filtrée par rôle)
+GET  /invoices/:id               # Détail facture
+POST /invoices                   # Création (traçabilité)
+POST /invoices/update/:id        # Mise à jour (manager, admin)
+POST /invoices/delete/:id        # Suppression (admin)
 
 # DFC Workflow
-GET  /invoices/dfc/pending # Factures en attente DFC
-POST /invoices/:id/dfc/approve # Approuver
-POST /invoices/:id/dfc/reject   # Rejeter
+GET  /invoices/dfc/pending       # Factures en attente DFC
+POST /invoices/:id/dfc/approve   # Approuver
+POST /invoices/:id/dfc/reject     # Rejeter
 ```
 
-### Export Endpoints
+### Export & Search Endpoints
 ```http
-POST /export/advanced      # Export multi-format (PDF, Excel, CSV, TXT, JSON)
-GET  /export/history       # Historique exports utilisateur
-GET  /fiscal-years         # Années fiscales disponibles
+GET  /export/advanced            # Export multi-format (PDF, Excel, CSV, TXT, JSON)
+GET  /export/history             # Historique exports utilisateur
+GET  /fiscal-years               # Années fiscales disponibles
+GET  /search/invoices            # Recherche avancée factures
+GET  /search/suppliers           # Recherche avancée fournisseurs
+GET  /search/relational          # Recherche relationnelle
 ```
 
 ### Supplier Endpoints  
 ```http
-GET  /suppliers            # Liste fournisseurs
-POST /suppliers            # Création fournisseur
-GET  /suppliers/search     # Recherche multi-critères
-POST /suppliers/verify     # Vérification conflits
+GET  /supplier                   # Liste fournisseurs
+POST /supplier                   # Création fournisseur (manager, admin)
+POST /supplier/delete/:id        # Suppression (admin)
+GET  /supplier/phone             # Recherche par téléphone
+GET  /supplier/:id               # Détail fournisseur
+GET  /suppliers/search           # Recherche flexible
+GET  /suppliers/find             # Recherche multi-champs
+GET  /suppliers/verify-conflicts # Vérifier conflits (compte/téléphone)
 ```
 
 ---
 
 ## 🌟 Billion-Scale System
+<a id="billion-scale-system"></a>
 
 ### 📊 Capacité du Système
 
@@ -371,6 +393,7 @@ ORDER BY create_at DESC;
 ---
 
 ## 🔐 Authentication & Security
+<a id="authentication--security"></a>
 
 ### JWT + HttpOnly Cookies
 - **XSS Protection**: Tokens non accessibles en JavaScript
@@ -416,6 +439,7 @@ INSERT INTO export_log (
 ---
 
 ## 🚀 Recent Updates (Oct 2025)
+<a id="recent-updates"></a>
 
 ### 🎯 **Billion-Scale Refactor**
 - ✅ **ID Format**: `INV-FY2025-000000001` (12 digits)
@@ -454,6 +478,7 @@ INSERT INTO export_log (
 ---
 
 ## 🗺 Roadmap
+<a id="roadmap"></a>
 
 ### 🎯 Phase 1 (Current)
 - [x] Billion-scale architecture
@@ -479,6 +504,7 @@ INSERT INTO export_log (
 ---
 
 ## 🤝 Contributing
+<a id="contributing"></a>
 
 1. Fork the repository
 2. Create feature branch (`git checkout -b feature/amazing-feature`)
@@ -489,12 +515,14 @@ INSERT INTO export_log (
 ---
 
 ## 📄 License
+<a id="license"></a>
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
 ## 📞 Support
+<a id="support"></a>
 
 - 📧 Email: support@invoice-app.com
 - 💬 Discord: [Community Server]

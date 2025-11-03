@@ -37,6 +37,7 @@ function ForgotPassword() {
     } catch (error) {
       setStatus('error');
       notifyError("Une erreur est survenue lors de l'envoi du lien");
+      console.log(error);
     }
   };
 

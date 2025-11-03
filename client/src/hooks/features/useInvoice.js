@@ -45,10 +45,10 @@ export default function useInvoice() {
       }
     } catch (error) {
       setLoading(false);
-      const isBackendMessage = response?.data?.status >= 400 &&
-                               response?.data?.status <= 500
+      const isBackendMessage = error?.response?.status >= 400 &&
+                               error?.response?.status <= 500
       if (isBackendMessage) {
-        setNextNumberExpected(response?.data?.nextInvoiceNum || '----');
+        setNextNumberExpected(error?.response?.data?.nextInvoiceNum || '----');
       } else {
         setNextNumberExpected('Une erreur interne est survenue');
         console.log('backend error : ', error);
@@ -109,7 +109,7 @@ export default function useInvoice() {
     } finally {
       setLoading(false);
     }
-  }, [getLastInvoiceNum]);
+  }, [getLastInvoiceNum, getNextNumberExpected]);
 
   return { 
     saveInvoice,

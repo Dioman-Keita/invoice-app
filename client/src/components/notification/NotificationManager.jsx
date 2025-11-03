@@ -1,4 +1,3 @@
-// components/NotificationManager.jsx
 import { useNotification } from '../../context/useNotification.js';
 import CMDTNotification from './CMDTNotification.jsx';
 

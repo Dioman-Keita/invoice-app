@@ -1,77 +1,25 @@
 import database from "../config/database";
 import logger from "../utils/Logger";
-import generateId, { updateFiscalYearCounter } from '../services/GenerateId';
+import idGenerator from '../core/generators/IdGenerator';
+import { InvoiceRecord, CreateInvoiceDto, UpdateInvoiceDto, InvoiceSearchParams } from "../types";
 import { formatDate } from "../utils/Formatters";
 import { auditLog } from "../utils/auditLogger";
-import { getSetting } from "../utils/InvoiceLastNumberValidator";
-
-type FolioType = '1 copie' | 'Orig + 1 copie' | 'Orig + 2 copies' | 'Orig + 3 copies';
-type InvoiceType =  'Ordinaire' | 'Transporteur' | 'Transitaire';
-
-export type InvoiceRecordType = {
-	id: string;
-    num_cmdt: string;
-    num_invoice: string;
-    invoice_object: string;
-    supplier_id: string;
-    invoice_type: InvoiceType;
-    invoice_nature: 'Paiement' | 'Acompte' | 'Avoir';
-    invoice_arr_date: string;
-    invoice_date: string;
-    folio: FolioType;
-    amount: string;
-    create_at: string;
-    update_at: string;
-    status: 'Oui'| 'Non';
-    dfc_status: 'pending' | 'approved' | 'rejected';
-    created_by: string;
-    created_by_email: string;
-    created_by_role: 'dfc_agent' | 'invoice_manager' | 'admin';
-    fiscal_year: string;
-}
-
-export type InvoiceInputBody = {
-	num_cmdt: string;
-	invoice_num: string;
-	invoice_object: string;
-	invoice_nature: string;
-	invoice_arrival_date: string;
-	invoice_date: string;
-	invoice_type: InvoiceType;
-	invoice_status: 'Oui' | 'Non'
-	folio: FolioType;
-	invoice_amount: string;
-	supplier_name: string;
-	supplier_account_number: string;
-	supplier_phone: string;
-	documents: string[];
-	status: 'Oui' | 'Non';
-	created_by: string | null;
-    created_by_email?: string;
-    created_by_role?: 'dfc_agent' | 'invoice_manager' | 'admin';
-}
-
-export type CreateInvoiceInput = Omit<InvoiceInputBody, "supplier_name" | "supplier_account_number" | "supplier_phone"> & { supplier_id: number }
-
-export type UpdateInvoiceData =  Omit<InvoiceRecordType, 'create_at' | 'update_at'>
+import { getSetting } from "../helpers/settings";
 
 export interface InvoiceModel {
-	create(invoiceData: CreateInvoiceInput): Promise<{success: Boolean, data?: unknown}>;
-	findInvoice(id: string | number, config: { 
-		findBy: 'id' | 'phone' | 'account_number' | 'supplier_id' | 'all', 
-		limit: number | null, orderBy: 'desc' | 'asc', fiscalYear?: string 
-	}): Promise<InvoiceRecordType[]>;
+	create(invoiceData: CreateInvoiceDto): Promise<{success: boolean, data?: unknown}>;
+	findInvoice(id: string | number, config: InvoiceSearchParams): Promise<InvoiceRecord[]>;
 	deleteInvoice(id: number): Promise<{success: boolean}>;
-	updateInvoice(data: UpdateInvoiceData): Promise<{success: Boolean}>;
+	updateInvoice(data: UpdateInvoiceDto): Promise<{success: boolean}>;
 	getLastInvoiceNum(): Promise<unknown>;
 }
 
 class Invoice implements InvoiceModel {
 
-	async create(invoiceData: CreateInvoiceInput): Promise<{ success: Boolean; data?: unknown; }> {
+	async create(invoiceData: CreateInvoiceDto): Promise<{ success: boolean; data?: unknown; }> {
 		try {
 			
-			const id = await generateId('invoice');
+			const id = await idGenerator.generateId('invoice');
             const fiscalYear = await getSetting('fiscal_year');
 			const params = [
 				id,
@@ -111,7 +59,7 @@ class Invoice implements InvoiceModel {
 			}
 
             await auditLog({
-                table_name: 'invoice', // Correction : table form au lieu de employee
+                table_name: 'invoice',
                 action: 'INSERT',
                 record_id: invoiceData.created_by,
                 performed_by: invoiceData.created_by,
@@ -122,10 +70,7 @@ class Invoice implements InvoiceModel {
                 userId: invoiceData.created_by,
                 email: invoiceData.created_by_email,
                 role: invoiceData.created_by_role
-            })
-
-            // Mettre à jour le compteur d'année fiscale
-            await updateFiscalYearCounter(fiscalYear);
+            });
 
             return {
                 success: true,
@@ -148,7 +93,7 @@ class Invoice implements InvoiceModel {
 			const fiscalYear = await getSetting('fiscal_year');
 			// Ensure form exists, matches fiscal year, and is pending
 			const checkQuery = `SELECT id, fiscal_year, dfc_status FROM invoice WHERE id = ?`;
-			const rows: any = await database.execute(checkQuery, [id]);
+			const rows = await database.execute(checkQuery, [id]);
 			const invoice = Array.isArray(rows) ? rows[0] : rows;
 			if (!invoice) return { success: false, message: 'Facture introuvable' };
 			if (invoice.fiscal_year !== fiscalYear) return { success: false, message: "Facture hors de l'année fiscale courante" };
@@ -176,7 +121,7 @@ class Invoice implements InvoiceModel {
 		}
 	}
 
-	async findDfcPendingCurrentFiscalYear(limit?: number): Promise<InvoiceRecordType[]> {
+	async findDfcPendingCurrentFiscalYear(limit?: number): Promise<InvoiceRecord[]> {
 		try {
 			const fiscalYear = await getSetting('fiscal_year');
 			let query = `
@@ -189,14 +134,13 @@ class Invoice implements InvoiceModel {
 			if (limit && Number.isFinite(limit)) {
 				query += ` LIMIT ${limit}`;
 			}
-			let rows: any = await database.execute(query, [fiscalYear]);
+            let rows = await database.execute<InvoiceRecord[] | InvoiceRecord>(query, [fiscalYear]);
 			if (rows && !Array.isArray(rows)) {
 				rows = [rows];
 			}
 			await auditLog({
 				table_name: 'invoice',
 				action: 'SELECT',
-				record_id: null,
 				performed_by: 'system',
 				description: `Récupération des factures DFC en attente pour l'année fiscale ${fiscalYear}`
 			});
@@ -208,17 +152,12 @@ class Invoice implements InvoiceModel {
 			return [];
 		}
 	}
-	async findInvoice(id: string | number, config: { 
-			findBy: "id" | "phone" | "account_number" | "supplier_id" | "all"; 
-			limit: number | null; 
-			orderBy: "desc" | "asc";
-			fiscalYear?: string;
-		} = { findBy: 'id', limit: null, orderBy: 'asc'}): Promise<InvoiceRecordType[]> {
+	async findInvoice(id: string | number, config: InvoiceSearchParams = { findBy: 'id', limit: null, orderBy: 'asc'}): Promise<InvoiceRecord[]> {
 		
 		try {
 			let query = "";
-			let params: any[] = [];
-			let rows: any;
+			let params = [];
+			let rows;
 			const validOrderBy = config.orderBy === 'asc' ? 'asc' : 'desc';
 			const fy = config.fiscalYear;
 
@@ -227,14 +166,14 @@ class Invoice implements InvoiceModel {
                     query = `SELECT * FROM invoice WHERE id = ? ${fy ? 'AND fiscal_year = ?' : ''} ORDER BY create_at ${validOrderBy}`;
                     params = fy ? [id, fy] : [id];
                     if (config.limit) query += ` LIMIT ${config.limit}`;
-                    rows = await database.execute(query, params);
+                    rows = await database.execute<InvoiceRecord[] | InvoiceRecord>(query, params);
                     break;
 
                 case 'supplier_id':
                     query = `SELECT * FROM invoice WHERE supplier_id = ? ${fy ? 'AND fiscal_year = ?' : ''} ORDER BY create_at ${validOrderBy}`;
                     params = fy ? [id, fy] : [id];
                     if (config.limit) query += ` LIMIT ${config.limit}`;
-                    rows = await database.execute(query, params);
+                    rows = await database.execute<InvoiceRecord[] | InvoiceRecord>(query, params);
                     break;
 
                 case 'phone':
@@ -248,13 +187,13 @@ class Invoice implements InvoiceModel {
                     `;
                     params = fy ? [id, fy] : [id];
                     if (config.limit) query += ` LIMIT ${config.limit}`;
-                    rows = await database.execute(query, params);
+                    rows = await database.execute<InvoiceRecord[] | InvoiceRecord>(query, params);
                     break;
 
                 case 'all':
                     query = `SELECT * FROM invoice ${fy ? 'WHERE fiscal_year = ?' : ''} ORDER BY create_at ${config.orderBy}`;
                     if (config.limit) query += ` LIMIT ${config.limit}`;
-                    rows = fy ? await database.execute(query, [fy]) : await database.execute(query);
+                    rows = fy ? await database.execute<InvoiceRecord[] | InvoiceRecord>(query, [fy]) : await database.execute<InvoiceRecord[] | InvoiceRecord>(query);
                     break;
 
 				default:
@@ -322,29 +261,28 @@ class Invoice implements InvoiceModel {
 		}
 	}
 
-	async updateInvoice(data: UpdateInvoiceData): Promise<{success: Boolean}> {
+	async updateInvoice(data: UpdateInvoiceDto): Promise<{success: boolean}> {
 		try {
 			const params = [
-				data.num_cmdt,
-				data.num_invoice,
+				data.invoice_num,
 				data.invoice_object,
 				data.supplier_id,
 				data.invoice_nature,
-				formatDate(data.invoice_arr_date),
+				formatDate(data.invoice_arrival_date),
 				formatDate(data.invoice_date),
 				data.invoice_type,
 				data.folio,
-				data.amount,
+				data.invoice_amount,
 				data.status,
-				data.created_by,
-				data.created_by_email,
-				data.created_by_role,
-				data.id // Pour la clause WHERE
+                data.created_by,
+                data.created_by_email,
+                data.created_by_role,
+				data.id
 			];
 
 			const query = `
 				UPDATE invoice 
-				SET num_cmdt = ?, num_invoice = ?, invoice_object = ?, supplier_id = ?, 
+				SET num_invoice = ?, invoice_object = ?, supplier_id = ?, 
 					invoice_nature = ?, invoice_arr_date = ?, invoice_date = ?, invoice_type = ?, 
 					folio = ?, amount = ?, status = ?, created_by = ?, created_by_email = ?, created_by_role = ?
 				WHERE id = ?
@@ -395,7 +333,6 @@ class Invoice implements InvoiceModel {
 			table_name: 'invoice',
 			action: 'SELECT',
 			performed_by: null,
-			record_id: null,
 			description: 'Récupération du dernier numéro de facture'
 		  });
 	  
@@ -435,7 +372,6 @@ class Invoice implements InvoiceModel {
 			  table_name: 'invoice',
 			  action: 'SELECT',
 			  performed_by: null,
-			  record_id: null,
 			  description: 'Récupération du dernier numéro de facture'
 			});
 		

@@ -4,15 +4,35 @@ import useInvoice from '../../hooks/features/useInvoice.js';
 
 export default function InvoiceLastNumber({ lastInvoiceNumber, isLoading = false, fiscalYear, displayLength = 12 }) {
     const [showTooltip, setShowTooltip] = useState(false);
-    
+
     console.log('🎯 InvoiceLastNumber avec props:', lastInvoiceNumber, isLoading, fiscalYear);
-    
+
+    // Fonction de formatage intelligent
+    const formatInvoiceNumber = (number) => {
+        if (!number && number !== 0) return '0'.repeat(displayLength);
+
+        const num = typeof number === 'string' ? parseInt(number, 10) : number;
+
+        if (isNaN(num)) return '0'.repeat(displayLength);
+
+        // Format adaptatif selon la plage
+        if (num <= 999) {
+            // Petits nombres : format 4 chiffres avec leading zeros
+            return num.toString().padStart(4, '0');
+        } else {
+            // Grands nombres : format avec leading zeros selon displayLength
+            return num.toString().padStart(displayLength, '0');
+        }
+    };
+
+    const formattedNumber = formatInvoiceNumber(lastInvoiceNumber);
+
     return (
         <div className="relative inline-flex">
             <div className={`inline-flex items-center gap-3 px-3 py-2 rounded-lg bg-white text-gray-700 text-sm font-medium shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 group ${
                 isLoading ? 'opacity-50' : ''
             } ${fiscalYear ? 'border-green-200 bg-green-50' : ''}`}>
-                
+
                 {/* Année fiscale intégrée */}
                 {fiscalYear && (
                     <div className="flex items-center gap-1 bg-green-500 text-white px-2 py-1 rounded-md text-xs font-semibold">
@@ -20,29 +40,36 @@ export default function InvoiceLastNumber({ lastInvoiceNumber, isLoading = false
                         <span>{fiscalYear}</span>
                     </div>
                 )}
-                
+
                 {/* Section Numéro de Facture avec "Facture" au-dessus */}
                 <div className="flex flex-col items-center gap-1">
                     <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-800 font-medium">Facture</span>
+                        <span className="text-sm text-gray-800 font-medium">Facture</span>
                         <DocumentTextIcon className={`w-4 h-4 ${
                             isLoading ? 'text-gray-400 animate-pulse' : fiscalYear ? 'text-green-500' : 'text-blue-500'
                         }`} />
-                        
+
                         <span className="font-mono font-bold text-gray-800 text-base">
                             {isLoading ? (
                                 <span className="animate-pulse">...</span>
                             ) : (
-                                `#${lastInvoiceNumber ? lastInvoiceNumber.toString().padStart(displayLength, '0') : '0'.repeat(displayLength)}`
+                                `#${formattedNumber}`
                             )}
                         </span>
                     </div>
+
+                    {/* Indicateur de format */}
+                    {!isLoading && lastInvoiceNumber !== undefined && lastInvoiceNumber !== null && (
+                        <span className="text-xs text-gray-500 font-mono">
+                            {parseInt(lastInvoiceNumber) <= 999 ? 'Format: 0001-0999' : 'Format: 1000+'}
+                        </span>
+                    )}
                 </div>
-                
+
                 {/* Bouton d'information */}
-                <button 
+                <button
                     type='button'
-                    onMouseEnter={() => setShowTooltip(true)} 
+                    onMouseEnter={() => setShowTooltip(true)}
                     onMouseLeave={() => setShowTooltip(false)}
                     className={`transition-colors ${
                         isLoading ? 'text-gray-400' : fiscalYear ? 'text-green-500 hover:text-green-700' : 'text-gray-400 hover:text-gray-600'
@@ -52,16 +79,21 @@ export default function InvoiceLastNumber({ lastInvoiceNumber, isLoading = false
                     <InformationCircleIcon className="w-4 h-4" />
                 </button>
             </div>
-            
+
             {/* Tooltip avec information sur l'année fiscale */}
             {showTooltip && (
                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-md shadow-lg z-10 w-64 text-center">
-                    {isLoading 
-                        ? 'Mise à jour du numéro en cours...' 
+                    {isLoading
+                        ? 'Mise à jour du numéro en cours...'
                         : fiscalYear
                             ? `Dernier numéro de facture pour l'exercice ${fiscalYear}`
                             : 'Numéro de la dernière facture enregistrée dans le système'
                     }
+                    {!isLoading && lastInvoiceNumber !== undefined && (
+                        <div className="mt-1 text-green-300">
+                            Format: {parseInt(lastInvoiceNumber) <= 999 ? '4 chiffres (0001-0999)' : '1-12 chiffres (1000+)'}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

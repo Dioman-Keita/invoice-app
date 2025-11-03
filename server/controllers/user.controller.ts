@@ -1,7 +1,8 @@
 import ApiResponder from "../utils/ApiResponder";
 import { GmailEmailSender } from "../services/emailService";
 import { NotificationFactory } from "../services/notificationFactory";
-import Users, { UserType, User } from "../models/User";
+import { UserType, User, LoginDto, RegisterDto, VerifyEmailDto, RequestPasswordResetDto, ResetPasswordDto } from "../types";
+import Users from '../models/User';
 import { generateRefreshToken, generateUserToken, verifyUserToken } from "../services/userToken";
 import activityTracker, { ActivityTracker } from "../utils/ActivityTracker";
 import UserDataValidator from "../utils/UserDataValidator";
@@ -12,9 +13,10 @@ import database from "../config/database";
 import logger from "../utils/Logger";
 import { auditLog } from "../utils/auditLogger";
 import { BcryptHasher } from "../utils/PasswordHasher";
+import { AuthenticatedRequest } from "../types/express/request";
 
 export async function createUser(
-    req: Request<unknown, unknown, UserType>, 
+    req: Request<unknown, unknown, RegisterDto>, 
     res: Response
   ): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
@@ -24,8 +26,6 @@ export async function createUser(
       email: data.email, 
       role: data.role 
     });
-  
-    // ✅ VALIDATION AVEC LA NOUVELLE CLASSE
     const validationResult = await UserDataValidator.validateUserCreation(data);
   
     if (!validationResult.isValid) {
@@ -37,7 +37,7 @@ export async function createUser(
       const firstError = validationResult.errors[0];
       return ApiResponder.badRequest(res, firstError.message, {
         field: firstError.field,
-        allErrors: validationResult.errors // Optionnel: retourner toutes les erreurs
+        allErrors: validationResult.errors
       });
     }
   
@@ -81,7 +81,7 @@ export async function createUser(
     }
   }
 
-export async function login(req: Request, res: Response): Promise<Response> {
+export async function login(req: Request<unknown, unknown, LoginDto>, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
     const { email, rememberMe } = req.body;
     
@@ -110,12 +110,17 @@ export async function login(req: Request, res: Response): Promise<Response> {
       });
       
       // Vérifier si c'est une erreur de connexion à la base de données
-      if (authUser && (authUser as any).error === 'DATABASE_CONNECTION_ERROR') {
+      if (authUser && typeof authUser === 'object' && 'error' in authUser && authUser.error === 'DATABASE_CONNECTION_ERROR') {
         logger.error(`[${requestId}] Erreur de connexion à la base de données`, { email });
         return ApiResponder.error(res, null, "Service temporairement indisponible. Veuillez réessayer plus tard.");
       }
-      
-      if (!authUser || !authUser.id) {
+
+      if (
+        !authUser ||
+        typeof authUser !== 'object' ||
+        !('id' in authUser) ||
+        typeof authUser.id !== 'string'
+      ) {
         logger.warn(`[${requestId}] Échec de connexion - identifiants invalides`, { email });
         return ApiResponder.unauthorized(res, "Identifiants invalides");
       }
@@ -213,8 +218,8 @@ function clearAllCookies(res: Response): void {
     res.clearCookie('refresh_token', options);
     res.clearCookie('rememberMe', options);
 }
-export async function logout(req: Request, res: Response): Promise<Response> {
-    const user = (req as any).user || undefined;
+export async function logout(req: AuthenticatedRequest, res: Response): Promise<Response> {
+    const user = req.user || undefined;
     const requestId = req.headers['x-request-id'] as string || 'unknown';
     try {
         
@@ -269,12 +274,12 @@ export async function logout(req: Request, res: Response): Promise<Response> {
 }
 
 // Endpoint pour récupérer le profil de l'utilisateur connecté
-export async function getUserProfil(req: Request, res: Response): Promise<Response> {
+export async function getUserProfil(req: AuthenticatedRequest, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
     
     try {
         // req.user est peuplé par le middleware authGuard
-        const user = (req as any).user;
+        const user = req.user;
         
         if (!user) {
             logger.warn(`[${requestId}] Tentative d'accès au profile sans utilisateur authentifié`);
@@ -303,7 +308,7 @@ export async function getUserProfil(req: Request, res: Response): Promise<Respon
     }
 }
 
-export async function forgotPassword(req: Request, res: Response): Promise<Response> {
+export async function forgotPassword(req: Request<unknown, unknown, RequestPasswordResetDto>, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
     const { email } = req.body;
     
@@ -360,7 +365,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<Respo
             console.log('🔐 [DEBUG] forgotPassword - Token inséré avec succès');
 
             // Vérifiez que le token est bien en base
-            const verifyToken = await database.execute(
+            const verifyToken = await database.execute<unknown[]>(
                 "SELECT * FROM auth_token WHERE token = ?",
                 [token]
             );
@@ -415,7 +420,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<Respo
 }
 
 
-export async function resetUserPassword(req: Request, res: Response): Promise<Response> {
+export async function resetUserPassword(req: Request<unknown, unknown, ResetPasswordDto>, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
     const { password, token, confirmPassword } = req.body;
     const currentToken = token;
@@ -513,7 +518,7 @@ export async function resetUserPassword(req: Request, res: Response): Promise<Re
         console.log('🔐 Utilisateur trouvé:', user);
 
         // Vérification du token en base de données
-        const tokenRecords: any[] = await database.execute(
+        const tokenRecords: unknown[] = await database.execute(
             "SELECT * FROM auth_token WHERE token = ? AND create_at > DATE_SUB(NOW(), INTERVAL 30 MINUTE)",
             [currentToken]
         );
@@ -610,9 +615,9 @@ export async function resetUserPassword(req: Request, res: Response): Promise<Re
     }
 }
 
-export async function verifyRegistrationToken(req: Request, res: Response): Promise<Response> {
+export async function verifyRegistrationToken(req: Request<unknown, unknown, VerifyEmailDto>, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
-    const currentToken = req.body.token || req.query.token;
+    const currentToken = req.body.token;
 
     logger.info(`[${requestId}] Vérification du token d'inscription`, { currentToken });
     console.log('🔐 verifyRegistrationToken - Token reçu:', currentToken);
@@ -781,9 +786,9 @@ export async function verifyRegistrationToken(req: Request, res: Response): Prom
     }
 }
 
-export async function silentRefresh(req: Request, res: Response): Promise<Response> {
+export async function silentRefresh(req: AuthenticatedRequest, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknow';
-    const user = (req as any).user;
+    const user = req.user;
     const rememberMe = req.cookies.rememberMe === 'true';
     const activityTracker = new ActivityTracker(undefined, rememberMe);
 
@@ -876,7 +881,7 @@ export async function silentRefresh(req: Request, res: Response): Promise<Respon
         }, 'Token renouvelé avec succès');
 
     } catch (error) {
-        logger.error(`[${requestId}] Une erreur est survenue lors du renouvellement de token pour l'utilisateur ${user.email}`, {
+        logger.error(`[${requestId}] Une erreur est survenue lors du renouvellement de token pour l'utilisateur ${user?.email}`, {
             userId: user?.sup,
             email: user?.email,
             errorMessage: error instanceof Error ? error.message : 'unknow error',

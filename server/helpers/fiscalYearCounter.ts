@@ -1,5 +1,5 @@
-import database from "../../config/database";
-import logger from "../Logger";
+import database from "../config/database";
+import logger from "../utils/Logger";
 import { getSetting } from "./settings";
 
 export async function initializeFiscalYearCounter(fiscalYear: string): Promise<void> {
@@ -23,12 +23,13 @@ export async function initializeFiscalYearCounter(fiscalYear: string): Promise<v
       );
       logger.info(`Compteur initialisé pour l'année fiscale ${fiscalYear}`);
     } else {
-      logger.info(`Compteur pour ${fiscalYear} existe déjà`);
+      logger.info(`Compteur existant pour ${fiscalYear} existe déjà`);
     }
   } catch (error) {
     logger.error("Erreur lors de l'initialisation du compteur fiscal", {
       error: error instanceof Error ? error.message : 'Unknown error',
-      fiscalYear
+      stack: error instanceof Error ? error.stack : 'Unknown stack',
+      fiscalYear,
     });
     throw error;
   }
@@ -53,7 +54,8 @@ export async function getCurrentFiscalYearCounter(): Promise<{ fiscal_year: stri
     return { fiscal_year: fiscalYear, last_cmdt_number: 0};
   } catch (error) {
     logger.error("Erreur lors de la récupération du compteur fiscal", {
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'Unknown stack',
     });
     throw error;
   }
