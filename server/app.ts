@@ -8,7 +8,6 @@ import supplierRoute from './routes/supplier.route';
 import settingsRoute from './routes/settings.route';
 import searchRoute from './routes/search.route';
 import { requestIdMiddleware } from './middleware/requestIdMiddleware';
-import { corsHeaders } from './middleware/corsHeader';
 import { debugCookies } from './middleware/debugCookie';
 import logger from './utils/Logger';
 import ApiResponder from './utils/ApiResponder';
@@ -35,11 +34,9 @@ const corsOptions = {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-request-id']
 };
 
-// ✅ SEULEMENT cette ligne - SUPPRIMEZ app.options('*', ...)
 app.use(cors(corsOptions));
 
 // Middlewares globaux
-app.use(corsHeaders);
 app.use(cookieParser());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));

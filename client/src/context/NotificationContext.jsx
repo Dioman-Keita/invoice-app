@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NotificationContext } from './NotificationContext';
+import NotificationContext  from './NotificationContext';
 
 export const NotificationProvider = ({ children }) => {
 

@@ -163,7 +163,7 @@ export class UserModel {
     
             // 1️⃣ Insertion dans pending_verification
             await conn.execute(
-                "INSERT INTO pending_verification(id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department, fiscalYear) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO pending_verification(id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department, fiscal_year) VALUES(?,?,?,?,?,?,?,?,?,?)",
                 [this.id, this.firstName, this.lastName, this.email, this.hash, this.employeeId, this.role, this.phone, this.department, fiscalYear]
             );
     
@@ -177,8 +177,8 @@ export class UserModel {
     
             // 3️⃣ Transfert vers employee
             await conn.execute(`
-                INSERT INTO employee(id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department, fiscalYear)
-                SELECT id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department, fiscalYear
+                INSERT INTO employee(id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department, fiscal_year)
+                SELECT id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department, fiscal_year
                 FROM pending_verification WHERE id = ?
             `, [this.id]);
     

@@ -67,7 +67,7 @@ function Register() {
   const onSubmit = async (data) => {
     try {
       setLoading(true);
-      await new Promise((res) => setTimeout(res, 2000));
+      await new Promise((res) => setTimeout(res, 1000));
       const result = await registerUser({
         firstName: data.firstName,
         lastName: data.lastName,
