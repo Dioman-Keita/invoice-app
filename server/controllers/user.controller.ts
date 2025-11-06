@@ -67,7 +67,6 @@ export async function createUser(
       });
   
       return ApiResponder.created(res, { 
-        success: true, 
         userId: result.userId 
       }, 'Un email de verification vous a été envoyé pour completer votre inscription 😊');
       

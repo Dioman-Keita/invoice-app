@@ -69,7 +69,7 @@ case "$choice" in
   3)
     echo "$(timestamp) 💣 Safe reset (containers + CMDT volume only)..."
     docker compose down --remove-orphans
-    docker volume rm final-mysql-data 2>/dev/null || true
+    docker volume rm  server_final-mysql-data 2>/dev/null || true
     docker compose up -d
     echo "$(timestamp) ✅ Stack reset. CMDT data removed, images preserved."
     ;;

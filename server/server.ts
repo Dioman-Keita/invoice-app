@@ -1,5 +1,6 @@
 import app from './app';
 import logger from './utils/Logger';
+import { startCleanupUnverifiedJob } from './jobs/cleanupUnverified';
 
 const PORT = process.env.PORT || 3000;
 
@@ -10,6 +11,7 @@ app.listen(PORT, () => {
     console.log(`🚀 Serveur démarré sur le port ${PORT}`);
     console.log(`📡 API disponible sur http://localhost:${PORT}/api`);
     console.log(`🔍 Health check: http://localhost:${PORT}/api/health`);
+    startCleanupUnverifiedJob();
 });
 
 export default app;

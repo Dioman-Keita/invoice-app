@@ -154,7 +154,7 @@ export class NotificationFactory {
 			</html>
 		`;
 
-		const text = `Bonjour ${safeName},\n\nPour finaliser la création de votre compte et accéder à tous nos services, veuillez vérifier votre adresse email en cliquant sur le lien suivant :\n\n${actionLinkWithToken}\n\n${token ? 'Code de vérification : ' + token + '\n\n' : ''}Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.`;
+		const text = `Bonjour ${safeName},\n\nPour finaliser la création de votre compte et accéder à tous nos services, veuillez vérifier votre adresse email en cliquant sur le lien suivant :\n\n${actionLinkWithToken}\n\n${token ? 'Code de vérification : ' + token + '\n\n' : ''}Si vous n'avez pas créé de compte, vous pouvez ignorer cet email. Pour des raisons de sécurité, ce lien expirera dans <strong>1 heure</strong>.`;
 		return { subject, html, text };
 	}
 

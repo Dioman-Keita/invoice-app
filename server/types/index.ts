@@ -14,8 +14,5 @@ export * from './dto/SupplierDto';
 // API types
 export * from './api/ApiResponse';
 
-// Config types
-export * from './config/Env';
-
 // Erros
 export * from './errors/DbError';

@@ -27,20 +27,20 @@ echo ✅ Docker and Docker Compose detected.
 echo.
 
 :: ============================================
-:: 🚀 CMDT Stack Management (Docker Compose)
+:: 🚀 CMDT Stack Management - Docker Compose
 :: ============================================
 
 set "timestamp=[%time%]"
 echo %timestamp% Detected OS: %OS%
 echo ============================================
-echo 🚀 CMDT Stack Management (Docker Compose)
+echo 🚀 CMDT Stack Management - Docker Compose
 echo ============================================
 echo.
 
-echo 1. 🔁 Restart without removal (just restart)
-echo 2. 🔄 Restart with container removal (docker compose down)
-echo 3. 💣 Safe reset (containers + CMDT volume only)
-echo 4. 🔥 Extreme clean (purge all unused Docker data)
+echo 1. 🔁 Restart without removal - just restart
+echo 2. 🔄 Restart with container removal - docker compose down
+echo 3. 💣 Safe reset - containers and CMDT volume only
+echo 4. 🔥 Extreme clean - purge all unused Docker data
 echo.
 
 set /p choice="Choose an option (1, 2, 3 or 4): "
@@ -52,7 +52,7 @@ if "%choice%"=="1" (
     echo %timestamp% 🔁 Restarting without removal...
     docker compose restart
     if %errorlevel% neq 0 (
-        echo ⚠️  Docker needs admin privileges or isn’t running. Try launching Docker Desktop.
+        echo ⚠️  Docker needs admin privileges or is not running. Try launching Docker Desktop.
     ) else (
         echo ✅ Stack restarted with no data loss.
     )
@@ -68,16 +68,16 @@ if "%choice%"=="2" (
 )
 
 if "%choice%"=="3" (
-    echo %timestamp% 💣 Safe reset (containers + CMDT volume only)...
+    echo %timestamp% 💣 Safe reset - containers and CMDT volume only...
     docker compose down --remove-orphans
-    docker volume rm final-mysql-data 2>nul
+    docker volume rm server_final-mysql-data 2>nul
     docker compose up -d
     echo ✅ Stack reset. CMDT data removed, images preserved.
     goto end
 )
 
 if "%choice%"=="4" (
-    echo %timestamp% 🔥 Extreme clean...
+    echo %timestamp% 🔥 Extreme clean - full Docker prune...
     docker system prune -af --volumes
     echo ✅ Docker environment completely cleaned.
     goto end

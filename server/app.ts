@@ -60,9 +60,13 @@ app.get('/api/health', (_req, res) => {
 });
 
 // Gestion des erreurs globaux
-app.use((err: Error, req: Request, res: Response) => {
+app.use((err: Error & { type?: string; status?: number }, req: Request, res: Response, _next: NextFunction) => {
+    if (err?.type === 'entity.parse.failed' || (err instanceof SyntaxError && err.status === 400)) {
+        logger.error('Erreur de parsing JSON', { error: err.message, stack: err.stack });
+        return ApiResponder.badRequest(res, 'Requête JSON invalide');
+    }
     logger.error('Erreur non gérée', { error: err.message, stack: err.stack});
-    ApiResponder.error(res, err);
+    return ApiResponder.error(res, err);
 });
 
 export default app;

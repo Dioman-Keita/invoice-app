@@ -240,6 +240,8 @@ CREATE INDEX idx_employee_fiscal_year ON employee(fiscal_year);
 CREATE INDEX idx_fiscal_year_counter_year ON fiscal_year_counter(fiscal_year);
 CREATE INDEX idx_employee_fiscal_year_counter_year ON employee_fiscal_year_counter(fiscal_year);
 CREATE INDEX idx_pending_verification_fiscal_year ON pending_verification(fiscal_year);
+CREATE INDEX idx_employee_created_at ON employee(created_at);
+CREATE INDEX idx_employee_isVerified_created_at ON employee(isVerified, created_at);
 
 -- Vues sur les audits
 CREATE VIEW view_audit_log AS SELECT * FROM audit_log;
