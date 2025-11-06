@@ -755,7 +755,7 @@ function Profile() {
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-500">Numéro employé</span>
+                                    <span className="text-gray-500">ID employé</span>
                                     <span className="text-gray-900 font-medium font-mono">
                                         {userData?.userId || 'N/A'}
                                     </span>

@@ -84,7 +84,7 @@ function Register() {
       if (result?.success) {
         console.log('Donnees soumises : ', data);
         success(result.message || "Consultez votre email pour finaliser l'inscription");
-        reset()
+        reset();
       } else {
         error(result.message || "Erreur lors de l'inscription");
       }

@@ -23,14 +23,14 @@ const employeeIdSchema = z
   .min(1, "l'identifiant CMDT est requis")
   .regex(/^\d{5,7}$/, {
     message: "L'identifiant CMDT doit contenir 5 à 7 chiffres",
-  }); 
+  });
 
 const phoneSchema = z
-  .string()
-  .min(1, "Le numéro de téléphone est requis")
-  .regex(/^\+223(\s\d{2}){0,4}$/, {
-    message: "Le numéro doit être au format +223 XX XX XX XX",
-  });
+    .string()
+    .min(1, "Le numéro de téléphone est requis")
+    .regex(/^\+223(\s\d{2}){4}$/, {
+        message: "Format invalide : +223 XX XX XX XX",
+    });
 
 const roleSchema = z
   .enum(['dfc_agent', 'invoice_manager', 'admin'], {

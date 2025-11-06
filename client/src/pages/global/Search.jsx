@@ -130,9 +130,9 @@ function Search() {
   }, [activeTab]);
 
   // Utilisation du hook unique pour chaque type de recherche
-  const invoiceSearch = useSearch('/search/invoices', 'factures');
-  const supplierSearch = useSearch('/search/suppliers', 'fournisseurs');
-  const relationalSearch = useSearch('/search/relational', 'relationnel');
+  const invoiceSearch = useSearch('api/search/invoices', 'factures');
+  const supplierSearch = useSearch('api/search/suppliers', 'fournisseurs');
+  const relationalSearch = useSearch('api/search/relational', 'relationnel');
 
   // Prépare les filtres et options spécifiques à chaque onglet
   const buildOptionsForTab = (tab) => {

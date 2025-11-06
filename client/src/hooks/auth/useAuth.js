@@ -266,8 +266,9 @@ export function useAuth() {
 
             return {
                 success: true,
-                userId: response.userId,
-                email: payload.email
+                userId: response.data.userId,
+                email: payload.email,
+                message: response.message
             };
         } catch (err) {
             let message = "Erreur lors de l'inscription";
@@ -294,7 +295,7 @@ export function useAuth() {
     // ✅ finalizeRegister - CONSERVÉ
     const finalizeRegister = useCallback(async (token) => {
         try {
-            const response = await api.post('api/auth/verify-registration-token', { token });
+            const response = await api.post('api/auth/verify-registration-token', { token }, { timeout: 30000 });
 
             if (response?.success === true) {
                 await checkAuthStatus();
