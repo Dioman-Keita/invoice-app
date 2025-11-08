@@ -40,7 +40,7 @@ class Supplier implements SupplierModel {
 
             const fiscalYear = await getSetting('fiscal_year');
 
-            const query = "INSERT INTO supplier(name, account_number, phone, fiscal_year, created_by, created_by_role, created_email) VALUES (?,?,?)";
+            const query = "INSERT INTO supplier(name, account_number, phone, fiscal_year, created_by, created_by_role, created_by_email) VALUES (?,?,?,?,?,?,?)";
             const params = [supplier_name, formatAccountCanonical(supplier_account_number), supplier_phone, fiscalYear, created_by, created_by_role, created_by_email];
 
             const connection = await database.getConnection();

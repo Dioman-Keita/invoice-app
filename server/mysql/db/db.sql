@@ -208,7 +208,7 @@ CREATE TABLE app_settings (
 INSERT INTO app_settings (setting_key, setting_value, description) VALUES
 ('fiscal_year', '"2025"', 'Année fiscale en cours'),
 ('cmdt_format', '{"padding": 4, "max": 999999999999}', 'Format des numéros CMDT (support 1 milliard/an)'),
-('year_end_warning_threshold', '100000000', 'Seuil d avertissement fin d année (10% du milliard)'),
+('year_end_warning_threshold', '900000000000', 'Seuil d avertissement fin d année (10% du milliard)'),
 ('auto_year_switch', 'true', 'Changement automatique d année fiscale'),
 ('app_theme', '{"theme": "light"}', 'Paramètres d apparence de l application'),
 ('app_version', '"1.0.0"', 'Version de l application');

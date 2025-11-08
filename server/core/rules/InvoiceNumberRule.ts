@@ -241,7 +241,7 @@ class InvoiceNumberRule {
             const counter = await this.getCurrentFiscalYearCounter();
 
             const remaining = config.max - counter.last_cmdt_number;
-            const warning = remaining <= threshold;
+            const warning = counter.last_cmdt_number >= threshold;
 
             if (warning) {
                 logger.warn(`⚠️ Seuil d'alerte atteint pour ${fiscalYear}: ${counter.last_cmdt_number}/${config.max}. Reste: ${remaining}`);

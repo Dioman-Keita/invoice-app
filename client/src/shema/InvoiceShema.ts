@@ -73,12 +73,11 @@ export const invoiceSchema = z.object({
             }
         }),
     invoice_amount: z
-        .union([z.string(), z.undefined()])
-        .transform((val) => val ?? "")
-        .refine((val) => val.trim() !== "", { message: "Le montant est requis" })
-        .refine((val) => /^\d+$/.test(val), { message: "Le montant doit être un entier positif" })
+        .string()
+        .min(1, "Le montant est requis")
+        .regex(/^\d+$/, "Le montant doit être un entier positif")
         .transform((val) => parseInt(val, 10))
-        .refine((val) => val > 0 && val <= 100_000_000_000, {
+        .refine((val) => !isNaN(val) && val > 0 && val <= 100_000_000_000, {
             message: "Montant maximum autorisé : 100 000 000 000",
         }),
     supplier_name: z

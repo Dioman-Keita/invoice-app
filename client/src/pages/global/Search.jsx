@@ -84,7 +84,7 @@ function Search() {
   useEffect(() => {
     const fetchFiscalYears = async () => {
       try {
-        const response = await fetch('/api/fiscal-years', {
+        const response = await fetch('http://localhost:3000/api/fiscal-years', {
           credentials: 'include',
           headers: { Accept: 'application/json' }
         });
@@ -130,9 +130,9 @@ function Search() {
   }, [activeTab]);
 
   // Utilisation du hook unique pour chaque type de recherche
-  const invoiceSearch = useSearch('api/search/invoices', 'factures');
-  const supplierSearch = useSearch('api/search/suppliers', 'fournisseurs');
-  const relationalSearch = useSearch('api/search/relational', 'relationnel');
+  const invoiceSearch = useSearch('http://localhost:3000/api/search/invoices', 'factures');
+  const supplierSearch = useSearch('http://localhost:3000/api/search/suppliers', 'fournisseurs');
+  const relationalSearch = useSearch('http://localhost:3000/api/search/relational', 'relationnel');
 
   // Prépare les filtres et options spécifiques à chaque onglet
   const buildOptionsForTab = (tab) => {

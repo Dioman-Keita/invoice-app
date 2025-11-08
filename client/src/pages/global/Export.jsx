@@ -55,7 +55,7 @@ function Export() {
       }
       
       // Trigger download
-      const response = await fetch(`/api/export/advanced?${params.toString()}`, {
+      const response = await fetch(`http://localhost:3000/api/export/advanced?${params.toString()}`, {
         credentials: 'include',
         headers: { Accept: 'application/json' }
       });
@@ -82,7 +82,7 @@ function Export() {
 
   const loadFiscalYears = async () => {
     try {
-      const response = await fetch('/api/fiscal-years', {
+      const response = await fetch('http://localhost:3000/api/fiscal-years', {
         credentials: 'include',
         headers: { Accept: 'application/json' }
       });
@@ -97,7 +97,7 @@ function Export() {
 
   const loadExportHistory = async () => {
     try {
-      const response = await fetch('/api/export/history', {
+      const response = await fetch('http://localhost:3000/api/export/history', {
         credentials: 'include',
         headers: { Accept: 'application/json' }
       });
