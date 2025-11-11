@@ -43,6 +43,7 @@ export interface InvoiceRecord {
     created_by_email: string;
     created_by_role: UserRole;
     fiscal_year: string;
+    documents?: string | string[];
 }
 
 /**

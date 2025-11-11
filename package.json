@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate:excel-templates": "tsx server/scripts/generateExcelTemplates.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -15,8 +16,10 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tailwindcss/postcss": "^4.1.12",
     "axios": "^1.12.2",
+    "handlebars": "^4.7.8",
     "lucide-react": "^0.542.0",
     "postcss-loader": "^8.1.1",
+    "puppeteer": "^23.8.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-hook-form": "^7.62.0",
@@ -40,6 +43,7 @@
     "globals": "^16.3.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.12",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vite": "^7.1.2"
   }

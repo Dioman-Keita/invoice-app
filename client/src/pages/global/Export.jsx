@@ -17,66 +17,145 @@ function Export() {
   useBackground('bg-export');
   
   const [exportSettings, setExportSettings] = useState({
-    format: 'txt',
+    format: 'xlsx',  // ✅ MODIFICATION : xlsx au lieu de txt
     dateRange: 'month',
     customDates: {
       start: '',
       end: '',
       fiscalYear: 'toute'
     },
-    include: ['factures', 'fournisseurs', 'statistiques'],
+    include: ['factures'],  // ✅ MODIFICATION : Un seul type par export pour plus de clarté
     columns: ['numero', 'date', 'montant', 'fournisseur', 'statut']
   });
 
   const [fiscalYears, setFiscalYears] = useState([]);
   const [exportHistory, setExportHistory] = useState([]);
 
+  // ✅ MODIFICATION : Mapping vers les types backend
   const exportOptions = [
-    { id: 'factures', label: 'Factures', Icon: DocumentTextIcon },
-    { id: 'fournisseurs', label: 'Fournisseurs', Icon: TableCellsIcon },
-    { id: 'statistiques', label: 'Statistiques', Icon: ChartBarIcon },
-    { id: 'settings', label: 'Paramètres de l\'application', Icon: CogIcon }
+    { id: 'factures', label: 'Factures', Icon: DocumentTextIcon, backendType: 'invoices' },
+    { id: 'fournisseurs', label: 'Fournisseurs', Icon: TableCellsIcon, backendType: 'suppliers' },
+    { id: 'statistiques', label: 'Statistiques Relationnelles', Icon: ChartBarIcon, backendType: 'relational' }
   ];
+
+  // ✅ AJOUT : Fonction pour calculer les dates selon la période
+  const getDateRange = (range) => {
+    const today = new Date();
+    const start = new Date();
+    const end = new Date(today);
+    
+    switch (range) {
+      case 'day':
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case 'week':
+        const dayOfWeek = today.getDay();
+        const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Lundi
+        start.setDate(diff);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case 'month':
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+        end.setMonth(today.getMonth() + 1, 0); // Dernier jour du mois
+        end.setHours(23, 59, 59, 999);
+        break;
+      default:
+        return null;
+    }
+    
+    return {
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0]
+    };
+  };
 
   const handleExport = async () => {
     try {
-      // Build query parameters from settings
-      const params = new URLSearchParams();
-      params.set('type', exportSettings.include[0] || 'invoices'); // Use first selected
-      params.set('format', exportSettings.format);
-      
-      // Add date filters
-      if (exportSettings.dateRange === 'custom') {
-        if (exportSettings.customDates.start) params.set('dateFrom', exportSettings.customDates.start);
-        if (exportSettings.customDates.end) params.set('dateTo', exportSettings.customDates.end);
+      if (exportSettings.include.length === 0) {
+        alert('Veuillez sélectionner au moins un type de données à exporter');
+        return;
+      }
+
+      // ✅ MODIFICATION : Exporter chaque type sélectionné séparément
+      for (const selectedType of exportSettings.include) {
+        const option = exportOptions.find(opt => opt.id === selectedType);
+        if (!option) continue;
+
+        // Build query parameters from settings
+        const params = new URLSearchParams();
+        params.set('type', option.backendType);
+        
+        // ✅ MODIFICATION : Mapper les formats correctement
+        let format = exportSettings.format;
+        if (format === 'excel') format = 'xlsx';
+        // txt reste txt (pas de conversion en csv)
+        params.set('format', format);
+        
+        // ✅ AMÉLIORATION : Gérer les périodes automatiques
+        let dateFrom = '';
+        let dateTo = '';
+        
+        if (exportSettings.dateRange === 'custom') {
+          dateFrom = exportSettings.customDates.start;
+          dateTo = exportSettings.customDates.end;
+        } else {
+          const dateRange = getDateRange(exportSettings.dateRange);
+          if (dateRange) {
+            dateFrom = dateRange.start;
+            dateTo = dateRange.end;
+          }
+        }
+        
+        if (dateFrom) params.set('dateFrom', dateFrom);
+        if (dateTo) params.set('dateTo', dateTo);
+        
         if (exportSettings.customDates.fiscalYear && exportSettings.customDates.fiscalYear !== 'toute') {
           params.set('fiscal_year', exportSettings.customDates.fiscalYear);
         }
+        
+        // Trigger download
+        const response = await fetch(`http://localhost:3000/api/export/advanced?${params.toString()}`, {
+          credentials: 'include',
+          headers: { Accept: 'application/json' }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Erreur lors de l'export de ${option.label}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        // ✅ AMÉLIORATION : Nom de fichier plus descriptif
+        const typeLabels = {
+          'factures': 'factures',
+          'fournisseurs': 'fournisseurs',
+          'statistiques': 'statistiques-relationnelles'
+        };
+        const extension = format === 'xlsx' ? 'xlsx' : format === 'txt' ? 'txt' : format;
+        a.download = `export-${typeLabels[selectedType] || selectedType}-${new Date().toISOString().split('T')[0]}.${extension}`;
+        
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        // Petite pause entre les téléchargements pour éviter les problèmes
+        if (exportSettings.include.length > 1 && exportSettings.include.indexOf(selectedType) < exportSettings.include.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
       }
-      
-      // Trigger download
-      const response = await fetch(`http://localhost:3000/api/export/advanced?${params.toString()}`, {
-        credentials: 'include',
-        headers: { Accept: 'application/json' }
-      });
-
-      if (!response.ok) throw new Error('Erreur lors de l\'export');
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `export-${exportSettings.include[0]}-${new Date().toISOString().split('T')[0]}.${exportSettings.format}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
 
       // Refresh history
       await loadExportHistory();
     } catch (err) {
       console.error('Erreur export:', err);
-      alert('Erreur lors de l\'export des données');
+      alert(err.message || 'Erreur lors de l\'export des données');
     }
   };
 
@@ -144,21 +223,26 @@ function Export() {
           <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-md p-6 mb-8">
             <h2 className="text-xl font-semibold mb-6">Options d'exportation</h2>
             
-            {/* Format d'exportation - CSV changé en TXT */}
+            {/* ✅ MODIFICATION : Format d'exportation avec les bons formats */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-3">Format d'export</label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {['pdf', 'excel', 'txt', 'json'].map((format) => (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {[
+                  { value: 'xlsx', label: 'Excel (.xlsx)', icon: '📊' },
+                  { value: 'pdf', label: 'PDF (.pdf)', icon: '📄' },
+                  { value: 'txt', label: 'TXT (.txt)', icon: '📋' }
+                ].map((format) => (
                   <button
-                    key={format}
-                    onClick={() => setExportSettings({...exportSettings, format})}
+                    key={format.value}
+                    onClick={() => setExportSettings({...exportSettings, format: format.value})}
                     className={`p-4 rounded-lg border-2 transition-all duration-200 ${
-                      exportSettings.format === format
+                      exportSettings.format === format.value
                         ? 'border-green-500 bg-green-50 text-green-700'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <span className="font-medium capitalize">{format}</span>
+                    <span className="text-2xl mb-1 block">{format.icon}</span>
+                    <span className="font-medium text-sm">{format.label}</span>
                   </button>
                 ))}
               </div>
@@ -239,20 +323,27 @@ function Export() {
               )}
             </div>
 
-            {/* Données à inclure */}
+            {/* ✅ MODIFICATION : Données à inclure - Radio buttons pour un seul choix */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-3">Données à inclure</label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="block text-sm font-medium text-gray-700 mb-3">Type de données à exporter</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {exportOptions.map((opt) => (
-                  <label key={opt.id} className="flex items-center p-4 rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-colors duration-200 cursor-pointer">
+                  <label 
+                    key={opt.id} 
+                    className={`flex items-center p-4 rounded-lg border-2 transition-colors duration-200 cursor-pointer ${
+                      exportSettings.include.includes(opt.id) 
+                        ? 'border-green-500 bg-green-50' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
                     <input
-                      type="checkbox"
+                      type="radio"
+                      name="exportType"
                       checked={exportSettings.include.includes(opt.id)}
                       onChange={(e) => {
-                        const newInclude = e.target.checked
-                          ? [...exportSettings.include, opt.id]
-                          : exportSettings.include.filter(item => item !== opt.id);
-                        setExportSettings({...exportSettings, include: newInclude});
+                        if (e.target.checked) {
+                          setExportSettings({...exportSettings, include: [opt.id]});
+                        }
                       }}
                       className="rounded border-gray-300 text-green-600 focus:ring-green-500"
                     />
@@ -261,6 +352,7 @@ function Export() {
                   </label>
                 ))}
               </div>
+              <p className="text-xs text-gray-500 mt-2">Sélectionnez un type de données à exporter. Vous pouvez exporter plusieurs types en plusieurs fois.</p>
             </div>
 
             {/* Bouton d'exportation */}

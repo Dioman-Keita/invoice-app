@@ -1,6 +1,6 @@
 import InvoiceLastNumber from "../../features/invoices/InvoiceLastNumber.jsx";
 
-function FormContainer({ children, handleSubmit, onSubmit, lastInvoiceNumber, isLoading, fiscalYear }) {
+function FormContainer({ children, handleSubmit, onSubmit, lastInvoiceNumber, isLoading, fiscalYear, disabled = false }) {
     return (
         <main className="py-10 px-4">
             <form noValidate onSubmit={handleSubmit(onSubmit)} className="max-w-3xl mx-auto bg-white/90 backdrop-blur-md p-6 rounded-lg shadow-xl">
@@ -8,7 +8,9 @@ function FormContainer({ children, handleSubmit, onSubmit, lastInvoiceNumber, is
                     <span className="italic">SAISIE DES INFORMATIONS SUR LA FACTURE . EXERCICE FISCALE {fiscalYear}</span>
                     <span><InvoiceLastNumber isLoading={isLoading} lastInvoiceNumber={lastInvoiceNumber} fiscalYear={fiscalYear}/></span>
                 </h3>
-                {children}
+                <fieldset disabled={disabled} className={disabled ? "opacity-60 pointer-events-none" : ""}>
+                    {children}
+                </fieldset>
             </form>
         </main>
     )

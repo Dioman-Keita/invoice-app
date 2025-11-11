@@ -62,6 +62,7 @@ export type SearchRelationalParams = Partial<{
   order_by: string;
   order_direction: string;
   search: string;
+  supplier_name: string;  // ✅ AJOUT : Support du filtre supplier_name
   fiscal_year: string;
   invoice_type: string;
   invoice_nature: string;
@@ -79,6 +80,8 @@ export type SearchRelationalParams = Partial<{
   supplier_invoice_count_max: string | number;
   supplier_total_amount_min: string | number;
   supplier_total_amount_max: string | number;
+  supplier_avg_amount_min: string | number;  // ✅ AJOUT : Montant moyen min
+  supplier_avg_amount_max: string | number;  // ✅ AJOUT : Montant moyen max
 }>;
 
 export type RelationalGroupedRow = {
@@ -140,9 +143,12 @@ export class QueryBuilder {
     const allowedOrder = new Set([
       'create_at','invoice_arr_date','amount','num_cmdt','num_invoice','supplier_name'
     ]);
-    const orderByCandidate = String(q.order_by || '');
-    const orderBy = allowedOrder.has(orderByCandidate) ? orderByCandidate : 'create_at';
-    const orderDir = normalizeOrder(q.order_direction);
+    const orderByCandidate = String(q.order_by || '').trim();
+    // ✅ MODIFICATION : Ne pas trier si order_by est vide
+    const orderBy = orderByCandidate && allowedOrder.has(orderByCandidate) 
+      ? orderByCandidate 
+      : null;
+    const orderDir = orderBy ? normalizeOrder(q.order_direction) : 'desc';
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -232,7 +238,10 @@ export class QueryBuilder {
       const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
       const baseQuery = `FROM invoice i ${leftJoins} ${whereClause}`;
-      const selectQuery = `SELECT ${selectParts.join(', ')} ${baseQuery} ORDER BY ${orderBy} ${orderDir} LIMIT ${limit} OFFSET ${offset}`;
+      // ✅ MODIFICATION : Ajouter ORDER BY seulement si orderBy existe
+      const selectQuery = orderBy
+        ? `SELECT ${selectParts.join(', ')} ${baseQuery} ORDER BY ${orderBy} ${orderDir} LIMIT ${limit} OFFSET ${offset}`
+        : `SELECT ${selectParts.join(', ')} ${baseQuery} LIMIT ${limit} OFFSET ${offset}`;
       const countQuery = `SELECT COUNT(*) AS cnt ${baseQuery}`;
 
       logger.info('QueryBuilder.searchInvoices start', { filters: q, page, limit, orderBy, orderDir });
@@ -259,9 +268,12 @@ export class QueryBuilder {
     const offset = (page - 1) * limit;
 
     const allowedOrder = new Set(['create_at','name','account_number']);
-    const orderByCandidate = String(q.order_by || '');
-    const orderBy = allowedOrder.has(orderByCandidate) ? orderByCandidate : 'create_at';
-    const orderDir = normalizeOrder(q.order_direction);
+    const orderByCandidate = String(q.order_by || '').trim();
+    // ✅ MODIFICATION : Ne pas trier si order_by est vide
+    const orderBy = orderByCandidate && allowedOrder.has(orderByCandidate) 
+      ? orderByCandidate 
+      : null;
+    const orderDir = orderBy ? normalizeOrder(q.order_direction) : 'desc';
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -305,7 +317,10 @@ export class QueryBuilder {
       const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
       const base = `FROM supplier s ${joins} ${whereClause}`;
-      const select = `SELECT s.* ${base} GROUP BY s.id ORDER BY ${orderBy} ${orderDir} LIMIT ${limit} OFFSET ${offset}`;
+      // ✅ MODIFICATION : Ajouter ORDER BY seulement si orderBy existe
+      const select = orderBy
+        ? `SELECT s.* ${base} GROUP BY s.id ORDER BY ${orderBy} ${orderDir} LIMIT ${limit} OFFSET ${offset}`
+        : `SELECT s.* ${base} GROUP BY s.id LIMIT ${limit} OFFSET ${offset}`;
       const count = `SELECT COUNT(DISTINCT s.id) AS cnt ${base}`;
 
       logger.info('QueryBuilder.searchSuppliers start', { filters: q, page, limit, orderBy, orderDir });
@@ -331,14 +346,19 @@ export class QueryBuilder {
     const offset = (page - 1) * limit;
 
     const allowedOrder = new Set(['total_amount','invoice_count','last_invoice_date','supplier_name','avg_amount','supplier_account']);
-    const orderByCandidate = String(q.order_by || '');
-    const orderBy = allowedOrder.has(orderByCandidate) ? orderByCandidate : 'total_amount';
-    const orderDir = normalizeOrder(q.order_direction);
+    const orderByCandidate = String(q.order_by || '').trim();
+    // ✅ MODIFICATION : Ne pas trier si order_by est vide
+    const orderBy = orderByCandidate && allowedOrder.has(orderByCandidate) 
+      ? orderByCandidate 
+      : null;
+    const orderDir = orderBy ? normalizeOrder(q.order_direction) : 'desc';
 
     const groupBySupplier = String(q.group_by) === 'supplier' || String(q.group_by_supplier) === 'true';
 
-    const conditions: string[] = [];
-    const params: unknown[] = [];
+    const whereConditions: string[] = [];
+    const havingConditions: string[] = [];
+    const whereParams: unknown[] = [];
+    const havingParams: unknown[] = [];
 
     try {
       if (q.search) {
@@ -352,53 +372,70 @@ export class QueryBuilder {
         if (isCmdt(term)) { orParts.push('i.num_cmdt LIKE ?'); orParams.push(like); }
         // Always include supplier name
         orParts.push('s.name LIKE ?'); orParams.push(like);
-        conditions.push(`(${orParts.join(' OR ')})`);
-        params.push(...orParams);
+        whereConditions.push(`(${orParts.join(' OR ')})`);
+        whereParams.push(...orParams);
       }
-      if (q.fiscal_year) { conditions.push('i.fiscal_year = ?'); params.push(q.fiscal_year); }
-      if (q.invoice_type) { conditions.push('i.invoice_type = ?'); params.push(q.invoice_type); }
-      if (q.invoice_nature) { conditions.push('i.invoice_nature = ?'); params.push(q.invoice_nature); }
-      if (q.dfc_status) { conditions.push('i.dfc_status = ?'); params.push(q.dfc_status); }
-      if (q.dateFrom) { conditions.push('i.invoice_arr_date >= ?'); params.push(q.dateFrom); }
-      if (q.dateTo) { conditions.push('i.invoice_arr_date <= ?'); params.push(q.dateTo); }
-      if (q.amountMin) { conditions.push('CAST(i.amount AS DECIMAL(18,2)) >= ?'); params.push(q.amountMin); }
-      if (q.amountMax) { conditions.push('CAST(i.amount AS DECIMAL(18,2)) <= ?'); params.push(q.amountMax); }
+      // ✅ AJOUT : Support du filtre supplier_name
+      if (q.supplier_name) {
+        whereConditions.push('s.name LIKE ?');
+        whereParams.push(`%${String(q.supplier_name).trim()}%`);
+      }
+      if (q.fiscal_year) { whereConditions.push('i.fiscal_year = ?'); whereParams.push(q.fiscal_year); }
+      if (q.invoice_type) { whereConditions.push('i.invoice_type = ?'); whereParams.push(q.invoice_type); }
+      if (q.invoice_nature) { whereConditions.push('i.invoice_nature = ?'); whereParams.push(q.invoice_nature); }
+      if (q.dfc_status) { whereConditions.push('i.dfc_status = ?'); whereParams.push(q.dfc_status); }
+      if (q.dateFrom) { whereConditions.push('i.invoice_arr_date >= ?'); whereParams.push(q.dateFrom); }
+      if (q.dateTo) { whereConditions.push('i.invoice_arr_date <= ?'); whereParams.push(q.dateTo); }
+      if (q.amountMin) { whereConditions.push('CAST(i.amount AS DECIMAL(18,2)) >= ?'); whereParams.push(q.amountMin); }
+      if (q.amountMax) { whereConditions.push('CAST(i.amount AS DECIMAL(18,2)) <= ?'); whereParams.push(q.amountMax); }
 
       if (String(q.supplier_with_invoices) === 'true') {
-        conditions.push('i.id IS NOT NULL');
+        whereConditions.push('i.id IS NOT NULL');
       }
       if (String(q.invoice_with_attachments) === 'true') {
-        conditions.push('EXISTS (SELECT 1 FROM attachments a WHERE a.invoice_id = i.id)');
+        whereConditions.push('EXISTS (SELECT 1 FROM attachments a WHERE a.invoice_id = i.id)');
       }
       if (String(q.invoice_with_dfc_decision) === 'true') {
-        conditions.push('EXISTS (SELECT 1 FROM dfc_decision d WHERE d.invoice_id = i.id)');
+        whereConditions.push('EXISTS (SELECT 1 FROM dfc_decision d WHERE d.invoice_id = i.id)');
       }
 
-      // Numeric relational filters (only when grouped)
+      // ✅ MODIFICATION : Filtres d'agrégation dans HAVING (seulement quand groupé)
       if (groupBySupplier) {
         if (q.supplier_invoice_count_min) {
-          conditions.push('COUNT(i.id) >= ?');
-          params.push(q.supplier_invoice_count_min);
+          havingConditions.push('COUNT(i.id) >= ?');
+          havingParams.push(q.supplier_invoice_count_min);
         }
         if (q.supplier_invoice_count_max) {
-          conditions.push('COUNT(i.id) <= ?');
-          params.push(q.supplier_invoice_count_max);
+          havingConditions.push('COUNT(i.id) <= ?');
+          havingParams.push(q.supplier_invoice_count_max);
         }
         if (q.supplier_total_amount_min) {
-          conditions.push('SUM(CAST(i.amount AS DECIMAL(18,2))) >= ?');
-          params.push(q.supplier_total_amount_min);
+          havingConditions.push('SUM(CAST(i.amount AS DECIMAL(18,2))) >= ?');
+          havingParams.push(q.supplier_total_amount_min);
         }
         if (q.supplier_total_amount_max) {
-          conditions.push('SUM(CAST(i.amount AS DECIMAL(18,2))) <= ?');
-          params.push(q.supplier_total_amount_max);
+          havingConditions.push('SUM(CAST(i.amount AS DECIMAL(18,2))) <= ?');
+          havingParams.push(q.supplier_total_amount_max);
+        }
+        if (q.supplier_avg_amount_min) {
+          havingConditions.push('AVG(CAST(i.amount AS DECIMAL(18,2))) >= ?');
+          havingParams.push(q.supplier_avg_amount_min);
+        }
+        if (q.supplier_avg_amount_max) {
+          havingConditions.push('AVG(CAST(i.amount AS DECIMAL(18,2))) <= ?');
+          havingParams.push(q.supplier_avg_amount_max);
         }
       }
 
-      const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+      const where = whereConditions.length ? `WHERE ${whereConditions.join(' AND ')}` : '';
+      const having = havingConditions.length ? `HAVING ${havingConditions.join(' AND ')}` : '';
+      const params = [...whereParams, ...havingParams];
 
       if (groupBySupplier) {
         const base = `FROM invoice i LEFT JOIN supplier s ON s.id = i.supplier_id ${where}`;
-        const select = `SELECT 
+        // ✅ MODIFICATION : Ajouter ORDER BY seulement si orderBy existe
+        const select = orderBy
+          ? `SELECT 
             s.id AS supplier_id,
             s.name AS supplier_name,
             s.account_number AS supplier_account,
@@ -408,9 +445,25 @@ export class QueryBuilder {
             MAX(i.invoice_arr_date) AS last_invoice_date
           ${base}
           GROUP BY s.id
+          ${having}
           ORDER BY ${orderBy} ${orderDir}
+          LIMIT ${limit} OFFSET ${offset}`
+          : `SELECT 
+            s.id AS supplier_id,
+            s.name AS supplier_name,
+            s.account_number AS supplier_account,
+            COUNT(i.id) AS invoice_count,
+            SUM(CAST(i.amount AS DECIMAL(18,2))) AS total_amount,
+            AVG(CAST(i.amount AS DECIMAL(18,2))) AS avg_amount,
+            MAX(i.invoice_arr_date) AS last_invoice_date
+          ${base}
+          GROUP BY s.id
+          ${having}
           LIMIT ${limit} OFFSET ${offset}`;
-        const count = `SELECT COUNT(DISTINCT s.id) AS cnt ${base}`;
+        // ✅ MODIFICATION : Compter les groupes qui passent le HAVING
+        const count = having 
+          ? `SELECT COUNT(*) AS cnt FROM (SELECT s.id ${base} GROUP BY s.id ${having}) AS grouped`
+          : `SELECT COUNT(DISTINCT s.id) AS cnt ${base}`;
 
         logger.info('QueryBuilder.searchRelational start (grouped)', { filters: q, page, limit, orderBy, orderDir });
         let rows = await database.execute<RelationalGroupedRow[] | RelationalGroupedRow>(select, params);
@@ -420,7 +473,9 @@ export class QueryBuilder {
         return { rows: (rows as RelationalGroupedRow[]) || [], meta: { total, page, limit } };
       } else {
         const base = `FROM invoice i LEFT JOIN supplier s ON s.id = i.supplier_id ${where}`;
-        const select = `SELECT 
+        // ✅ MODIFICATION : Ajouter ORDER BY seulement si orderBy existe
+        const select = orderBy
+          ? `SELECT 
             s.name AS supplier_name,
             i.num_invoice,
             i.num_cmdt,
@@ -429,6 +484,15 @@ export class QueryBuilder {
             i.dfc_status
           ${base}
           ORDER BY ${orderBy === 'supplier_name' ? 'supplier_name' : 'i.invoice_arr_date'} ${orderDir}
+          LIMIT ${limit} OFFSET ${offset}`
+          : `SELECT 
+            s.name AS supplier_name,
+            i.num_invoice,
+            i.num_cmdt,
+            i.amount,
+            i.invoice_arr_date,
+            i.dfc_status
+          ${base}
           LIMIT ${limit} OFFSET ${offset}`;
         const count = `SELECT COUNT(*) AS cnt ${base}`;
 

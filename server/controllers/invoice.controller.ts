@@ -727,3 +727,119 @@ export async function rejectDfcInvoice(
   }
 }
 
+// ✅ NOUVEAU : Récupérer les attachments d'une facture
+export async function getInvoiceAttachments(
+  req: Request<{ id: string }>,
+  res: Response
+): Promise<Response> {
+  const requestId = req.headers['x-request-id'] || 'unknown';
+  
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    
+    if (!user) {
+      return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
+    }
+
+    const { id } = req.params;
+    
+    if (!id) {
+      return ApiResponder.badRequest(res, 'ID de la facture requis');
+    }
+
+    const result = await Invoice.getInvoiceAttachments(id);
+    
+    if (!result.success) {
+      return ApiResponder.error(res, new Error('Erreur lors de la récupération des attachments'));
+    }
+
+    return ApiResponder.success(res, { documents: result.documents });
+  } catch (err) {
+    logger.error(`[${requestId}] Erreur lors de la récupération des attachments`, {
+      errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',
+      stack: err instanceof Error ? err.stack : 'unknown stack',
+      invoiceId: req.params.id
+    });
+    return ApiResponder.error(res, err);
+  }
+}
+
+// ✅ NOUVEAU : Mettre à jour les attachments d'une facture
+export async function updateInvoiceAttachments(
+  req: Request<{ id: string }, unknown, { documents: string[] }>,
+  res: Response
+): Promise<Response> {
+  const requestId = req.headers['x-request-id'] || 'unknown';
+  
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    
+    if (!user) {
+      return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
+    }
+
+    const { id } = req.params;
+    const { documents } = req.body;
+    
+    if (!id) {
+      return ApiResponder.badRequest(res, 'ID de la facture requis');
+    }
+
+    if (!Array.isArray(documents)) {
+      return ApiResponder.badRequest(res, 'documents doit être un tableau');
+    }
+
+    const result = await Invoice.updateInvoiceAttachments(id, documents, user.sup || 'unknown');
+    
+    if (!result.success) {
+      return ApiResponder.error(res, new Error('Erreur lors de la mise à jour des attachments'));
+    }
+
+    return ApiResponder.success(res, { message: 'Attachments mis à jour avec succès' });
+  } catch (err) {
+    logger.error(`[${requestId}] Erreur lors de la mise à jour des attachments`, {
+      errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',
+      stack: err instanceof Error ? err.stack : 'unknown stack',
+      invoiceId: req.params.id
+    });
+    return ApiResponder.error(res, err);
+  }
+}
+
+// ✅ NOUVEAU : Supprimer les attachments d'une facture
+export async function deleteInvoiceAttachments(
+  req: Request<{ id: string }>,
+  res: Response
+): Promise<Response> {
+  const requestId = req.headers['x-request-id'] || 'unknown';
+  
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    
+    if (!user) {
+      return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
+    }
+
+    const { id } = req.params;
+    
+    if (!id) {
+      return ApiResponder.badRequest(res, 'ID de la facture requis');
+    }
+
+    const result = await Invoice.deleteInvoiceAttachments(id, user.sup || 'unknown');
+    
+    if (!result.success) {
+      return ApiResponder.error(res, new Error('Erreur lors de la suppression des attachments'));
+    }
+
+    return ApiResponder.success(res, { message: 'Attachments supprimés avec succès' });
+  } catch (err) {
+    logger.error(`[${requestId}] Erreur lors de la suppression des attachments`, {
+      errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',
+      stack: err instanceof Error ? err.stack : 'unknown stack',
+      invoiceId: req.params.id
+    });
+    return ApiResponder.error(res, err);
+  }
+}
+

@@ -11,13 +11,13 @@ export default function useInvoice() {
   
   const getLastInvoiceNum = useCallback(async (force = false) => {
     try {
-      console.log('🔄 Appel API last-form-num', { force });
+      console.log(' Appel API last-form-num', { force });
       const response = await api.get('api/invoices/last-num');
       
       if (response?.success === true) {
         const lastInvoiceNum = response?.data?.lastInvoiceNum || '0000';
         const currentFiscalYear = response?.data?.fiscalYear || new Date().getFullYear();
-        console.log('📦 Nouveau numéro reçu:', lastInvoiceNum);
+        console.log(' Nouveau numéro reçu:', lastInvoiceNum);
         console.log('Annee fiscal recue : ', currentFiscalYear);
         setLastInvoiceNumber(lastInvoiceNum);
         setFiscalYear(currentFiscalYear);
@@ -28,7 +28,7 @@ export default function useInvoice() {
       }
     } catch (error) {
       setLastInvoiceNumber('0000');
-      console.log(error,  '❌ Erreur récupération numéro:', error?.response?.data?.message || error.message);
+      console.log(error,  ' Erreur récupération numéro:', error?.response?.data?.message || error.message);
       return '0000';
     } finally {
       setLoading(false);
@@ -71,7 +71,7 @@ export default function useInvoice() {
       setLoading(true);
       const response = await api.post('api/invoices', invoiceData);
       if (response.success === true) {
-        console.log('✅ Facture créée, mise à jour du numéro...');
+        console.log(' Facture créée, mise à jour du numéro...');
         
         // Attendre un peu pour que le backend ait le temps de traiter
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -79,12 +79,13 @@ export default function useInvoice() {
         // Recharger le dernier numéro
         const newNum = await getLastInvoiceNum(true);
         await getNextNumberExpected();
-        console.log('🎯 Numéro après création:', newNum);
+        console.log(' Numéro après création:', newNum);
         
         return {
           success: true,
           message: response?.message || 'Facture envoyée avec succès',
-          newInvoiceNumber: newNum
+          newInvoiceNumber: newNum,
+          warningInfo: response?.meta?.warningInfo || null
         };
       }
       return {

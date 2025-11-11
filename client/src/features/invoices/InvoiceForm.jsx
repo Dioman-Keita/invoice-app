@@ -19,6 +19,7 @@ import useToastFeedback from "../../hooks/ui/useToastFeedBack.js";
 import useDateValidation from "../../hooks/ui/useDateValidation.js";
 import ValidateSupplierInput from "../../components/validation/ValidateSupplierInput.jsx";
 import useInvoice from "../../hooks/features/useInvoice.js";
+import useFiscalSettings from "../../hooks/features/useFiscalSettings.js";
 
 function InvoiceForm() {
 
@@ -41,6 +42,7 @@ function InvoiceForm() {
   const invoiceDate = useWatch({ control, name: "invoice_date" });
   const arrivalDate = useWatch({ control, name: "invoice_arrival_date" });
   const { saveInvoice, lastInvoiceNumber, fiscalYear, nextNumberExpected } = useInvoice();
+  const { warningInfo, remaining } = useFiscalSettings();
   const [resetTrigger, setResetTrigger] = useState(0);
   const { success, error } = useToastFeedback();
   const { validateDateOrder } = useDateValidation();
@@ -74,6 +76,9 @@ function InvoiceForm() {
       
       if (result.success) {
         success(result.message);
+        if (result.warningInfo?.warning === true) {
+          success(`Alerte: seuil annuel proche. Restant: ${result.warningInfo.remaining}`);
+        }
         setResetTrigger(prev => prev + 1);
         console.log('✅ Succès:', data);
         methods.reset();
@@ -95,7 +100,18 @@ function InvoiceForm() {
         lastInvoiceNumber={lastInvoiceNumber} 
         isLoading={loading} 
         fiscalYear={fiscalYear}
+        disabled={Number(remaining) === 0}
     >
+          {warningInfo?.warning === true && (
+            <div className="mb-4 p-3 rounded-md bg-yellow-50 text-yellow-800 border border-yellow-200">
+              Attention: le seuil annuel approche. Restant: {warningInfo.remaining}
+            </div>
+          )}
+          {Number(remaining) === 0 && (
+            <div className="mb-4 p-3 rounded-md bg-red-50 text-red-800 border border-red-200">
+              Le quota de numéros pour l'année fiscale courante est épuisé. Veuillez démarrer une nouvelle année fiscale.
+            </div>
+          )}
           <FormSection legend={"FACTURE"}>
             <ValidatedInvoiceNumberInput name="invoice_num" label="Numéro de la facture" placeholder="000000000001"/>
             <ValidatedCodeInput name="num_cmdt" label="N° CMDT courrier" placeholder="000000000001" initialValue={nextNumberExpected} resetTrigger={resetTrigger} maxLength={12}/>

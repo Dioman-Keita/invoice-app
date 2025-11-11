@@ -10,7 +10,11 @@ import {
   updateInvoice,
   getDfcPendingInvoices,
   approveDfcInvoice,
-  rejectDfcInvoice 
+  rejectDfcInvoice,
+  // ✅ NOUVEAU : Imports pour les attachments
+  getInvoiceAttachments,
+  updateInvoiceAttachments,
+  deleteInvoiceAttachments
 } from '../controllers/invoice.controller';
 import { requireAdmin, requireAgentOrManager, requireManagerOrAdmin } from '../middleware/roleGuard';
 
@@ -36,5 +40,10 @@ router.post('/invoices/:id/dfc/reject', requireAgentOrManager, rejectDfcInvoice)
 router.get('/invoices/:id', requireAgentOrManager, getInvoice);              // GET /invoices/:id - Récupérer une facture spécifique
 router.post('/invoices/update/:id', requireManagerOrAdmin, updateInvoice);   // POST /invoices/update/:id - Mettre à jour une facture
 router.post('/invoices/delete/:id', requireAdmin, deleteInvoice);            // POST /invoices/delete/:id - Supprimer une facture
+
+// ✅ NOUVEAU : Routes pour les attachments
+router.get('/invoices/:id/attachments', requireAgentOrManager, getInvoiceAttachments);
+router.post('/invoices/:id/attachments', requireAgentOrManager, updateInvoiceAttachments);
+router.post('/invoices/:id/attachments/delete', requireManagerOrAdmin, deleteInvoiceAttachments);
 
 export default router;

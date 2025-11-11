@@ -12,6 +12,9 @@ export interface InvoiceModel {
 	deleteInvoice(id: number): Promise<{success: boolean}>;
 	updateInvoice(data: UpdateInvoiceDto): Promise<{success: boolean}>;
 	getLastInvoiceNum(): Promise<unknown>;
+	getInvoiceAttachments(invoiceId: string): Promise<{success: boolean; documents: string[]}>;
+	updateInvoiceAttachments(invoiceId: string, documents: string[], performedBy: string): Promise<{success: boolean}>;
+	deleteInvoiceAttachments(invoiceId: string, performedBy: string): Promise<{success: boolean}>;
 }
 
 class Invoice implements InvoiceModel {
@@ -163,14 +166,24 @@ class Invoice implements InvoiceModel {
 
             switch (config.findBy) {
                 case 'id':
-                    query = `SELECT * FROM invoice WHERE id = ? ${fy ? 'AND fiscal_year = ?' : ''} ORDER BY create_at ${validOrderBy}`;
+                    query = `SELECT i.*, 
+                    COALESCE(JSON_EXTRACT(a.documents, '$'), JSON_ARRAY()) AS documents
+                    FROM invoice i 
+                    LEFT JOIN attachments a ON a.invoice_id = i.id 
+                    WHERE i.id = ? ${fy ? 'AND i.fiscal_year = ?' : ''} 
+                    ORDER BY i.create_at ${validOrderBy}`;
                     params = fy ? [id, fy] : [id];
                     if (config.limit) query += ` LIMIT ${config.limit}`;
                     rows = await database.execute<InvoiceRecord[] | InvoiceRecord>(query, params);
                     break;
 
                 case 'supplier_id':
-                    query = `SELECT * FROM invoice WHERE supplier_id = ? ${fy ? 'AND fiscal_year = ?' : ''} ORDER BY create_at ${validOrderBy}`;
+                    query = `SELECT i.*, 
+                    COALESCE(JSON_EXTRACT(a.documents, '$'), JSON_ARRAY()) AS documents
+                    FROM invoice i 
+                    LEFT JOIN attachments a ON a.invoice_id = i.id 
+                    WHERE i.supplier_id = ? ${fy ? 'AND i.fiscal_year = ?' : ''} 
+                    ORDER BY i.create_at ${validOrderBy}`;
                     params = fy ? [id, fy] : [id];
                     if (config.limit) query += ` LIMIT ${config.limit}`;
                     rows = await database.execute<InvoiceRecord[] | InvoiceRecord>(query, params);
@@ -178,23 +191,30 @@ class Invoice implements InvoiceModel {
 
                 case 'phone':
                 case 'account_number':
-                    // Ces critères nécessitent une jointure avec la table supplier
                     query = `
-                        SELECT i.* FROM invoice i 
-                        INNER JOIN supplier s ON i.supplier_id = s.id 
-                        WHERE ${config.findBy === 'phone' ? 's.phone' : 's.account_number'} = ? ${fy ? 'AND i.fiscal_year = ?' : ''}
-                        ORDER BY i.create_at ${validOrderBy}
-                    `;
+                    SELECT i.*, 
+                        COALESCE(JSON_EXTRACT(a.documents, '$'), JSON_ARRAY()) AS documents
+                    FROM invoice i 
+                    LEFT JOIN attachments a ON a.invoice_id = i.id
+                    INNER JOIN supplier s ON i.supplier_id = s.id 
+                    WHERE ${config.findBy === 'phone' ? 's.phone' : 's.account_number'} = ? ${fy ? 'AND i.fiscal_year = ?' : ''}
+                    ORDER BY i.create_at ${validOrderBy}
+                `;
                     params = fy ? [id, fy] : [id];
                     if (config.limit) query += ` LIMIT ${config.limit}`;
                     rows = await database.execute<InvoiceRecord[] | InvoiceRecord>(query, params);
                     break;
 
                 case 'all':
-                    query = `SELECT * FROM invoice ${fy ? 'WHERE fiscal_year = ?' : ''} ORDER BY create_at ${config.orderBy}`;
-                    if (config.limit) query += ` LIMIT ${config.limit}`;
-                    rows = fy ? await database.execute<InvoiceRecord[] | InvoiceRecord>(query, [fy]) : await database.execute<InvoiceRecord[] | InvoiceRecord>(query);
-                    break;
+                    query = `SELECT i.*, 
+                    COALESCE(JSON_EXTRACT(a.documents, '$'), JSON_ARRAY()) AS documents
+                    FROM invoice i 
+                    LEFT JOIN attachments a ON a.invoice_id = i.id 
+                    ${fy ? 'WHERE i.fiscal_year = ?' : ''} 
+                    ORDER BY i.create_at ${config.orderBy}`;
+                if (config.limit) query += ` LIMIT ${config.limit}`;
+                rows = fy ? await database.execute<InvoiceRecord[] | InvoiceRecord>(query, [fy]) : await database.execute<InvoiceRecord[] | InvoiceRecord>(query);
+                break;
 
 				default:
 					throw new Error('Type de recherche non supporté');
@@ -205,12 +225,31 @@ class Invoice implements InvoiceModel {
 				rows = [rows];
 			}
 
+			// Parser les documents JSON
+			if (rows && rows.length > 0) {
+				rows = rows.map((row: InvoiceRecord & { documents?: string | string[] }) => {
+					const invoiceRow = row as InvoiceRecord;
+					if (row.documents) {
+						try {
+							invoiceRow.documents = typeof row.documents === 'string' 
+								? JSON.parse(row.documents) 
+								: (Array.isArray(row.documents) ? row.documents : []);
+						} catch {
+							invoiceRow.documents = [];
+						}
+					} else {
+						invoiceRow.documents = [];
+					}
+					return invoiceRow;
+				});
+			}
+
 			if (rows && rows.length > 0) {
 				await auditLog({
 					table_name: 'invoice',
 					action: 'SELECT',
 					record_id: typeof id === 'string' ? id : id.toString(),
-					performed_by: 'system', // À remplacer par l'ID utilisateur réel si disponible
+					performed_by: id.toString(), // À remplacer par l'ID utilisateur réel si disponible
 					description: `Recherche de facture par ${config.findBy}`
 				});
 			}
@@ -238,7 +277,8 @@ class Invoice implements InvoiceModel {
 				return { success: false };
 			}
 
-			const query = "DELETE FROM form WHERE id = ?";
+			// Utiliser 'invoice' au lieu de 'form'
+			const query = "DELETE FROM invoice WHERE id = ?";
 			await database.execute(query, [id]);
 
 			await auditLog({
@@ -317,8 +357,9 @@ class Invoice implements InvoiceModel {
 	async getLastInvoiceNum(): Promise<{success: boolean, invoiceNum: string | null}> {
 		try {
 		  const fiscalYear = await getSetting('fiscal_year');
+		  // Utiliser 'invoice' au lieu de 'form'
 		  const result = await database.execute(
-			"SELECT num_cmdt FROM form WHERE fiscal_year = ? ORDER BY create_at DESC LIMIT 1",
+			"SELECT num_cmdt FROM invoice WHERE fiscal_year = ? ORDER BY create_at DESC LIMIT 1",
 			[fiscalYear]
 		  );
 		  
@@ -356,8 +397,9 @@ class Invoice implements InvoiceModel {
 	async getTheLatestInvoiceNumber(): Promise<{success: boolean; lastInvoiceNumber: string}> {
 		try {
 			const fiscalYear = await getSetting('fiscal_year');
+			// Utiliser 'invoice' au lieu de 'form'
 			const result = await database.execute(
-			  "SELECT num_cmdt FROM form WHERE fiscal_year = ? ORDER BY create_at DESC LIMIT 1",
+			  "SELECT num_cmdt FROM invoice WHERE fiscal_year = ? ORDER BY create_at DESC LIMIT 1",
 			  [fiscalYear]
 			);
 			
@@ -390,6 +432,113 @@ class Invoice implements InvoiceModel {
 			  lastInvoiceNumber: '0000'
 			}
 		  }
+	}
+
+	// ✅ NOUVEAU : Méthode pour récupérer les attachments d'une facture
+	async getInvoiceAttachments(invoiceId: string): Promise<{success: boolean; documents: string[]}> {
+		try {
+			const result = await database.execute<Array<{ documents: string }>>(
+				"SELECT documents FROM attachments WHERE invoice_id = ?",
+				[invoiceId]
+			);
+
+			if (result && Array.isArray(result) && result.length > 0) {
+				const documents = typeof result[0].documents === 'string' 
+					? JSON.parse(result[0].documents) 
+					: result[0].documents;
+				return {
+					success: true,
+					documents: Array.isArray(documents) ? documents : []
+				};
+			}
+
+			return {
+				success: true,
+				documents: []
+			};
+		} catch (error) {
+			logger.error(`Erreur lors de la récupération des attachments pour la facture ${invoiceId}`, {
+				errorMessage: error instanceof Error ? error.message : 'unknown error',
+				stack: error instanceof Error ? error.stack : 'unknown stack'
+			});
+			return {
+				success: false,
+				documents: []
+			};
+		}
+	}
+
+	// ✅ NOUVEAU : Méthode pour mettre à jour les attachments
+	async updateInvoiceAttachments(invoiceId: string, documents: string[], performedBy: string): Promise<{success: boolean}> {
+		try {
+			// Vérifier si la facture existe
+			const invoice = await this.findInvoice(invoiceId, { findBy: 'id', limit: 1 });
+			if (!invoice || invoice.length === 0) {
+				return { success: false };
+			}
+
+			// Vérifier si des attachments existent déjà
+			const existing = await database.execute(
+				"SELECT id FROM attachments WHERE invoice_id = ?",
+				[invoiceId]
+			);
+
+			if (existing && Array.isArray(existing) && existing.length > 0) {
+				// Mettre à jour
+				await database.execute(
+					"UPDATE attachments SET documents = ? WHERE invoice_id = ?",
+					[JSON.stringify(documents), invoiceId]
+				);
+			} else {
+				// Créer
+				await database.execute(
+					"INSERT INTO attachments(documents, invoice_id) VALUES (?,?)",
+					[JSON.stringify(documents), invoiceId]
+				);
+			}
+
+			await auditLog({
+				table_name: 'attachments',
+				action: 'UPDATE',
+				performed_by: performedBy,
+				record_id: invoiceId,
+				description: `Mise à jour des attachments pour la facture ${invoiceId}`
+			});
+
+			return { success: true };
+		} catch (error) {
+			logger.error(`Erreur lors de la mise à jour des attachments pour la facture ${invoiceId}`, {
+				errorMessage: error instanceof Error ? error.message : 'unknown error',
+				stack: error instanceof Error ? error.stack : 'unknown stack'
+			});
+			return { success: false };
+		}
+	}
+
+	// ✅ NOUVEAU : Méthode pour supprimer les attachments
+	async deleteInvoiceAttachments(invoiceId: string, performedBy: string): Promise<{success: boolean}> {
+		try {
+			await database.execute(
+				"DELETE FROM attachments WHERE invoice_id = ?",
+				[invoiceId]
+			);
+
+			await auditLog({
+				table_name: 'attachments',
+				action: 'DELETE',
+				performed_by: performedBy,
+				record_id: invoiceId,
+				description: `Suppression des attachments pour la facture ${invoiceId}`
+			});
+
+			return { success: true };
+		} catch (error) {
+			logger.error(`Erreur lors de la suppression des attachments pour la facture ${invoiceId}`, {
+				errorMessage: error instanceof Error ? error.message : 'unknown error',
+				stack: error instanceof Error ? error.stack : 'unknown stack'
+			});
+			return { success: false };
+		}
 	}
 }
 export default new Invoice();

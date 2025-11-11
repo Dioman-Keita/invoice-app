@@ -1,3 +1,6 @@
+// Ajoute une pagination lorsque les facture en attente atteignent un certain nombre
+// Ameliore la lisibilite de la section "INFORMATION DE CATEGORISATION" qui voit ses texte deborder de l'interface des fois 
+
 import { useState, useEffect } from 'react';
 import useTitle from '../../../hooks/ui/useTitle.js';
 import Navbar from '../../../components/navbar/Navbar.jsx';
@@ -19,7 +22,9 @@ import {
   CreditCardIcon,
   TagIcon,
   UserCircleIcon,
-  ClipboardDocumentListIcon
+  ClipboardDocumentListIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import useBackground from '../../../hooks/ui/useBackground.js';
 
@@ -38,9 +43,43 @@ function DfcFormular() {
   const [showStats, setShowStats] = useState(true);
   const [commentError, setCommentError] = useState('');
   
+  // Configuration de pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [invoicesPerPage, setInvoicesPerPage] = useState(3); // Nombre de factures par page
+  
   // Configuration du textarea
   const MAX_COMMENT_LENGTH = 500;
   const COMMENT_WARNING_THRESHOLD = 450;
+
+  // Calcul des données de pagination
+  const indexOfLastInvoice = currentPage * invoicesPerPage;
+  const indexOfFirstInvoice = indexOfLastInvoice - invoicesPerPage;
+  const currentInvoices = pendingInvoices.slice(indexOfFirstInvoice, indexOfLastInvoice);
+  const totalPages = Math.ceil(pendingInvoices.length / invoicesPerPage);
+
+  // Réinitialiser la page quand les données changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [pendingInvoices.length]);
+
+  // Fonctions de pagination
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToPage = (pageNumber) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
 
   // Formater les montants de manière professionnelle
   const formatAmount = (amount) => {
@@ -305,14 +344,35 @@ function DfcFormular() {
             {/* Colonne de gauche : Factures en attente */}
             <div className="space-y-6">
               <div className="bg-white rounded-lg border border-gray-200 p-5">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <ClockIcon className="w-5 h-5 text-amber-500 mr-2" />
-                  Factures en attente de traitement
-                </h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <ClockIcon className="w-5 h-5 text-amber-500 mr-2" />
+                    Factures en attente de traitement
+                  </h2>
+                  
+                  {/* Sélecteur d'éléments par page */}
+                  {pendingInvoices.length > 5 && (
+                    <div className="flex items-center space-x-2">
+                      <label className="text-xs text-gray-600 whitespace-nowrap">
+                        Afficher:
+                      </label>
+                      <select
+                        value={invoicesPerPage}
+                        onChange={(e) => setInvoicesPerPage(Number(e.target.value))}
+                        className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={15}>15</option>
+                        <option value={20}>20</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
                 
                 {pendingInvoices.length > 0 ? (
                   <div className="space-y-3">
-                    {pendingInvoices.map((invoice) => (
+                    {currentInvoices.map((invoice) => (
                       <div
                         key={invoice.id}
                         onClick={() => handleInvoiceSelect(invoice)}
@@ -365,6 +425,61 @@ function DfcFormular() {
                         )}
                       </div>
                     ))}
+                    
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                        <div className="text-xs text-gray-600">
+                          Affichage de {indexOfFirstInvoice + 1} à {Math.min(indexOfLastInvoice, pendingInvoices.length)} sur {pendingInvoices.length} factures
+                        </div>
+                        
+                        <div className="flex items-center space-x-1">
+                          <button
+                            onClick={prevPage}
+                            disabled={currentPage === 1}
+                            className="p-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                          >
+                            <ChevronLeftIcon className="w-4 h-4" />
+                          </button>
+                          
+                          {/* Affichage des numéros de page */}
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNumber;
+                            if (totalPages <= 5) {
+                              pageNumber = i + 1;
+                            } else if (currentPage <= 3) {
+                              pageNumber = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              pageNumber = totalPages - 4 + i;
+                            } else {
+                              pageNumber = currentPage - 2 + i;
+                            }
+                            
+                            return (
+                              <button
+                                key={pageNumber}
+                                onClick={() => goToPage(pageNumber)}
+                                className={`min-w-[2rem] px-2 py-1 text-xs rounded border transition-colors ${
+                                  currentPage === pageNumber
+                                    ? 'bg-blue-500 text-white border-blue-500'
+                                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                }`}
+                              >
+                                {pageNumber}
+                              </button>
+                            );
+                          })}
+                          
+                          <button
+                            onClick={nextPage}
+                            disabled={currentPage === totalPages}
+                            className="p-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                          >
+                            <ChevronRightIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
@@ -508,48 +623,96 @@ function DfcFormular() {
                       </div>
                     )}
 
-                    {/* Catégories - Version améliorée */}
+                    {/* Catégories - Version améliorée avec meilleure gestion du débordement */}
                     <div className="mb-6">
                       <p className="text-xs font-medium text-gray-500 mb-3 flex items-center">
                         <DocumentTextIcon className="w-3 h-3 mr-1" />
                         INFORMATIONS DE CATÉGORISATION
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                        <div className="p-3 bg-blue-50 rounded border border-blue-200 min-w-0">
+                        <div className="p-3 bg-blue-50 rounded border border-blue-200 min-w-0 group relative">
                           <p className="text-xs text-blue-600 font-medium mb-1 whitespace-nowrap flex items-center">
-                            <TagIcon className="w-3 h-3 mr-1" />
-                            Type de facture
+                            <TagIcon className="w-3 h-3 mr-1 flex-shrink-0" />
+                            Type
                           </p>
-                          <p className="text-sm font-medium text-gray-900 truncate" title={currentInvoice.invoice_type}>
+                          <p 
+                            className="text-sm font-medium text-gray-900 truncate"
+                            title={currentInvoice.invoice_type}
+                          >
                             {currentInvoice.invoice_type}
                           </p>
+                          {/* Tooltip pour texte complet */}
+                          {currentInvoice.invoice_type && currentInvoice.invoice_type.length > 20 && (
+                            <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-10">
+                              <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                                {currentInvoice.invoice_type}
+                              </div>
+                              <div className="w-3 h-3 bg-gray-800 transform rotate-45 absolute -bottom-1 left-3"></div>
+                            </div>
+                          )}
                         </div>
-                        <div className="p-3 bg-green-50 rounded border border-green-200 min-w-0">
+                        <div className="p-3 bg-green-50 rounded border border-green-200 min-w-0 group relative">
                           <p className="text-xs text-green-600 font-medium mb-1 whitespace-nowrap flex items-center">
-                            <DocumentCheckIcon className="w-3 h-3 mr-1" />
+                            <DocumentCheckIcon className="w-3 h-3 mr-1 flex-shrink-0" />
                             Nature
                           </p>
-                          <p className="text-sm font-medium text-gray-900 truncate" title={currentInvoice.invoice_nature}>
+                          <p 
+                            className="text-sm font-medium text-gray-900 truncate"
+                            title={currentInvoice.invoice_nature}
+                          >
                             {currentInvoice.invoice_nature}
                           </p>
+                          {/* Tooltip pour texte complet */}
+                          {currentInvoice.invoice_nature && currentInvoice.invoice_nature.length > 20 && (
+                            <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-10">
+                              <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                                {currentInvoice.invoice_nature}
+                              </div>
+                              <div className="w-3 h-3 bg-gray-800 transform rotate-45 absolute -bottom-1 left-3"></div>
+                            </div>
+                          )}
                         </div>
-                        <div className="p-3 bg-purple-50 rounded border border-purple-200 min-w-0">
+                        <div className="p-3 bg-purple-50 rounded border border-purple-200 min-w-0 group relative">
                           <p className="text-xs text-purple-600 font-medium mb-1 whitespace-nowrap flex items-center">
-                            <HashtagIcon className="w-3 h-3 mr-1" />
+                            <HashtagIcon className="w-3 h-3 mr-1 flex-shrink-0" />
                             Folio
                           </p>
-                          <p className="text-sm font-medium text-gray-900 truncate" title={currentInvoice.folio}>
+                          <p 
+                            className="text-sm font-medium text-gray-900 truncate"
+                            title={currentInvoice.folio}
+                          >
                             {currentInvoice.folio}
                           </p>
+                          {/* Tooltip pour texte complet */}
+                          {currentInvoice.folio && currentInvoice.folio.length > 20 && (
+                            <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-10">
+                              <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                                {currentInvoice.folio}
+                              </div>
+                              <div className="w-3 h-3 bg-gray-800 transform rotate-45 absolute -bottom-1 left-3"></div>
+                            </div>
+                          )}
                         </div>
-                        <div className="p-3 bg-gray-50 rounded border border-gray-200 min-w-0">
+                        <div className="p-3 bg-gray-50 rounded border border-gray-200 min-w-0 group relative">
                           <p className="text-xs text-gray-600 font-medium mb-1 whitespace-nowrap flex items-center">
-                            <UserCircleIcon className="w-3 h-3 mr-1" />
+                            <UserCircleIcon className="w-3 h-3 mr-1 flex-shrink-0" />
                             Créée par
                           </p>
-                          <p className="text-sm font-medium text-gray-900 truncate" title={currentInvoice.created_by}>
+                          <p 
+                            className="text-sm font-medium text-gray-900 truncate"
+                            title={currentInvoice.created_by}
+                          >
                             {currentInvoice.created_by}
                           </p>
+                          {/* Tooltip pour texte complet */}
+                          {currentInvoice.created_by && currentInvoice.created_by.length > 20 && (
+                            <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-10">
+                              <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                                {currentInvoice.created_by}
+                              </div>
+                              <div className="w-3 h-3 bg-gray-800 transform rotate-45 absolute -bottom-1 left-3"></div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
