@@ -1,6 +1,6 @@
 # Système de gestion de factures (CMDT) 🚀
 
-Système de gestion de factures **prêt pour l'entreprise**, avec une capacité extrême : jusqu'à **999 999 999 999 factures par an**, audit complet, sécurité avancée et interface moderne.
+Système de gestion de factures prêt pour l'entreprise, conçu pour une capacité extrême : jusqu'à **999 999 999 999 factures par an**, audit complet, sécurité avancée, et interface moderne.
 
 ---
 
@@ -32,12 +32,12 @@ Invoice Manager est un système de gestion de factures complet, pensé pour les 
 
 **Points forts :**
 
-* **Grande capacité** : jusqu'à 999 999 999 999 factures/an (aucune confusion avec 1 milliard)
-* **Sécurité** : JWT HttpOnly, traçabilité complète, droits granulaires
-* **Expérience utilisateur moderne** : React + Tailwind, validation temps réel, interface responsive
-* **Export avancé** : PDF, Excel avec historique détaillé
-* **Workflow** : CRUD factures et fournisseurs, processus DFC
-* **Gestion d'exercice fiscal** : changement automatique et planification jusqu'à deux ans d'avance
+* Grande capacité : jusqu'à 999 999 999 999 factures/an (aucune confusion avec 1 milliard)
+* Sécurité : JWT HttpOnly, traçabilité complète, droits granulaires
+* Expérience utilisateur moderne : React + Tailwind, validation temps réel, interface responsive
+* Export avancé : PDF, Excel avec historique détaillé
+* Workflow : CRUD factures et fournisseurs, processus DFC
+* Gestion d'exercice fiscal : bascule automatique et planification jusqu'à deux ans d'avance
 
 ---
 
@@ -49,7 +49,7 @@ Invoice Manager est un système de gestion de factures complet, pensé pour les 
 
 * Format d'identifiant optimisé : `INV-000000000001` (12 chiffres séquentiels)
 * Performances élevées : indexation, compteur dédié `BIGINT`
-* Anti-duplication : vérification des ID existants + synchronisation automatique
+* Anti-duplication : vérification des ID existants & synchronisation automatique
 
 ### 🔐 Sécurité & Authentification
 
@@ -89,23 +89,23 @@ Invoice Manager est un système de gestion de factures complet, pensé pour les 
 
 ```
 React 18 + Vite
-├── UI: Tailwind CSS + Heroicons
-├── Forms: React Hook Form + Zod
-├── State: React Context + Hooks
-├── Routing: React Router
-└── Build: Vite (HMR, optimisation)
+├── UI : Tailwind CSS + Heroicons
+├── Forms : React Hook Form + Zod
+├── State : React Context + Hooks
+├── Routing : React Router
+└── Build : Vite (HMR, optimisation)
 ```
 
 ### Backend
 
 ```
 Node.js + Express + TypeScript
-├── Auth: JWT HttpOnly + bcrypt
-├── DB: MySQL 8.2 (Docker)
-├── Validation: Custom
-├── Logging: Logger personnalisé
-├── Audit: traçabilité complète
-└── API: RESTful + Express Router
+├── Auth : JWT HttpOnly + bcrypt
+├── DB : MySQL 8.2 (Docker)
+├── Validation : Custom
+├── Logging : Logger personnalisé
+├── Audit : traçabilité complète
+└── API : RESTful + Express Router
 ```
 
 ### Base de données
@@ -149,7 +149,7 @@ cd client && npm install && cd ..
 ### ⚠️ Attention : Initialisation Docker
 
 > Les scripts d'initialisation Docker (`server/manage-task.sh` ou `server/manage-task.bash`) effectuent un **reset complet du moteur Docker** :  
-> Cela signifie qu'ils suppriment non seulement les containers et images liées au projet invoice-app, mais peuvent réinitialiser tout le moteur Docker (tous les containers/images présents localement).  
+> Cela signifie qu'ils suppriment non seulement les conteneurs et images liés au projet invoice-app, mais peuvent réinitialiser tout le moteur Docker (tous les conteneurs/images présents localement).  
 > **Utilisez-les avec précaution** si vous avez d'autres projets sur votre Docker local.
 
 ---
@@ -175,7 +175,7 @@ DB_USER=root
 DB_PASSWORD=your_password
 DB_NAME=cmdt_invoice_db
 ```
-> Les durées d’expiration JWT (courte ou longue selon "remember me") sont gérées automatiquement côté backend. Inutile de les définir dans `.env`.
+> Les durées d’expiration JWT sont gérées automatiquement côté backend. Inutile de les définir dans `.env`.
 
 ---
 
@@ -222,9 +222,9 @@ npm run dev
 * Workflow DFC : acceptation/refus, commentaires
 * Recherche multi-critères
 
-### Fournisseur
+### Fournisseurs
 
-* CRUD, recherche avancée, vérification des conflits
+* CRUD, recherche avancée, validation des conflits
 
 ### Export
 
@@ -237,7 +237,7 @@ npm run dev
 
 <a id="architecture-grande-echelle"></a>
 
-* Capacité extrême : **jusqu'à 999 999 999 999 factures/an**
+* Capacité extrême : jusqu'à 999 999 999 999 factures/an
 * ID facture : `INV-000000000001` (12 chiffres)
 * Compteur sur BIGINT pour garantir performance et atomicité
 * Optimisations : indexation par séquence, pas de `SELECT MAX()`, prévention des doublons
@@ -250,8 +250,8 @@ npm run dev
 
 * JWT + cookies HttpOnly, protections CSRF & XSS
 * Contrôle d’accès par rôle : admin / gestionnaire de factures / agent DFC
-* Audit trail : toute action tracée
-* Activity tracking : suivi des exports et opérations
+* Audit trail : toutes les actions sont tracées
+* Suivi d’activité : exports et opérations
 
 ---
 
@@ -259,10 +259,10 @@ npm run dev
 
 <a id="mises-a-jour-recentes"></a>
 
-* Migration vers **Docker + MySQL 8.2** pour stabilité accrue
+* Migration vers **Docker + MySQL 8.2**
 * Backend strictement typé en TypeScript
 * Optimisation de l’export PDF, Excel
-* Nouveaux scripts pour initialisation Docker (`manage-task.sh` / `manage-task.bash`)
+* Nouveaux scripts pour initialisation Docker
 * Corrections de bugs et améliorations de performance
 
 ---
@@ -321,13 +321,10 @@ Licence MIT — voir [LICENSE](LICENSE)
 
 <a id="support"></a>
 
-* 📧 Email : [diomankeita001@gmail.com](mailto:diomankeita001@gmail.com)
-* 🌐 Site officiel : [https://www.cmdt-invoice.com](https://www.cmdt-invoice.com)
-* 💬 Discord : Community Server
-* 🐛 Issues GitHub : [Issues](https://github.com/Dioman-Keita/invoice-app.git/issues)
+* Email : [diomankeita001@gmail.com](mailto:diomankeita001@gmail.com)
 
 ---
 
-**Créé avec ❤️ pour la gestion de factures à très grande échelle**
+Ce logiciel est fourni dans une démarche professionnelle de robustesse et de performance pour la gestion volumique des factures.
 
-*Dernière mise à jour : novembre 2025 — Architecture billion-scale prête*
+*Dernière mise à jour : novembre 2025*
