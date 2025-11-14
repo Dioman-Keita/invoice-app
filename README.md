@@ -1,10 +1,10 @@
 # Invoice Management System (CMDT) 🚀
 
-Système de gestion de factures **enterprise-ready** avec support pour **1 milliard de factures par an**, audit complet, sécurité renforcée, et interface moderne.
+Enterprise-ready invoice management system, designed for extreme scale: supports up to **999,999,999,999 invoices per year**, full audit trail, strong security, and a modern UI.
 
 ---
 
-## 🎯 Sommaire
+## 🎯 Table of Contents
 
 * [Overview](#overview)
 * [Key Features](#key-features)
@@ -28,17 +28,16 @@ Système de gestion de factures **enterprise-ready** avec support pour **1 milli
 
 <a id="overview"></a>
 
-Invoice Manager est un système complet de gestion de factures conçu pour les entreprises exigeantes.
+Invoice Manager is a comprehensive platform built for rigorous enterprise environments.
 
-**Points forts :**
+**Highlights:**
 
-* **Scalabilité** : 1 milliard de factures/an
-* **Sécurité** : JWT HttpOnly, audit trail complet, rôles granulaires
-* **UX moderne** : React + Tailwind, validation temps réel, interface responsive
-* **Export avancé** : PDF, Excel, TXT, JSON avec historique complet
-* **Workflow** : CRUD factures et fournisseurs, validation DFC
-* **Fiscal Year Management** : bascule automatique d’année fiscale et support pour programmation jusqu’à +2 ans par rapport à l’année réelle
-
+* Massive scale: up to 999,999,999,999 invoices/year (no confusion with 1 billion)
+* Security: JWT HttpOnly, complete audit trail, granular roles
+* Modern UX: React + Tailwind, real-time validation, responsive UI
+* Advanced export: PDF and Excel with full history tracking
+* Workflow: Invoice and supplier CRUD, DFC validation process
+* Fiscal year management: automatic switching and planning up to two years in advance
 
 ---
 
@@ -48,38 +47,37 @@ Invoice Manager est un système complet de gestion de factures conçu pour les e
 
 ### 🚀 Billion-Scale Architecture
 
-* Format ID scalable : `INV-000000000001` (12 chiffres séquentiels)
-* Performance optimisée : indexation et compteur dédié `BIGINT`
-* Anti-duplicata : vérification IDs existants + synchronisation automatique
+* Optimized ID format: `INV-000000000001` (12 sequential digits)
+* High performance: indexed with a dedicated `BIGINT` counter
+* Duplicate prevention: verified IDs and automatic synchronization
 
 ### 🔐 Security & Authentication
 
-* JWT HttpOnly cookies (mitigation XSS)
-* Session management avec timeout configurable
-* Role-based access control : admin, invoice_manager, dfc_agent
-* Activity tracking & audit trail complet
-* Password hashing bcrypt et validation Zod
+* JWT HttpOnly cookies (XSS mitigation)
+* Dynamic session handling (backend-managed "remember me")
+* Role-based access: admin, invoice manager, DFC agent
+* Complete activity trail for all actions
+* Bcrypt password hashing and robust validation
 
 ### 📊 Invoice Management
 
-* CRUD complet avec validation avancée
-* Recherche multi-critères par fournisseur
-* Workflow DFC (approve/reject) avec commentaires
-* Numérotation intelligente et séquentielle
+* Full CRUD with advanced validation
+* Multi-criteria search by supplier
+* DFC workflow (approve/reject with comments)
+* Intelligent sequential numbering
 
 ### 💼 Supplier Management
 
-* Numéro de compte unique (12 chiffres)
-* Validation des conflits (téléphone/compte)
-* Recherche flexible multi-critères
-* Interface moderne avec feedback temps réel
+* Account number: **all valid formats accepted** (not limited to 12 digits)
+* Conflict validation (account/supplier/phone)
+* Flexible, multi-criteria search
+* Modern, dynamic user interface
 
 ### 📤 Export & Reports
 
-* Export PDF, Excel, TXT, JSON
-* Filtrage temporel
-* Historique des exports avec tracking
-* Interface moderne avec états de chargement
+* PDF and Excel export only (TXT format is not supported)
+* Advanced time filtering
+* Complete export history
 
 ---
 
@@ -106,7 +104,7 @@ Node.js + Express + TypeScript
 ├── DB: MySQL 8.2 (Docker)
 ├── Validation: Custom
 ├── Logging: Custom logger
-├── Audit: Activity tracking complet
+├── Audit: full activity traceability
 └── API: RESTful + Express Router
 ```
 
@@ -115,9 +113,9 @@ Node.js + Express + TypeScript
 ```
 MySQL 8.2 via Docker
 ├── Tables: invoice, supplier, employee, audit_log
-├── Indexing optimisé pour performances
-├── Constraints: Clés étrangères + uniques
-└── Scaling: Prêt pour partitionnement
+├── Optimized indexing
+├── Foreign and unique constraints
+└── Partitioning ready
 ```
 
 ---
@@ -126,10 +124,10 @@ MySQL 8.2 via Docker
 
 <a id="prerequisites"></a>
 
-* Node.js 18+ et npm 9+
-* MySQL 8.2 via Docker
-* Navigateur moderne (Chrome 90+, Firefox 88+)
-* Docker + Docker Compose installés
+* Node.js 18+ and npm 9+
+* MySQL 8.2 (via Docker)
+* Modern web browser (Chrome 90+, Firefox 88+)
+* Docker + Docker Compose
 
 ---
 
@@ -148,12 +146,11 @@ cd server && npm install && cd ..
 cd client && npm install && cd ..
 ```
 
-### 🔹 Docker Initialization
+### ⚠️ Warning: Docker Initialization
 
-* **Windows** : `invoice-app/server/manage-task.bat`
-* **Linux/macOS** : `invoice-app/server/manage-task.sh`
-
-Ces scripts gèrent le lancement de Docker, la création des volumes MySQL et la configuration initiale.
+> The Docker initialization scripts (`server/manage-task.sh` or `server/manage-task.bash`) perform a **full Docker engine reset**:  
+> This means they do not just delete containers/images related to invoice-app, but can also reset your entire Docker setup (removing all containers/images locally).  
+> **Use with caution** if you run other Docker projects on your machine.
 
 ---
 
@@ -161,25 +158,24 @@ Ces scripts gèrent le lancement de Docker, la création des volumes MySQL et la
 
 <a id="configuration"></a>
 
-Créer `server/.env` :
+Create `server/.env` with:
 
 ```bash
 # Authentication
 JWT_SECRET_KEY=super_secret_key_change_me
-JWT_EXPIRES_IN=5m
-JWT_REFRESH_EXPIRES_IN=30m
 
 # Environment
 NODE_ENV=development
 PORT=3000
 FRONTEND_URL=http://localhost:5173
 
-# Database MySQL
+# MySQL Database
 DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=your_password
 DB_NAME=cmdt_invoice_db
 ```
+> JWT expiration is backend-managed and dynamic; no need to define it in `.env`.
 
 ---
 
@@ -188,17 +184,20 @@ DB_NAME=cmdt_invoice_db
 <a id="development"></a>
 
 ```bash
-# Terminal 1: Backend (Express + TypeScript)
-cd server && npm run dev
+# Start frontend:
+cd invoice-app
+npm run dev
 
-# Terminal 2: Frontend (React + Vite)
-cd client && npm run dev
+# Start backend:
+cd server
+npm run dev
 ```
 
-**URLs par défaut** :
+**Default URLs**:
 
-* Frontend : [http://localhost:5173](http://localhost:5173)
-* Backend API : [http://localhost:3000](http://localhost:3000)
+* Frontend: [http://localhost:5173](http://localhost:5173)
+* Backend API: [http://localhost:3000](http://localhost:3000)
+
 ---
 
 ## 📡 API Documentation
@@ -219,18 +218,18 @@ cd client && npm run dev
 
 ### Invoice
 
-* CRUD complet (GET, POST, update, delete)
-* Workflow DFC : approve/reject
-* Recherche multi-critères
+* Full CRUD (GET, POST, update, delete)
+* DFC workflow: approve/reject, comments
+* Multi-criteria search
 
 ### Supplier
 
-* CRUD, recherche multi-champs, validation conflits
+* CRUD, advanced search, conflict validation
 
 ### Export
 
-* PDF, Excel, TXT, JSON
-* Historique et suivi des exports
+* PDF, Excel (TXT not supported)
+* Export history tracking
 
 ---
 
@@ -238,10 +237,10 @@ cd client && npm run dev
 
 <a id="billion-scale-system"></a>
 
-* Capacité : **jusqu'à 999 999 999 999 factures/an**
-* ID facture : `INV-000000000001` (12 chiffres)
-* Counter : BIGINT pour performance et atomicité
-* Optimisations : indexation par séquence, pas de `SELECT MAX()`, prevention duplicata
+* Extreme capacity: up to 999,999,999,999 invoices/year
+* Invoice ID: `INV-000000000001` (12 digits)
+* BIGINT counter for high performance & atomicity
+* Sequence indexing, no `SELECT MAX()`, duplication prevention
 
 ---
 
@@ -249,10 +248,10 @@ cd client && npm run dev
 
 <a id="authentication--security"></a>
 
-* JWT + HttpOnly cookies, CSRF & XSS protection
-* Role-Based Access Control : admin / invoice_manager / dfc_agent
-* Audit trail : toutes les actions tracées
-* Activity tracking : exports et opérations suivis
+* JWT & HttpOnly cookies, CSRF & XSS protection
+* Role-Based Access: admin / invoice manager / DFC agent
+* Full audit trail: all actions logged
+* Export & operation tracking
 
 ---
 
@@ -260,11 +259,11 @@ cd client && npm run dev
 
 <a id="recent-updates"></a>
 
-* Migration vers **Docker + MySQL 8.2** pour stabilité
-* Typage strict TypeScript backend
-* Optimisation des exports PDF, Excel, TXT, JSON
-* Scripts `manage-task.bat` / `manage-task.sh` pour init Docker
-* Correction des erreurs et amélioration de la performance
+* Docker + MySQL 8.2 migration
+* Strict TypeScript backend
+* Enhanced PDF and Excel exports
+* Updated Docker init scripts
+* Performance and bug fixes
 
 ---
 
@@ -275,26 +274,26 @@ cd client && npm run dev
 ### Phase 1 (Current)
 
 * Billion-scale architecture
-* Modern export system
+* Modernized export system
 * Enhanced audit logging
-* TypeScript coverage
+* Complete TypeScript coverage
 * Responsive UX improvements
 
 ### Phase 2 (Next)
 
-* Real-time Notifications (WebSocket)
-* Advanced Analytics (Dashboard)
-* Bulk Operations
-* API Rate Limiting
-* Integration Tests
+* Real-time notifications (WebSocket)
+* Advanced analytics (dashboard)
+* Bulk operations
+* API rate limiting
+* Integration tests
 
 ### Phase 3 (Future)
 
-* Microservices (Invoice + Auth separation)
-* Queue System (Background processing)
-* Mobile App (React Native)
-* Multi-tenant
-* AI Features (Duplicate detection, OCR)
+* Microservices (invoice & auth separation)
+* Background queue system
+* Mobile app (React Native)
+* Multi-tenant support
+* AI features (duplicate detection, OCR etc.)
 
 ---
 
@@ -303,9 +302,9 @@ cd client && npm run dev
 <a id="contributing"></a>
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/my-feature`)
-3. Commit changes (`git commit -m 'Add feature'`)
-4. Push to branch (`git push origin feature/my-feature`)
+2. Create a branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -m 'Add feature'`)
+4. Push to your branch (`git push origin feature/my-feature`)
 5. Open a Pull Request
 
 ---
@@ -314,7 +313,7 @@ cd client && npm run dev
 
 <a id="license"></a>
 
-MIT License - see [LICENSE](LICENSE)
+MIT License — see [LICENSE](LICENSE)
 
 ---
 
@@ -322,13 +321,10 @@ MIT License - see [LICENSE](LICENSE)
 
 <a id="support"></a>
 
-* 📧 Email: [diomankeita@example.com](mailto:diomankeita@example.com)
-* 🌐 Site officiel : [https://www.cmdt-invoice.com](https://www.cmdt-invoice.com)
-* 💬 Discord: Community Server
-* 🐛 GitHub Issues: [Issues](https://github.com/Dioman-Keita/invoice-app.git/issues)
+* Email: [diomankeita001@gmail.com](mailto:diomankeita001@gmail.com)
 
 ---
 
-**Built with ❤️ for enterprise-scale invoice management**
+This solution is provided with a focus on robustness and high-volume performance for enterprise invoice management.
 
-*Last updated: November 2025 – Billion-Scale Architecture Ready*
+*Last updated: November 2025*
