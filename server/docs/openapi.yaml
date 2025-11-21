@@ -196,6 +196,24 @@ components:
           type: string
           format: date-time
       required: [id, name, email]
+
+    ExportRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [invoice, supplier, relational]
+        variant:
+          type: string
+          enum: [list, overview]
+        format:
+          type: string
+          enum: [pdf, odt, xlsx]
+        search:
+          type: object
+          additionalProperties: true
+      required: [type, variant, format]
+
 paths:
   /health:
     get:
@@ -699,17 +717,30 @@ paths:
       responses:
         '200': { description: Résultats relationnels }
 
-  /export/history:
-    get:
-      summary: Historique des exports
+  /export:
+    post:
+      summary: Générer un export selon type/variant/format
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExportRequest' }
       responses:
-        '200': { description: Historique }
-
-  /export/advanced:
-    get:
-      summary: Export avancé selon filtres
-      responses:
-        '200': { description: Export généré }
+        '200':
+          description: Fichier exporté
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.oasis.opendocument.text:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
 
   /fiscal-years:
     get:

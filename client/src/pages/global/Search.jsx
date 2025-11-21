@@ -78,6 +78,8 @@ function Search() {
   const [currentLimit, setCurrentLimit] = useState(10);
   
   const [invoiceAttachments, setInvoiceAttachments] = useState({});
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [loadingAttachments, setLoadingAttachments] = useState({});
   
   const invoiceSearch = useSearch('http://localhost:3000/api/search/invoices', 'factures');
@@ -358,91 +360,79 @@ function Search() {
     setShowSupplierOverview(false);
   };
 
-  const handleCloseOverview = () => {
+  const handleCloseOverview = (e) => {
+    // Prevent event propagation to avoid triggering other handlers
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
     setShowInvoiceOverview(false);
     setShowSupplierOverview(false);
     setShowGroupedOverview(false);  // ✅ AJOUT
     setSelectedInvoice(null);
     setSelectedSupplier(null);
     setSelectedGroupedResult(null);  // ✅ AJOUT
+    // Reset export states when closing overview to prevent auto-export
+    setIsExportingPdf(false);
+    setIsExportingExcel(false);
   };
 
   const handleExport = async (format, data = null) => {
+    // Set the appropriate loading state based on format
+    if (format === 'pdf') {
+      setIsExportingPdf(true);
+    } else if (format === 'xlsx') {
+      setIsExportingExcel(true);
+    }
     try {
-      let url;
-      
-      // ✅ MODIFICATION : Utiliser des routes spécifiques selon le contexte
-      if (data) {
-        // Export depuis un overview - inclure les filtres et options pour reconstruire le contexte
-        const params = new URLSearchParams();
-        params.append('format', format);
-        
-        // Ajouter les filtres et options actuels pour respecter le contexte de recherche
-        const filtersForTab = buildFiltersForTab(activeTab);
-        Object.entries(filtersForTab).forEach(([key, value]) => {
-          if (value !== undefined && value !== null && value !== '') {
-            params.append(key, String(value));
-          }
-        });
-        
-        const options = buildOptionsForTab(activeTab);
-        Object.entries(options).forEach(([key, value]) => {
-          if (value !== undefined && value !== null && value !== '') {
-            params.append(key, String(value));
-          }
-        });
-        
-        if (showInvoiceOverview && selectedInvoice) {
-          // Export d'une facture spécifique
-          url = `http://localhost:3000/api/export/invoice/${data.id}?${params.toString()}`;
-        } else if (showSupplierOverview && selectedSupplier) {
-          // Export d'un fournisseur spécifique
-          url = `http://localhost:3000/api/export/supplier/${data.id}?${params.toString()}`;
-        } else if (showGroupedOverview && selectedGroupedResult) {
-          // Export d'un résultat groupé
-          url = `http://localhost:3000/api/export/grouped/${data.supplier_id || data.id}?${params.toString()}`;
-        } else {
-          // Fallback vers la route globale si le contexte n'est pas clair
-          params.append('type', activeTab);
-          params.append('specific_id', data.id);
-          url = `http://localhost:3000/api/export/advanced?${params.toString()}`;
+      // Map active tab to API type
+      const typeMap = { invoices: 'invoice', suppliers: 'supplier', relational: 'relational' };
+      const type = typeMap[activeTab] || 'invoice';
+      const isOverview = !!data && (showInvoiceOverview || showSupplierOverview || showGroupedOverview);
+      const variant = isOverview ? 'overview' : 'list';
+
+      // Build search payload exactly like QueryBuilder inputs
+      const filtersForTab = buildFiltersForTab(activeTab);
+      const options = buildOptionsForTab(activeTab);
+      const cleanFilters = Object.fromEntries(
+        Object.entries(filtersForTab).filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+      );
+      const cleanOptions = Object.fromEntries(
+        Object.entries(options).filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+      );
+      const searchPayload = { ...cleanFilters, ...cleanOptions };
+
+      // For overview, pass the specific identifier expected by the backend
+      if (isOverview) {
+        if (showInvoiceOverview && (selectedInvoice || data)) {
+          searchPayload.invoice_id = data?.id || selectedInvoice?.id;
+        } else if (showSupplierOverview && (selectedSupplier || data)) {
+          searchPayload.supplier_id = data?.id || selectedSupplier?.id;
+        } else if (showGroupedOverview && (selectedGroupedResult || data)) {
+          searchPayload.supplier_id = data?.supplier_id || data?.id || selectedGroupedResult?.supplier_id || selectedGroupedResult?.id;
         }
       } else {
-        // Export global (tous les résultats de recherche)
-      const params = new URLSearchParams();
-      
-      const filtersForTab = buildFiltersForTab(activeTab);
-      Object.entries(filtersForTab).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-            params.append(key, String(value));
-        }
-      });
-      
-      const options = buildOptionsForTab(activeTab);
-      Object.entries(options).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          params.append(key, String(value));
-        }
-      });
-      
-      params.append('format', format);
-      params.append('type', activeTab);
-        url = `http://localhost:3000/api/export/advanced?${params.toString()}`;
+        // For list exports, keep a safe limit hint as before
+        const limitForFormat = String(format).toLowerCase() === 'pdf' ? 200 : 1000;
+        if (!searchPayload.limit) searchPayload.limit = limitForFormat;
       }
 
-      // Choisir le bon Accept selon le format exporté
       const lowerFmt = String(format).toLowerCase();
       const acceptByFormat = {
         pdf: 'application/pdf',
         xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        txt: 'text/plain; charset=utf-8',
-        csv: 'text/csv; charset=utf-8'
+        odt: 'application/vnd.oasis.opendocument.text'
       };
       const accept = acceptByFormat[lowerFmt] || '*/*';
 
-      const response = await fetch(url, {
+      const response = await fetch('http://localhost:3000/api/export', {
+        method: 'POST',
         credentials: 'include',
-        headers: { Accept: accept }
+        headers: {
+          Accept: accept,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ type, variant, format: lowerFmt, search: searchPayload })
       });
 
       if (!response.ok) throw new Error('Erreur lors de l\'export');
@@ -463,8 +453,8 @@ function Search() {
         } else if (showGroupedOverview && selectedGroupedResult) {
           a.download = `statistiques-fournisseur-${data.supplier_id || data.id}-${new Date().toISOString().split('T')[0]}.${format.toLowerCase()}`;
         } else {
-        const prefix = activeTab === 'invoices' ? 'facture' : 'fournisseur';
-        a.download = `${prefix}-${data.id}-${new Date().toISOString().split('T')[0]}.${format.toLowerCase()}`;
+          const prefix = activeTab === 'invoices' ? 'facture' : 'fournisseur';
+          a.download = `${prefix}-${data.id}-${new Date().toISOString().split('T')[0]}.${format.toLowerCase()}`;
         }
       } else {
         a.download = `export-${activeTab}-${new Date().toISOString().split('T')[0]}.${format.toLowerCase()}`;
@@ -477,6 +467,13 @@ function Search() {
     } catch (err) {
       console.error('Erreur export:', err);
       alert('Erreur lors de l\'export des données');
+    } finally {
+      // Reset the appropriate loading state
+      if (format === 'pdf') {
+        setIsExportingPdf(false);
+      } else if (format === 'xlsx') {
+        setIsExportingExcel(false);
+      }
     }
   };
 
@@ -1098,29 +1095,44 @@ function Search() {
                   <button 
                     type="button" 
                     onClick={() => handleExport('pdf')} 
-                    disabled={!invoiceSearch.data?.length && !supplierSearch.data?.length && !relationalSearch.data?.length}
+                    disabled={isExportingPdf || isExportingExcel || (!invoiceSearch.data?.length && !supplierSearch.data?.length && !relationalSearch.data?.length)}
                     className="flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <ArrowDownTrayIcon className="w-4 h-4 mr-1" />
-                    PDF
+                    {isExportingPdf ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Export...
+                      </>
+                    ) : (
+                      <>
+                        <ArrowDownTrayIcon className="w-4 h-4 mr-1" />
+                        PDF
+                      </>
+                    )}
                   </button>
                   <button 
                     type="button" 
                     onClick={() => handleExport('xlsx')} 
-                    disabled={!invoiceSearch.data?.length && !supplierSearch.data?.length && !relationalSearch.data?.length}
+                    disabled={isExportingPdf || isExportingExcel || (!invoiceSearch.data?.length && !supplierSearch.data?.length && !relationalSearch.data?.length)}
                     className="flex items-center px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <ArrowDownTrayIcon className="w-4 h-4 mr-1" />
-                    Excel
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => handleExport('txt')} 
-                    disabled={!invoiceSearch.data?.length && !supplierSearch.data?.length && !relationalSearch.data?.length}
-                    className="flex items-center px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ArrowDownTrayIcon className="w-4 h-4 mr-1" />
-                    TXT
+                    {isExportingExcel ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Export...
+                      </>
+                    ) : (
+                      <>
+                        <ArrowDownTrayIcon className="w-4 h-4 mr-1" />
+                        Excel
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -1460,7 +1472,7 @@ function Search() {
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Folio:</span>
-                            <span className="font-medium">{selectedInvoice.folio}</span>
+                            <span className="font-medium">{selectedInvoice.folio || 'Non spécifié'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Statut DFC:</span>
@@ -1505,17 +1517,45 @@ function Search() {
                   </div>
 
                   <div className="mt-6 flex justify-end space-x-3">
-                    <button onClick={() => handleExport('pdf', selectedInvoice)} className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
-                      <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                      PDF
+                    <button 
+                      onClick={() => handleExport('pdf', selectedInvoice)} 
+                      disabled={isExportingPdf || isExportingExcel}
+                      className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isExportingPdf ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Export...
+                        </>
+                      ) : (
+                        <>
+                          <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                          PDF
+                        </>
+                      )}
                     </button>
-                    <button onClick={() => handleExport('xlsx', selectedInvoice)} className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors">
-                      <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                      Excel
-                    </button>
-                    <button onClick={() => handleExport('txt', selectedInvoice)} className="flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors">
-                      <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                      TXT
+                    <button 
+                      onClick={() => handleExport('xlsx', selectedInvoice)} 
+                      disabled={isExportingPdf || isExportingExcel}
+                      className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isExportingExcel ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Export...
+                        </>
+                      ) : (
+                        <>
+                          <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                          Excel
+                        </>
+                      )}
                     </button>
                     <button onClick={handleCloseOverview} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
                       Fermer
@@ -1587,17 +1627,45 @@ function Search() {
                   </div>
 
                   <div className="mt-6 flex justify-end space-x-3">
-                    <button onClick={() => handleExport('pdf', selectedSupplier)} className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
-                      <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                      PDF
+                    <button 
+                      onClick={() => handleExport('pdf', selectedSupplier)} 
+                      disabled={isExportingPdf || isExportingExcel}
+                      className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isExportingPdf ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Export...
+                        </>
+                      ) : (
+                        <>
+                          <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                          PDF
+                        </>
+                      )}
                     </button>
-                    <button onClick={() => handleExport('xlsx', selectedSupplier)} className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors">
-                      <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                      Excel
-                    </button>
-                    <button onClick={() => handleExport('txt', selectedSupplier)} className="flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors">
-                      <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                      TXT
+                    <button 
+                      onClick={() => handleExport('xlsx', selectedSupplier)} 
+                      disabled={isExportingPdf || isExportingExcel}
+                      className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isExportingExcel ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Export...
+                        </>
+                      ) : (
+                        <>
+                          <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                          Excel
+                        </>
+                      )}
                     </button>
                     <button onClick={handleCloseOverview} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
                       Fermer
@@ -1670,17 +1738,45 @@ function Search() {
                   </div>
 
                   <div className="mt-6 flex justify-end space-x-3">
-                    <button onClick={() => handleExport('pdf', selectedGroupedResult)} className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
-                      <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                      PDF
+                    <button 
+                      onClick={() => handleExport('pdf', selectedGroupedResult)} 
+                      disabled={isExportingPdf || isExportingExcel}
+                      className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isExportingPdf ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Export...
+                        </>
+                      ) : (
+                        <>
+                          <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                          PDF
+                        </>
+                      )}
                     </button>
-                    <button onClick={() => handleExport('xlsx', selectedGroupedResult)} className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors">
-                      <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                      Excel
-                    </button>
-                    <button onClick={() => handleExport('txt', selectedGroupedResult)} className="flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors">
-                      <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                      TXT
+                    <button 
+                      onClick={() => handleExport('xlsx', selectedGroupedResult)} 
+                      disabled={isExportingPdf || isExportingExcel}
+                      className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isExportingExcel ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Export...
+                        </>
+                      ) : (
+                        <>
+                          <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                          Excel
+                        </>
+                      )}
                     </button>
                     <button onClick={handleCloseOverview} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
                       Fermer

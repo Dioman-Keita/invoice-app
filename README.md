@@ -146,15 +146,23 @@ cd server && npm install && cd ..
 cd client && npm install && cd ..
 ```
 
-### ⚠️ Warning: Docker Initialization
+###  ⚠️ Warning: Docker Stack Management
 
-> The Docker initialization scripts (`server/manage-task.sh` or `server/manage-task.bash`) perform a **full Docker engine reset**:  
-> This means they do not just delete containers/images related to invoice-app, but can also reset your entire Docker setup (removing all containers/images locally).  
-> **Use with caution** if you run other Docker projects on your machine.
+> Use the stack helpers: `server/manage-stack.sh` (macOS/Linux) or `server/manage-stack.bat` (Windows).
+>
+> These scripts provide four options:
+> 1) Restart only (no removal)
+> 2) Restart with container removal (`docker compose down`, volumes preserved)
+> 3) Safe reset (remove containers and the CMDT volume only)
+> 4) Extreme clean (global `docker system prune -af --volumes`)
+>
+> Option 4 purges unused Docker images/containers/networks/volumes globally on your machine (not only this project).  
+> Option 3 removes only this project's data volume. Options 1–2 keep your data.  
+> **Use with caution**, especially if you run other Docker projects.
 
 ---
 
-## ⚙️ Configuration
+##  ⚙️ Configuration
 
 <a id="configuration"></a>
 

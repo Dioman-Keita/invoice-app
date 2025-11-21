@@ -4,14 +4,39 @@ import { startCleanupUnverifiedJob } from './jobs/cleanupUnverified';
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-    logger.info(`🚀 Serveur démarré sur le port ${PORT}`);
-    logger.info(`📡 API disponible sur http://localhost:${PORT}/api`);
-    logger.info(`🔍 Health check: http://localhost:${PORT}/api/health`);
-    console.log(`🚀 Serveur démarré sur le port ${PORT}`);
-    console.log(`📡 API disponible sur http://localhost:${PORT}/api`);
-    console.log(`🔍 Health check: http://localhost:${PORT}/api/health`);
-    startCleanupUnverifiedJob();
+// Initialisation asynchrone
+async function startServer() {
+    try {
+
+        // Démarrer le serveur
+        app.listen(PORT, () => {
+            logger.info(`🚀 Serveur démarré sur le port ${PORT}`);
+            logger.info(`📡 API disponible sur http://localhost:${PORT}/api`);
+            logger.info(`🔍 Health check: http://localhost:${PORT}/api/health`);
+            console.log(`🚀 Serveur démarré sur le port ${PORT}`);
+            console.log(`📡 API disponible sur http://localhost:${PORT}/api`);
+            console.log(`🔍 Health check: http://localhost:${PORT}/api/health`);
+            startCleanupUnverifiedJob();
+        });
+    } catch (error) {
+        logger.error('✗ Échec de l\'initialisation du serveur', { error });
+        console.error('✗ Échec de l\'initialisation du serveur:', error);
+        process.exit(1);
+    }
+}
+
+// Nettoyage lors de l'arrêt
+process.on('SIGTERM', async () => {
+    logger.info('SIGTERM reçu, nettoyage...');
+    process.exit(0);
 });
+
+process.on('SIGINT', async () => {
+    logger.info('SIGINT reçu, nettoyage...');
+    process.exit(0);
+});
+
+// Démarrer le serveur
+startServer();
 
 export default app;

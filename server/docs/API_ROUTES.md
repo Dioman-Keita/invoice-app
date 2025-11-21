@@ -181,13 +181,21 @@ http://localhost:3000/api
 - **Protection** : `authGuard` + `requireAgentOrManager`
 - **Rôles** : `dfc_agent`, `invoice_manager`
 
-### **GET** `/export/advanced`
-- **Description** : Export avancé (CSV/Excel) basé sur filtres
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
-
-### **GET** `/export/history`
-- **Description** : Historique des exports effectués
+### **POST** `/export`
+- **Description** : Générer un export basé sur une recherche standardisée
+- **Body** :
+  ```json
+  {
+    "type": "invoice" | "supplier" | "relational",
+    "variant": "list" | "overview",
+    "format": "pdf" | "odt" | "xlsx",
+    "search": { /* mêmes filtres que /search/... */ }
+  }
+  ```
+- **Response** : Fichier binaire
+  - `application/pdf` si `format=pdf`
+  - `application/vnd.oasis.opendocument.text` si `format=odt`
+  - `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` si `format=xlsx`
 - **Protection** : `authGuard` + `requireAgentOrManager`
 - **Rôles** : `dfc_agent`, `invoice_manager`
 

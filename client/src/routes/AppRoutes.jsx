@@ -4,10 +4,8 @@ import Login from "../pages/auth/Login.jsx";
 import Home from "../pages/global/Home.jsx";
 import Register from "../pages/auth/Register.jsx";
 import Invoice from "../pages/agent/manager/Invoice.jsx";
-import Export from "../pages/global/Export.jsx";
 import Search from "../pages/global/Search.jsx";
 import Stats from "../pages/admin/Stats.jsx";
-import Print from "../pages/global/Print.jsx";
 import Settings from "../pages/admin/Settings.jsx";
 import JoinDfc from "../pages/global/JoinDfc.jsx";
 import DfcFormular from "../pages/agent/dfc/DfcFormular.jsx";
@@ -40,11 +38,6 @@ function AppRoutes() {
             {/* ==================== */}
             {/* ROUTES PROTÉGÉES - Accès tous utilisateurs authentifiés */}
             {/* ==================== */}
-            <Route path="/export" element={
-                <PrivateRoute requiredRoles={['admin', 'invoice_manager', 'dfc_agent']}>
-                    <Export />
-                </PrivateRoute>
-            } />
             <Route path="/search" element={
                 <PrivateRoute requiredRoles={['admin', 'invoice_manager', 'dfc_agent']}>
                     <Search />
@@ -58,11 +51,6 @@ function AppRoutes() {
             <Route path="/stats" element={
                 <PrivateRoute requiredRoles={['admin', 'invoice_manager', 'dfc_agent']}>
                     <StatsSimple />
-                </PrivateRoute>
-            } />
-            <Route path="/print" element={
-                <PrivateRoute requiredRoles={['admin', 'invoice_manager', 'dfc_agent']}>
-                    <Print />
                 </PrivateRoute>
             } />
 

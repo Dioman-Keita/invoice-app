@@ -6,7 +6,6 @@ import {
   ChartBarIcon,
   DocumentPlusIcon,
   MagnifyingGlassIcon,
-  PrinterIcon,
   UserPlusIcon,
   HomeIcon,
   UserGroupIcon,
@@ -73,11 +72,9 @@ function NavbarPanel({ isOpen, onClose }) {
 
   // Menu de base pour les utilisateurs non connectés
   const baseMenuItems = useMemo(() => ([
-    { label: 'Exporter en PDF', icon: <DocumentArrowDownIcon className="w-6 h-6" />, action: 'export' },
     { label: 'Statistiques', icon: <ChartBarIcon className="w-6 h-6" />, action: 'stats' },
     { label: 'Nouvelle facture', icon: <DocumentPlusIcon className="w-6 h-6" />, action: 'newInvoice' },
     { label: 'Rechercher', icon: <MagnifyingGlassIcon className="w-6 h-6" />, action: 'search' },
-    { label: 'Imprimer une facture', icon: <PrinterIcon className="w-6 h-6" />, action: 'print' },
     { label: 'Devenir agent DFC', icon: <UserPlusIcon className="w-6 h-6" />, action: 'joinDFC' },
     { label: 'Traitement DFC', icon: <DocumentCheckIcon className="w-6 h-6" />, action: 'dfc_traitment' },
     { label: 'Accueil', icon: <HomeIcon className="w-6 h-6" />, action: 'home' },
@@ -143,9 +140,6 @@ function NavbarPanel({ isOpen, onClose }) {
 
   const handleAction = (action) => {
     switch(action) {
-      case 'export':
-        navigate('/export');
-        break;
       case 'stats':
         navigate('/stats');
         break;
@@ -154,9 +148,6 @@ function NavbarPanel({ isOpen, onClose }) {
         break;
       case 'search':
         navigate('/search');
-        break;
-      case 'print':
-        navigate('/print');
         break;
       case 'joinDFC':
         navigate('/joinDFC');
