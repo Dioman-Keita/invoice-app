@@ -1,210 +1,218 @@
-# Système de gestion de factures (CMDT) 🚀
+﻿# Invoice Management System (CMDT) ðŸš€
 
-Système de gestion de factures prêt pour l'entreprise, conçu pour une capacité extrême : jusqu'à **999 999 999 999 factures par an**, audit complet, sécurité avancée, et interface moderne.
+Enterprise-ready invoice management system, designed for extreme scale: supports up to **999,999,999,999 invoices per year**, full audit trail, strong security, and a modern UI.
 
 ---
 
-## 🎯 Sommaire
+## ðŸŽ¯ Table of Contents
 
-* [Aperçu](#apercu)
-* [Fonctionnalités-clés](#fonctionnalites-cles)
-* [Technologies](#technologies)
-* [Prérequis](#prerequis)
-* [Installation rapide](#installation-rapide)
+* [Overview](#overview)
+* [Key Features](#key-features)
+* [Tech Stack](#tech-stack)
+* [Prerequisites](#prerequisites)
+* [Quick Installation](#quick-installation)
 * [Configuration](#configuration)
-* [Développement](#developpement)
-* [Documentation API](#documentation-api)
-* [Architecture grande échelle](#architecture-grande-echelle)
-* [Sécurité & Authentification](#securite-authentification)
-* [Mises à jour récentes](#mises-a-jour-recentes)
-* [Feuille de route](#feuille-de-route)
-* [Contribution](#contribution)
-* [Licence](#licence)
+* [Development](#development)
+* [API Documentation](#api-documentation)
+* [Billion-Scale System](#billion-scale-system)
+* [Authentication & Security](#authentication--security)
+* [Recent Updates](#recent-updates)
+* [Roadmap](#roadmap)
+* [Contributing](#contributing)
+* [License](#license)
 * [Support](#support)
 
 ---
 
-## 📋 Aperçu
+## ðŸ“‹ Overview
 
-<a id="apercu"></a>
+<a id="overview"></a>
 
-Invoice Manager est un système de gestion de factures complet, pensé pour les entreprises exigeantes.
+Invoice Manager is a comprehensive platform built for rigorous enterprise environments.
 
-**Points forts :**
+**Highlights:**
 
-* Grande capacité : jusqu'à 999 999 999 999 factures/an (aucune confusion avec 1 milliard)
-* Sécurité : JWT HttpOnly, traçabilité complète, droits granulaires
-* Expérience utilisateur moderne : React + Tailwind, validation temps réel, interface responsive
-* Export avancé : PDF, Excel avec historique détaillé
-* Workflow : CRUD factures et fournisseurs, processus DFC
-* Gestion d'exercice fiscal : bascule automatique et planification jusqu'à deux ans d'avance
-
----
-
-## ✨ Fonctionnalités-clés
-
-<a id="fonctionnalites-cles"></a>
-
-### 🚀 Architecture Grande Échelle
-
-* Format d'identifiant optimisé : `INV-000000000001` (12 chiffres séquentiels)
-* Performances élevées : indexation, compteur dédié `BIGINT`
-* Anti-duplication : vérification des ID existants & synchronisation automatique
-
-### 🔐 Sécurité & Authentification
-
-* JWT HttpOnly cookies (protection XSS)
-* Gestion des sessions (durée dynamique côté backend suivant le "remember me")
-* Contrôle des accès par rôles : admin, gestionnaire de factures, agent DFC
-* Traçabilité complète de toutes les actions
-* Hachage des mots de passe (bcrypt) & validation robuste
-
-### 📊 Gestion des factures
-
-* CRUD complet avec validation avancée
-* Recherche multi-critères par fournisseur
-* Workflow DFC (validation/refus) avec commentaires
-* Numérotation intelligente et séquentielle
-
-### 💼 Gestion des fournisseurs
-
-* Numéro de compte : TOUS les formats valides sont acceptés (ne se limite PAS à 12 chiffres)
-* Vérification des conflits (compte/fournisseur/téléphone)
-* Recherche flexible multi-critères
-* Interface moderne et dynamique
-
-### 📤 Export & Rapports
-
-* Export PDF & Excel uniquement (plus de TXT)
-* Filtrage avancé par période
-* Historique complet et traçable
+* Massive scale: up to 999,999,999,999 invoices/year (no confusion with 1 billion)
+* Security: JWT HttpOnly, complete audit trail, granular roles
+* Modern UX: React + Tailwind, real-time validation, responsive UI
+* Advanced export: PDF and Excel with full history tracking
+* Workflow: Invoice and supplier CRUD, DFC validation process
+* Fiscal year management: automatic switching and planning up to two years in advance
 
 ---
 
-## 🛠 Technologies
+## âœ¨ Key Features
 
-<a id="technologies"></a>
+<a id="key-features"></a>
+
+### ðŸš€ Billion-Scale Architecture
+
+* Optimized ID format: `INV-000000000001` (12 sequential digits)
+* High performance: indexed with a dedicated `BIGINT` counter
+* Duplicate prevention: verified IDs and automatic synchronization
+
+### ðŸ” Security & Authentication
+
+* JWT HttpOnly cookies (XSS mitigation)
+* Dynamic session handling (backend-managed "remember me")
+* Role-based access: admin, invoice manager, DFC agent
+* Complete activity trail for all actions
+* Bcrypt password hashing and robust validation
+
+### ðŸ“Š Invoice Management
+
+* Full CRUD with advanced validation
+* Multi-criteria search by supplier
+* DFC workflow (approve/reject with comments)
+* Intelligent sequential numbering
+
+### ðŸ’¼ Supplier Management
+
+* Account number: **all valid formats accepted** (not limited to 12 digits)
+* Conflict validation (account/supplier/phone)
+* Flexible, multi-criteria search
+* Modern, dynamic user interface
+
+### ðŸ“¤ Export & Reports
+
+* PDF and Excel export only (TXT format is not supported)
+* Advanced time filtering
+* Complete export history
+
+---
+
+## ðŸ›  Tech Stack
+
+<a id="tech-stack"></a>
 
 ### Frontend
 
 ```
 React 18 + Vite
-├── UI : Tailwind CSS + Heroicons
-├── Forms : React Hook Form + Zod
-├── State : React Context + Hooks
-├── Routing : React Router
-└── Build : Vite (HMR, optimisation)
+â”œâ”€â”€ UI: Tailwind CSS + Heroicons
+â”œâ”€â”€ Forms: React Hook Form + Zod
+â”œâ”€â”€ State: React Context + Hooks
+â”œâ”€â”€ Routing: React Router
+â””â”€â”€ Build: Vite (HMR, optimization)
 ```
 
 ### Backend
 
 ```
 Node.js + Express + TypeScript
-├── Auth : JWT HttpOnly + bcrypt
-├── DB : MySQL 8.2 (Docker)
-├── Validation : Custom
-├── Logging : Logger personnalisé
-├── Audit : traçabilité complète
-└── API : RESTful + Express Router
+â”œâ”€â”€ Auth: JWT HttpOnly + bcrypt
+â”œâ”€â”€ DB: MySQL 8.2 (Docker)
+â”œâ”€â”€ Validation: Custom
+â”œâ”€â”€ Logging: Custom logger
+â”œâ”€â”€ Audit: full activity traceability
+â””â”€â”€ API: RESTful + Express Router
 ```
 
-### Base de données
+### Database
 
 ```
 MySQL 8.2 via Docker
-├── Tables : invoice, supplier, employee, audit_log
-├── Indexation optimisée pour la performance
-├── Contraintes : clés étrangères et uniques
-└── Scalabilité : prêt pour le partitionnement
+â”œâ”€â”€ Tables: invoice, supplier, employee, audit_log
+â”œâ”€â”€ Optimized indexing
+â”œâ”€â”€ Foreign and unique constraints
+â””â”€â”€ Partitioning ready
 ```
 
 ---
 
-## ⚡ Prérequis
+## âš¡ Prerequisites
 
-<a id="prerequis"></a>
+<a id="prerequisites"></a>
 
-* Node.js 18+ et npm 9+
+* Node.js 18+ and npm 9+
 * MySQL 8.2 (via Docker)
-* Navigateur moderne (Chrome 90+, Firefox 88+)
+* Modern web browser (Chrome 90+, Firefox 88+)
 * Docker + Docker Compose
 
 ---
 
-## 🚀 Installation rapide
+## ðŸš€ Quick Installation
 
-<a id="installation-rapide"></a>
+<a id="quick-installation"></a>
 
 ```bash
-# Cloner le dépôt
+# Clone repository
 git clone https://github.com/Dioman-Keita/invoice-app.git
 cd invoice-app
 
-# Installer les dépendances
+# Install dependencies
 npm install
 cd server && npm install && cd ..
 cd client && npm install && cd ..
 ```
 
-### ⚠️ Attention : Initialisation Docker
+###  âš ï¸ Warning: Docker Stack Management
 
-> Les scripts d'initialisation Docker (`server/manage-task.sh` ou `server/manage-task.bash`) effectuent un **reset complet du moteur Docker** :  
-> Cela signifie qu'ils suppriment non seulement les conteneurs et images liés au projet invoice-app, mais peuvent réinitialiser tout le moteur Docker (tous les conteneurs/images présents localement).  
-> **Utilisez-les avec précaution** si vous avez d'autres projets sur votre Docker local.
+> Use the stack helpers: `server/manage-stack.sh` (macOS/Linux) or `server/manage-stack.bat` (Windows).
+>
+> These scripts provide four options:
+> 1) Restart only (no removal)
+> 2) Restart with container removal (`docker compose down`, volumes preserved)
+> 3) Safe reset (remove containers and the CMDT volume only)
+> 4) Extreme clean (global `docker system prune -af --volumes`)
+>
+> Option 4 purges unused Docker images/containers/networks/volumes globally on your machine (not only this project).  
+> Option 3 removes only this project's data volume. Options 1â€“2 keep your data.  
+> **Use with caution**, especially if you run other Docker projects.
 
 ---
 
-## ⚙️ Configuration
+##  âš™ï¸ Configuration
 
 <a id="configuration"></a>
 
-Créer le fichier `server/.env` :
+Create `server/.env` with:
 
 ```bash
-# Authentification
+# Authentication
 JWT_SECRET_KEY=super_secret_key_change_me
 
-# Environnement
+# Environment
 NODE_ENV=development
 PORT=3000
 FRONTEND_URL=http://localhost:5173
 
-# Base de données MySQL
+# MySQL Database
 DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=your_password
 DB_NAME=cmdt_invoice_db
 ```
-> Les durées d’expiration JWT sont gérées automatiquement côté backend. Inutile de les définir dans `.env`.
+> JWT expiration is backend-managed and dynamic; no need to define it in `.env`.
 
 ---
 
-## 👨‍💻 Développement
+## ðŸ‘¨â€ðŸ’» Development
 
-<a id="developpement"></a>
+<a id="development"></a>
 
 ```bash
-# Lancer le frontend :
+# Start frontend:
 cd invoice-app
 npm run dev
 
-# Lancer le backend :
+# Start backend:
 cd server
 npm run dev
 ```
 
-**URLs par défaut** :
+**Default URLs**:
 
-* Frontend : [http://localhost:5173](http://localhost:5173)
-* Backend API : [http://localhost:3000](http://localhost:3000)
+* Frontend: [http://localhost:5173](http://localhost:5173)
+* Backend API: [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 📡 Documentation API
+## ðŸ“¡ API Documentation
 
-<a id="documentation-api"></a>
+<a id="api-documentation"></a>
 
-### Authentification
+### Authentication
 
 * POST /auth/login
 * POST /auth/register
@@ -216,115 +224,115 @@ npm run dev
 * POST /auth/logout
 * POST /auth/admin/create-user
 
-### Factures
+### Invoice
 
-* CRUD complet (GET, POST, update, delete)
-* Workflow DFC : acceptation/refus, commentaires
-* Recherche multi-critères
+* Full CRUD (GET, POST, update, delete)
+* DFC workflow: approve/reject, comments
+* Multi-criteria search
 
-### Fournisseurs
+### Supplier
 
-* CRUD, recherche avancée, validation des conflits
+* CRUD, advanced search, conflict validation
 
 ### Export
 
-* PDF, Excel (pas de TXT)
-* Historique et suivi des exports
+* PDF, Excel (TXT not supported)
+* Export history tracking
 
 ---
 
-## 🌟 Architecture grande échelle
+## ðŸŒŸ Billion-Scale System
 
-<a id="architecture-grande-echelle"></a>
+<a id="billion-scale-system"></a>
 
-* Capacité extrême : jusqu'à 999 999 999 999 factures/an
-* ID facture : `INV-000000000001` (12 chiffres)
-* Compteur sur BIGINT pour garantir performance et atomicité
-* Optimisations : indexation par séquence, pas de `SELECT MAX()`, prévention des doublons
-
----
-
-## 🔐 Sécurité & Authentification
-
-<a id="securite-authentification"></a>
-
-* JWT + cookies HttpOnly, protections CSRF & XSS
-* Contrôle d’accès par rôle : admin / gestionnaire de factures / agent DFC
-* Audit trail : toutes les actions sont tracées
-* Suivi d’activité : exports et opérations
+* Extreme capacity: up to 999,999,999,999 invoices/year
+* Invoice ID: `INV-000000000001` (12 digits)
+* BIGINT counter for high performance & atomicity
+* Sequence indexing, no `SELECT MAX()`, duplication prevention
 
 ---
 
-## 🚀 Mises à jour récentes
+## ðŸ” Authentication & Security
 
-<a id="mises-a-jour-recentes"></a>
+<a id="authentication--security"></a>
 
-* Migration vers **Docker + MySQL 8.2**
-* Backend strictement typé en TypeScript
-* Optimisation de l’export PDF, Excel
-* Nouveaux scripts pour initialisation Docker
-* Corrections de bugs et améliorations de performance
-
----
-
-## 🗺 Feuille de route
-
-<a id="feuille-de-route"></a>
-
-### Phase 1 (actuelle)
-
-* Architecture billion-scale
-* Système d’export moderne
-* Audit logging enrichi
-* Couverture TypeScript complète
-* Améliorations UX Responsive
-
-### Phase 2 (prochaine)
-
-* Notifications en temps réel (WebSocket)
-* Analytics avancé (dashboard)
-* Opérations en masse
-* Limitation de débit API
-* Tests d’intégration
-
-### Phase 3 (futur)
-
-* Microservices (découpage Invoice + Auth)
-* Queue system (traitement asynchrone)
-* Application mobile (React Native)
-* Modèle multi-tenant
-* IA (détection doublons, OCR…)
+* JWT & HttpOnly cookies, CSRF & XSS protection
+* Role-Based Access: admin / invoice manager / DFC agent
+* Full audit trail: all actions logged
+* Export & operation tracking
 
 ---
 
-## 🤝 Contribution
+## ðŸš€ Recent Updates
 
-<a id="contribution"></a>
+<a id="recent-updates"></a>
 
-1. Forkez le dépôt
-2. Créez une branche (`git checkout -b feature/ma-fonctionnalite`)
-3. Commitez vos changements (`git commit -m 'Ajout fonctionnalité'`)
-4. Pushez la branche (`git push origin feature/ma-fonctionnalite`)
-5. Ouvrez une Pull Request sur GitHub
-
----
-
-## 📄 Licence
-
-<a id="licence"></a>
-
-Licence MIT — voir [LICENSE](LICENSE)
+* Docker + MySQL 8.2 migration
+* Strict TypeScript backend
+* Enhanced PDF and Excel exports
+* Updated Docker init scripts
+* Performance and bug fixes
 
 ---
 
-## 📞 Support
+## ðŸ—º Roadmap
+
+<a id="roadmap"></a>
+
+### Phase 1 (Current)
+
+* Billion-scale architecture
+* Modernized export system
+* Enhanced audit logging
+* Complete TypeScript coverage
+* Responsive UX improvements
+
+### Phase 2 (Next)
+
+* Real-time notifications (WebSocket)
+* Advanced analytics (dashboard)
+* Bulk operations
+* API rate limiting
+* Integration tests
+
+### Phase 3 (Future)
+
+* Microservices (invoice & auth separation)
+* Background queue system
+* Mobile app (React Native)
+* Multi-tenant support
+* AI features (duplicate detection, OCR etc.)
+
+---
+
+## ðŸ¤ Contributing
+
+<a id="contributing"></a>
+
+1. Fork the repository
+2. Create a branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -m 'Add feature'`)
+4. Push to your branch (`git push origin feature/my-feature`)
+5. Open a Pull Request
+
+---
+
+## ðŸ“„ License
+
+<a id="license"></a>
+
+MIT License â€” see [LICENSE](LICENSE)
+
+---
+
+## ðŸ“ž Support
 
 <a id="support"></a>
 
-* Email : [diomankeita001@gmail.com](mailto:diomankeita001@gmail.com)
+* Email: [diomankeita001@gmail.com](mailto:diomankeita001@gmail.com)
 
 ---
 
-Ce logiciel est fourni dans une démarche professionnelle de robustesse et de performance pour la gestion volumique des factures.
+This solution is provided with a focus on robustness and high-volume performance for enterprise invoice management.
 
-*Dernière mise à jour : novembre 2025*
+*Last updated: November 2025*
