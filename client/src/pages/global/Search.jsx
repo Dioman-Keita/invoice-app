@@ -42,6 +42,7 @@ function Search() {
     invoice_type: '',
     invoice_nature: '',
     dfc_status: '',
+    status: '',
     amountMin: '',
     amountMax: '',
     account_number: '',
@@ -52,14 +53,14 @@ function Search() {
     supplier_invoice_count_max: '',
     supplier_total_amount_min: '',
     supplier_total_amount_max: '',
-    supplier_avg_amount_min: '',  // ✅ AJOUT : Montant moyen min
-    supplier_avg_amount_max: ''   // ✅ AJOUT : Montant moyen max
+    supplier_avg_amount_min: '',  // AJOUT : Montant moyen min
+    supplier_avg_amount_max: ''   // AJOUT : Montant moyen max
   });
 
   const [advancedOptions, setAdvancedOptions] = useState({
     order_by: '',
     order_direction: 'desc',
-    group_by_supplier: true  // ✅ MODIFICATION : Activé par défaut pour la recherche relationnelle
+    group_by_supplier: true  // MODIFICATION : Activé par défaut pour la recherche relationnelle
   });
 
   const [fiscalYears, setFiscalYears] = useState([]);
@@ -68,10 +69,10 @@ function Search() {
   
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
-  const [selectedGroupedResult, setSelectedGroupedResult] = useState(null);  // ✅ AJOUT : Pour l'overview des résultats groupés
+  const [selectedGroupedResult, setSelectedGroupedResult] = useState(null);  // AJOUT : Pour l'overview des résultats groupés
   const [showInvoiceOverview, setShowInvoiceOverview] = useState(false);
   const [showSupplierOverview, setShowSupplierOverview] = useState(false);
-  const [showGroupedOverview, setShowGroupedOverview] = useState(false);  // ✅ AJOUT : Pour l'overview des résultats groupés
+  const [showGroupedOverview, setShowGroupedOverview] = useState(false);  // AJOUT : Pour l'overview des résultats groupés
   
   const [filtersModified, setFiltersModified] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -115,6 +116,7 @@ function Search() {
       invoice_type: '',
       invoice_nature: '',
       dfc_status: '',
+      status: '',
       amountMin: '',
       amountMax: '',
       account_number: '',
@@ -125,10 +127,10 @@ function Search() {
       supplier_invoice_count_max: '',
       supplier_total_amount_min: '',
       supplier_total_amount_max: '',
-      supplier_avg_amount_min: '',  // ✅ AJOUT
-      supplier_avg_amount_max: ''   // ✅ AJOUT
+      supplier_avg_amount_min: '',  // AJOUT
+      supplier_avg_amount_max: ''   // AJOUT
     });
-    // ✅ MODIFICATION : Réinitialiser avec group_by_supplier activé pour relational, désactivé pour les autres
+    // MODIFICATION : Réinitialiser avec group_by_supplier activé pour relational, désactivé pour les autres
     setAdvancedOptions({
       order_by: '',
       order_direction: 'desc',
@@ -829,6 +831,17 @@ function Search() {
                           <option value="rejected">Rejeté</option>
                         </select>
                       </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Facture annulée
+                        </label>
+                        <select value={filters.status} onChange={(e) => setFilters({...filters, status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                          <option value="">Toutes</option>
+                          <option value="Oui">Oui</option>
+                          <option value="Non">Non</option>
+                        </select>
+                      </div>
                     </>
                   )}
 
@@ -1182,6 +1195,7 @@ function Search() {
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut DFC</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Facture annulée</th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pièces jointes</th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
@@ -1204,6 +1218,7 @@ function Search() {
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <span className={getStatusBadge(invoice.dfc_status)}>{getStatusText(invoice.dfc_status)}</span>
                                 </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{invoice.status === 'Oui' ? 'Oui' : (invoice.status === 'Non' ? 'Non' : (invoice.status || 'Non spécifié'))}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                   {invoice.attachments_count !== undefined && invoice.attachments_count !== null ? (
                                     <div className="flex items-center space-x-1">
@@ -1435,6 +1450,10 @@ function Search() {
                           <div className="flex justify-between">
                             <span className="text-gray-600">Créée le:</span>
                             <span className="font-medium">{formatDateTime(selectedInvoice.create_at)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Facture annulée:</span>
+                            <span className="font-medium">{selectedInvoice.status === 'Oui' ? 'Oui' : (selectedInvoice.status === 'Non' ? 'Non' : (selectedInvoice.status || 'Non spécifié'))}</span>
                           </div>
                         </div>
                       </div>

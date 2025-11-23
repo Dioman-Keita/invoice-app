@@ -193,7 +193,7 @@ DB_NAME=cmdt_invoice_db
 
 ```bash
 # Start frontend:
-cd invoice-app
+cd client
 npm run dev
 
 # Start backend:

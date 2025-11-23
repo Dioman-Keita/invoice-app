@@ -10,6 +10,12 @@ function fmtDate(d: any): string | undefined {
   return typeof d === 'string' ? d : undefined;
 }
 
+function toGeneralStatus(v: any): string | undefined {
+  if (!v) return undefined;
+  if (typeof v !== 'string') return undefined;
+  return v === 'Oui' ? 'Annulée' : v === 'Non' ? 'Valide' : undefined;
+}
+
 // Per-template mappers. Each mapper is specific; no cross-template reuse.
 
 export function mapInvoiceListOdt(rows: any[], dateRange: DateRange) {
@@ -113,6 +119,8 @@ export function mapRelationalListXlsx(rows: any[], fiscalYear?: string) {
     day: nowDay(),
     dateFrom: undefined,
     dateTo: undefined,
+    total: rows.length,
+    total_supplier: rows.length,
     supplier: rows.map((r: any) => ({
       name: r.supplier_name ?? r.name ?? '',
       phone: r.phone ?? undefined,
@@ -152,7 +160,8 @@ export function mapInvoiceOverviewOdt(detail: any) {
       type: detail?.invoice_type ?? '',
       nature: detail?.invoice_nature ?? '',
       folio: detail?.folio ?? '',
-      status: detail?.status ?? '',
+      status: detail?.dfc_status ?? detail?.status ?? '',
+      general_status: toGeneralStatus(detail?.status),
       object: detail?.invoice_object ?? '',
       fiscal_year: detail?.fiscal_year ?? undefined,
       attachments: detail?.attachments ?? undefined,
@@ -184,6 +193,7 @@ export function mapInvoiceOverviewXlsx(detail: any, dateRange: DateRange, rootFi
       nature: detail?.invoice_nature ?? '',
       object: detail?.invoice_object ?? '',
       dfc_status: detail?.dfc_status ?? detail?.status ?? '',
+      general_status: toGeneralStatus(detail?.status),
       attachments: detail?.attachments ?? undefined,
       fiscal_year: detail?.fiscal_year ?? undefined,
       supplier: {

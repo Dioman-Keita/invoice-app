@@ -1,4 +1,5 @@
 import database from '../../config/database';
+import logger from '../../utils/Logger';
 
 export type InvoiceDetails = {
   id: string;
@@ -53,6 +54,37 @@ export async function fetchInvoiceDetailsById(id: string): Promise<InvoiceDetail
   const row = await database.execute<any[] | any>(sql, [id]);
   const r = Array.isArray(row) ? row[0] : row;
   if (!r) return null;
+  // Read attachments (optional)
+  let attachmentsStr: string | undefined;
+  try {
+    const attRows = await database.execute<any[] | any>(
+      'SELECT documents FROM attachments WHERE invoice_id = ? LIMIT 10',
+      [id]
+    );
+    const arr = Array.isArray(attRows) ? attRows : (attRows ? [attRows] : []);
+    const files: string[] = [];
+    for (const a of arr) {
+      const docs = a?.documents;
+      if (!docs) continue;
+      // documents is JSON in DB; can be array of strings or array of objects
+      let parsed: any;
+      try { parsed = typeof docs === 'string' ? JSON.parse(docs) : docs; } catch { parsed = null; }
+      if (Array.isArray(parsed)) {
+        for (const d of parsed) {
+          if (!d) continue;
+          if (typeof d === 'string') files.push(d);
+          else if (typeof d === 'object') {
+            const name = d.name || d.filename || d.fileName || d.label;
+            if (name) files.push(String(name));
+          }
+        }
+      }
+    }
+    attachmentsStr = files.length > 0 ? files.join(', ') : 'Aucune pieces jointes';
+  } catch (e) {
+    logger.warn('Failed to load attachments for invoice', { invoice_id: id, error: (e as any)?.message || e });
+    attachmentsStr = 'Aucune pieces jointes';
+  }
   return {
     id: r.id,
     num_cmdt: r.num_cmdt,
@@ -71,7 +103,7 @@ export async function fetchInvoiceDetailsById(id: string): Promise<InvoiceDetail
       account_number: r.supplier_account_number,
       phone: r.supplier_phone,
     },
-    attachments: r.attachments || undefined,
+    attachments: attachmentsStr,
   };
 }
 
@@ -80,13 +112,24 @@ export async function fetchSupplierDetailsById(id: string | number): Promise<Sup
   const row = await database.execute<any[] | any>(sql, [id]);
   const r = Array.isArray(row) ? row[0] : row;
   if (!r) return null;
+  const roleMap: Record<string, string> = {
+    'invoice_manager': 'Gestionnaire de facturation',
+    'admin': 'Administrateur',
+    'dfc_agent': 'Agent DFC',
+  };
+  const prettyRole = r.created_by_role ? (roleMap[String(r.created_by_role)] || String(r.created_by_role)) : undefined;
   return {
     id: r.id,
     name: r.name,
     account_number: r.account_number,
     phone: r.phone,
     create_at: r.create_at,
-    // emp is optional and depends on your model. Leaving undefined by default.
+    emp: {
+      id: r.created_by || undefined,
+      name: undefined,
+      email: r.created_by_email || undefined,
+      role: prettyRole,
+    },
   };
 }
 

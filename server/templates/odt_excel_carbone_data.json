@@ -50,6 +50,7 @@
       "nature": "Paiement",
       "folio": "Orig + 1 copie",
       "status": "en attente",
+      "general_status": "Annulée",
       "object": "Achat de pexticides",
       "fiscal_year": "2025",
       "attachments": "Connaissement, Attestation de prise en charge, Lettre de voiture Inter-Etats"
@@ -247,6 +248,7 @@
       "nature": "Paiement",
       "object": "Achat de vehicules de services",
       "dfc_status": "Traitée",
+      "general_status": "Annulée",
       "attachments": "Connaissement, Attestation de prise en charge, Lettre de voiture Inter-Etats",
       "fiscal_year": "2023",
       "supplier": {

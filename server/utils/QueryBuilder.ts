@@ -24,6 +24,7 @@ export type SearchInvoicesParams = Partial<{
   invoice_type: string;
   invoice_nature: string;
   dfc_status: string;
+  status: string;
   dateFrom: string;
   dateTo: string;
   amountMin: string | number;
@@ -209,6 +210,7 @@ export class QueryBuilder {
       if (q.invoice_type) { conditions.push('i.invoice_type = ?'); params.push(q.invoice_type); }
       if (q.invoice_nature) { conditions.push('i.invoice_nature = ?'); params.push(q.invoice_nature); }
       if (q.dfc_status) { conditions.push('i.dfc_status = ?'); params.push(q.dfc_status); }
+      if (q.status) { conditions.push('i.status = ?'); params.push(q.status); }
       if (q.dateFrom) { conditions.push('i.invoice_arr_date >= ?'); params.push(q.dateFrom); }
       if (q.dateTo) { conditions.push('i.invoice_arr_date <= ?'); params.push(q.dateTo); }
       if (q.amountMin) { conditions.push('CAST(i.amount AS DECIMAL(18,2)) >= ?'); params.push(q.amountMin); }
@@ -439,6 +441,7 @@ export class QueryBuilder {
             s.id AS supplier_id,
             s.name AS supplier_name,
             s.account_number AS supplier_account,
+            s.phone AS phone,
             COUNT(i.id) AS invoice_count,
             SUM(CAST(i.amount AS DECIMAL(18,2))) AS total_amount,
             AVG(CAST(i.amount AS DECIMAL(18,2))) AS avg_amount,
@@ -452,6 +455,7 @@ export class QueryBuilder {
             s.id AS supplier_id,
             s.name AS supplier_name,
             s.account_number AS supplier_account,
+            s.phone AS phone,
             COUNT(i.id) AS invoice_count,
             SUM(CAST(i.amount AS DECIMAL(18,2))) AS total_amount,
             AVG(CAST(i.amount AS DECIMAL(18,2))) AS avg_amount,
@@ -477,6 +481,7 @@ export class QueryBuilder {
         const select = orderBy
           ? `SELECT 
             s.name AS supplier_name,
+            s.phone AS phone,
             i.num_invoice,
             i.num_cmdt,
             i.amount,
@@ -487,6 +492,7 @@ export class QueryBuilder {
           LIMIT ${limit} OFFSET ${offset}`
           : `SELECT 
             s.name AS supplier_name,
+            s.phone AS phone,
             i.num_invoice,
             i.num_cmdt,
             i.amount,
