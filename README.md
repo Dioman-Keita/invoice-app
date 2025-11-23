@@ -246,7 +246,7 @@ npm run dev
 <a id="billion-scale-system"></a>
 
 * Extreme capacity: up to 999,999,999,999 invoices/year
-* Invoice ID: `INV-000000000001` (12 digits)
+* Invoice ID: `INV-FY2025-000000000001` (12 digits)
 * BIGINT counter for high performance & atomicity
 * Sequence indexing, no `SELECT MAX()`, duplication prevention
 
