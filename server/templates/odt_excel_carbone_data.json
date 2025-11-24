@@ -49,6 +49,7 @@
       "type": "Transitaire",
       "nature": "Paiement",
       "folio": "Orig + 1 copie",
+      "amount":"30 000 0033",
       "status": "en attente",
       "general_status": "Annulée",
       "object": "Achat de pexticides",

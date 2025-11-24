@@ -4,12 +4,25 @@ import { getSetting } from '../../helpers/settings';
 // Helpers
 function nowDay(): string { return new Date().toLocaleDateString('fr-FR'); }
 function nowTime(): string { return new Date().toLocaleTimeString('fr-FR'); }
-function fmtDate(d: any): string | undefined {
-  if (!d) return undefined;
-  if (d instanceof Date) return d.toLocaleDateString('fr-FR');
-  return typeof d === 'string' ? d : undefined;
+function fmtDate(value: any): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (value instanceof Date) return value.toLocaleDateString('fr-FR');
+  try {
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) return d.toLocaleDateString('fr-FR');
+  } catch {}
+  return String(value);
 }
-
+function fmtAmount(value: any): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  const n = typeof value === 'number' ? value : Number(String(value).replace(/\s/g, '').replace(',', '.'));
+  if (!isNaN(n)) {
+    try {
+      return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n);
+    } catch {}
+  }
+  return String(value);
+}
 function toGeneralStatus(v: any): string | undefined {
   if (!v) return undefined;
   if (typeof v !== 'string') return undefined;
@@ -157,6 +170,7 @@ export function mapInvoiceOverviewOdt(detail: any) {
       inv_date: fmtDate(detail?.invoice_date),
       arr_date: fmtDate(detail?.invoice_arr_date),
       send_date: fmtDate(detail?.create_at), // rule: send_date from create_at
+      amount: fmtAmount(detail?.amount) ?? '',
       type: detail?.invoice_type ?? '',
       nature: detail?.invoice_nature ?? '',
       folio: detail?.folio ?? '',
@@ -178,15 +192,15 @@ export function mapInvoiceOverviewXlsx(detail: any, dateRange: DateRange, rootFi
   return {
     fiscal_year: rootFiscalYear,
     day: nowDay(),
-    dateFrom: dateRange.dateFrom,
-    dateTo: dateRange.dateTo,
+    dateFrom: fmtDate(dateRange.dateFrom),
+    dateTo: fmtDate(dateRange.dateTo),
     invoice: {
       id: detail?.id ?? '',
       num_cmdt: detail?.num_cmdt ?? '',
       num_inv: detail?.num_invoice ?? '',
       date_inv: fmtDate(detail?.invoice_date),
       date_send: fmtDate(detail?.create_at), // rule: date_send from create_at
-      amount: typeof detail?.amount === 'number' ? String(detail?.amount) : (detail?.amount ?? ''),
+      amount: fmtAmount(detail?.amount) ?? '',
       arr_date: fmtDate(detail?.invoice_arr_date),
       type: detail?.invoice_type ?? '',
       folio: detail?.folio ?? '',

@@ -122,6 +122,7 @@ export const InvoiceOverviewOdtSchema = z.object({
     inv_date: DateStr,
     arr_date: DateStr,
     send_date: DateStr,
+    amount: NumStr,
     type: z.string().optional(),
     nature: z.string().optional(),
     folio: z.string().optional(),

@@ -8,6 +8,7 @@ export type InvoiceDetails = {
   invoice_date?: string;
   invoice_arr_date?: string;
   create_at?: string; // used as send_date/date_send
+  amount?: string | number;
   invoice_type?: string;
   invoice_nature?: string;
   folio?: string;
@@ -92,6 +93,7 @@ export async function fetchInvoiceDetailsById(id: string): Promise<InvoiceDetail
     invoice_date: r.invoice_date,
     invoice_arr_date: r.invoice_arr_date,
     create_at: r.create_at,
+    amount: r.amount,
     invoice_type: r.invoice_type,
     invoice_nature: r.invoice_nature,
     folio: r.folio,
