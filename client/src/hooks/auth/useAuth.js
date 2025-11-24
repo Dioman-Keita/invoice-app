@@ -255,7 +255,7 @@ export function useAuth() {
     // ✅ register - CONSERVÉ
     const register = useCallback(async (payload) => {
         try {
-            const response = await api.post('api/auth/register', payload);
+            const response = await api.post('api/auth/register', payload, { timeout: 30000 });
     
             if (response.success !== true) {
                 return {
@@ -281,7 +281,10 @@ export function useAuth() {
                 message = err.response.data.message;
                 field = err.response.data?.field;
             } else {
-                message = "Une erreur technique est survenue. Veuillez réessayer.";
+                // Probable timeout réseau (envoi d'email peut dépasser 10s)
+                message = err?.code === 'ECONNABORTED' ?
+                    'Délai de réponse dépassé. Veuillez réessayer dans 1h.' :
+                    "Une erreur technique est survenue. Veuillez réessayer.";
             }
 
             return {
@@ -325,6 +328,20 @@ export function useAuth() {
             };
         }
     }, [checkAuthStatus]);
+
+    // Renvoyer l'email de vérification d'inscription
+    const resendVerification = useCallback(async (email) => {
+        try {
+            const response = await api.post('api/auth/resend-verification', { email });
+            if (response?.success === true) {
+                return { success: true, message: response.message || 'Email renvoyé' };
+            }
+            return { success: false, message: response?.message || 'Échec du renvoi' };
+        } catch (err) {
+            const message = err?.response?.data?.message || err?.message || 'Erreur lors du renvoi';
+            return { success: false, message };
+        }
+    }, []);
 
     // Login amélioré avec gestion rememberMe
     const login = useCallback(async (credentials) => {
@@ -493,6 +510,7 @@ export function useAuth() {
         logout,
         register,
         finalizeRegister,
+        resendVerification,
         forgotPassword,
         resetPassword,
         checkAuthStatus: refreshAuth,

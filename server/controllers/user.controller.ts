@@ -80,6 +80,58 @@ export async function createUser(
     }
   }
 
+// Renvoi d'email de vérification d'inscription
+export async function resendVerificationEmail(req: Request, res: Response): Promise<Response> {
+    const requestId = req.headers['x-request-id'] || 'unknown';
+    const { email } = req.body as { email?: string };
+
+    if (!email || !isValidEmail(email)) {
+        return ApiResponder.badRequest(res, "Email invalide");
+    }
+
+    try {
+        logger.info(`[${requestId}] Demande de renvoi d'email de vérification`, { email });
+
+        const users = await Users.findUser(email, 'email');
+        if (!Array.isArray(users) || users.length === 0) {
+            return ApiResponder.notFound(res, "Utilisateur introuvable");
+        }
+
+        const user = users[0];
+        if (user.isVerified) {
+            return ApiResponder.badRequest(res, "Ce compte est déjà vérifié");
+        }
+
+        const token = generateUserToken({
+            sup: user.id,
+            email: user.email,
+            role: user.role,
+            activity: 'SIGN_UP'
+        });
+
+        const verifyLinkBase = process.env.APP_URL || "http://localhost:5173";
+        const verifyLink = `${verifyLinkBase}/verify?token=${encodeURIComponent(token)}`;
+
+        const template = NotificationFactory.create('register', {
+            name: `${(user as any).firstName ?? ''} ${(user as any).lastName ?? ''}`.trim(),
+            email: user.email,
+            link: verifyLink,
+            token,
+        });
+
+        const sender = new GmailEmailSender();
+        await sender.send({ to: user.email as string, name: `${(user as any).firstName ?? ''} ${(user as any).lastName ?? ''}`.trim() }, template);
+
+        return ApiResponder.success(res, { email: user.email }, "Un nouvel email de vérification a été envoyé");
+    } catch (error) {
+        logger.error(`[${requestId}] Échec du renvoi d'email de vérification`, {
+            email,
+            error: error instanceof Error ? error.message : 'Erreur inconnue'
+        });
+        return ApiResponder.badRequest(res, "Impossible d'envoyer l'email de vérification. Veuillez réessayer plus tard.");
+    }
+}
+
 export async function login(req: Request<unknown, unknown, LoginDto>, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
     const { email, rememberMe } = req.body;

@@ -15,6 +15,23 @@ function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+
+  const handleResendEmail = async () => {
+    if (!userEmail) return;
+    try {
+      const res = await resendVerification(userEmail);
+      if (res?.success) {
+        success(res.message || "Email renvoyé");
+      } else {
+        error(res?.message || "Échec du renvoi");
+      }
+    } catch (e) {
+      error(e?.message || "Erreur lors du renvoi");
+    }
+  }
+
   const { 
     filterEmail, 
     filterFirstName,
@@ -27,7 +44,7 @@ function Register() {
   
   const { error, success } = useToastFeedback();
 
-  const { register: registerUser } = useAuth();
+  const { register: registerUser, resendVerification } = useAuth();
   const { 
     register, 
     handleSubmit, 
@@ -84,6 +101,8 @@ function Register() {
       if (result?.success) {
         console.log('Donnees soumises : ', data);
         success(result.message || "Consultez votre email pour finaliser l'inscription");
+        setUserEmail(data.email);
+        setRegistrationSuccess(true);
         reset();
       } else {
         error(result.message || "Erreur lors de l'inscription");
@@ -95,6 +114,7 @@ function Register() {
       setLoading(false);
     }
   }
+  
   useEffect(() => {
     setValue('role', role, { shouldValidate: true, shouldDirty: true });
   }, [role, setValue]);
@@ -118,7 +138,139 @@ function Register() {
         return null;
     }
   };
-  
+
+  // Composant Vestiaire d'attente
+  const WaitingRoom = () => (
+    <div className="min-h-screen flex flex-col md:flex-row bg-register">
+      {/* Section illustration */}
+      <div className="md:w-1/2 flex items-center justify-center p-8 bg-gradient-to-br from-blue-600 to-green-700 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="relative z-10 max-w-md text-center">
+          <div className="mb-8">
+            <div className="w-20 h-20 mx-auto mb-4 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" />
+              </svg>
+            </div>
+            <h1 className="text-4xl font-bold mb-3">CMDT Mali</h1>
+            <p className="text-xl text-blue-100">Vérification en cours</p>
+          </div>
+          
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+            <h3 className="font-semibold mb-3 text-lg">Email envoyé !</h3>
+            <p className="text-blue-100 text-sm leading-relaxed">
+              Un lien de vérification a été envoyé à votre adresse email professionnelle.
+            </p>
+          </div>
+        </div>
+        
+        {/* Éléments décoratifs */}
+        <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
+        <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/5 rounded-full blur-xl"></div>
+      </div>
+
+      {/* Section Vestiaire d'attente */}
+      <div className="md:w-1/2 flex items-center justify-center p-6">
+        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-gray-100 p-8">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800">Vérifiez votre email</h2>
+            <p className="text-gray-600 mt-2 text-sm">Finalisez votre inscription</p>
+          </div>
+
+          <div className="space-y-6">
+            {/* Animation de chargement */}
+            <div className="flex justify-center">
+              <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+            </div>
+
+            {/* Message principal */}
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                Consultez votre boîte email
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Un email de vérification a été envoyé à :
+              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                <p className="text-blue-700 font-medium">{userEmail}</p>
+              </div>
+              <p className="text-sm text-gray-500">
+                Cliquez sur le lien dans l'email pour finaliser votre inscription
+              </p>
+            </div>
+
+            {/* Étapes */}
+            <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+              <h4 className="font-semibold text-gray-800 mb-4">Prochaines étapes :</h4>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold mt-0.5">
+                    1
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-700">Ouvrez votre email</p>
+                    <p className="text-sm text-gray-500">Vérifiez votre boîte de réception et vos spams</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold mt-0.5">
+                    2
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-700">Cliquez sur le lien</p>
+                    <p className="text-sm text-gray-500">Le lien vous redirigera vers la page de vérification</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold mt-0.5">
+                    3
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-700">Finalisez l'inscription</p>
+                    <p className="text-sm text-gray-500">Votre compte sera activé automatiquement</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="space-y-4">
+              <button
+                onClick={() => setRegistrationSuccess(false)}
+                className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+              >
+                Retour au formulaire
+              </button>
+              
+              <div className="text-center">
+                <p className="text-sm text-gray-600">
+                  Vous n'avez pas reçu l'email ?{' '}
+                  <button 
+                    onClick={handleResendEmail}
+                    className="font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                  >
+                    Renvoyer l'email
+                  </button>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Afficher le vestiaire d'attente si l'inscription est réussie
+  if (registrationSuccess) {
+    return <WaitingRoom />;
+  }
+
+  // Retourner le formulaire d'inscription normal
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-register">
       {/* Section illustration */}
