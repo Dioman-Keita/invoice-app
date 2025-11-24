@@ -113,16 +113,55 @@ export async function resendVerificationEmail(req: Request, res: Response): Prom
         const verifyLink = `${verifyLinkBase}/verify?token=${encodeURIComponent(token)}`;
 
         const template = NotificationFactory.create('register', {
-            name: `${(user as any).firstName ?? ''} ${(user as any).lastName ?? ''}`.trim(),
+            name: `${(user as any).firstname ?? ''} ${(user as any).lastname ?? ''}`.trim(),
             email: user.email,
             link: verifyLink,
             token,
         });
 
         const sender = new GmailEmailSender();
-        await sender.send({ to: user.email as string, name: `${(user as any).firstName ?? ''} ${(user as any).lastName ?? ''}`.trim() }, template);
 
-        return ApiResponder.success(res, { email: user.email }, "Un nouvel email de vérification a été envoyé");
+        const MAX_ATTEMPTS = 3;
+        const RETRY_DELAY = 2000; // ms
+        const TIMEOUT = 20000; // ms
+
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                logger.info(`Tentative d'envoi d'email #${attempt}`, { email: user.email });
+
+                await Promise.race([
+                    sender.send({ to: user.email as string, name: `${(user as any).firstName ?? ''} ${(user as any).lastName ?? ''}`.trim() }, template),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout_email')), TIMEOUT))
+                ]);
+
+                logger.info('Email envoyé avec succès', { email: user.email, attempt });
+                return ApiResponder.success(res, { email: user.email }, "Un nouvel email de vérification a été envoyé");
+
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+                let userFriendlyError = 'Échec de l’envoi de l’email';
+                if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('smtp')) {
+                    userFriendlyError = 'Connexion réseau lente ou instable';
+                } else if (errorMessage.includes('Timeout_email')) {
+                    userFriendlyError = 'Délai d’attente dépassé pour l’email';
+                }
+
+                logger.warn(`Échec tentative #${attempt} d'envoi d'email`, {
+                    email: user.email,
+                    error: errorMessage,
+                    attempt
+                });
+
+                if (attempt < MAX_ATTEMPTS) {
+                    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attempt));
+                } else {
+                    logger.error('Échec définitif de l’envoi de l’email', { email: user.email });
+                    return ApiResponder.badRequest(res, `Impossible d'envoyer l'email de vérification. ${userFriendlyError}. Veuillez réessayer plus tard.`);
+                }
+            }
+        }
+        // Fallback (ne devrait pas être atteint)
+        return ApiResponder.badRequest(res, "Impossible d'envoyer l'email de vérification. Veuillez réessayer plus tard.");
     } catch (error) {
         logger.error(`[${requestId}] Échec du renvoi d'email de vérification`, {
             email,
