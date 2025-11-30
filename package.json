@@ -2,12 +2,12 @@
   "name": "invoice-app",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
+  "main": "main.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "dev": "npm run dev --prefix client",
+    "build": "npm run build --prefix client",
+    "preview": "npm run preview --prefix client",
+    "electron:dev": "concurrently \"npm run dev --prefix client\" \"electron .\""
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
@@ -18,6 +18,10 @@
     "@typescript-eslint/parser": "^8.46.2",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.1",
+    "electron": "^39.2.4",
+    "electron-builder": "^26.0.12",
+    "electron-reload": "^2.0.0-alpha.1",
     "eslint": "^9.38.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
@@ -26,6 +30,6 @@
     "tailwindcss": "^4.1.12",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "vite": "^7.1.2"
+    "vite": "^7.2.4"
   }
 }

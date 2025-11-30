@@ -71,63 +71,63 @@ input[type=number]::-webkit-out-spin-button {
   z-index: -1;
 }
 .bg-home {
-  background-image: url('public/image-coton-5.jpg');
+  background-image: url('/image-coton-5.jpg');
 }
 
 .bg-invoice {
-  background-image: url('public/image-coton-5.jpg');
+  background-image: url('/image-coton-5.jpg');
 }
 
 .bg-export {
-  background-image: url('public/image-coton-5.jpg');
+  background-image: url('/image-coton-5.jpg');
 }
 
 .bg-joinDFC {
-  background-image: url('public/image-coton-5.jpg');
+  background-image: url('/image-coton-5.jpg');
 }
 
 .bg-print {
-  background-image: url('public/image-coton-5.jpg');
+  background-image: url('/image-coton-5.jpg');
 }
 
 .bg-stats {
-  background-image: url('public/image-coton-5.jpg');
+  background-image: url('/image-coton-5.jpg');
 }
 
 .bg-search {
-  background-image: url('public/image-coton-5.jpg');
+  background-image: url('/image-coton-5.jpg');
 }
 
 .bg-login {
-  background-image: url('public/image-coton-5.jpg');
+  background-image: url('/image-coton-5.jpg');
 }
 
 .bg-register {
-  background-image: url('public/image-coton-5.jpg');
+  background-image: url('/image-coton-5.jpg');
 }
 
 .bg-dfc-formular {
-  background-image: url('public/image-coton-6.jpg');
+  background-image: url('/image-coton-6.jpg');
 }
 
 .bg-settings {
-  background-image: url('public/image-coton-7.jpg');
+  background-image: url('/image-coton-7.jpg');
 }
 .bg-verify {
-  background-image: url('public/image-coton-5.jpg');
+  background-image: url('/image-coton-5.jpg');
 }
 .bg-help {
-  background-image: url('public/image-coton-5.jpg');
+  background-image: url('/image-coton-5.jpg');
 }
 .bg-admin {
-  background-image: url('public/image-coton-5.jpg');
+  background-image: url('/image-coton-5.jpg');
 }
 .bg-unauthorized {
-  background-image: url('public/image-coton-9.jpg');
+  background-image: url('/image-coton-9.jpg');
 }
 
 .bg-profile {
-  background-image: url('public/image-coton-9.jpg');
+  background-image: url('/image-coton-9.jpg');
 }
 
 @keyframes fadeIn {

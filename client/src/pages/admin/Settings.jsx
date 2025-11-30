@@ -789,9 +789,9 @@ function Settings() {
                                     <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                                         <span className="text-sm font-medium text-blue-900">Version</span>
                                         <div className="relative group">
-        <span className="font-mono text-sm bg-white px-2 py-1 rounded border">
-          v{serverSettings?.app_version ?? immutableSettings.systemVersion}
-        </span>
+                                        <span className="font-mono text-sm bg-white px-2 py-1 rounded border">
+                                            v{serverSettings?.app_version ?? immutableSettings.systemVersion}
+                                        </span>
                                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 pointer-events-none whitespace-nowrap shadow-lg">
                                                 Version: v{serverSettings?.app_version ?? immutableSettings.systemVersion}
                                                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
@@ -802,9 +802,9 @@ function Settings() {
                                     <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                                         <span className="text-sm font-medium text-green-900">Format CMDT</span>
                                         <div className="relative group">
-        <span className="font-mono text-sm bg-white px-2 py-1 rounded border">
-          {serverSettings?.cmdt_format?.padding ?? 4} digits
-        </span>
+                                        <span className="font-mono text-sm bg-white px-2 py-1 rounded border">
+                                            {serverSettings?.cmdt_format?.padding ?? 4} digits
+                                        </span>
                                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 pointer-events-none whitespace-nowrap shadow-lg">
                                                 Format CMDT: {serverSettings?.cmdt_format?.padding ?? 4} chiffres
                                                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
@@ -815,9 +815,9 @@ function Settings() {
                                     <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
                                         <span className="text-sm font-medium text-purple-900">Année fiscale</span>
                                         <div className="relative group">
-        <span className="font-mono text-sm bg-white px-2 py-1 rounded border">
-          {serverSettings?.fiscalYear ?? '2025'}
-        </span>
+                                        <span className="font-mono text-sm bg-white px-2 py-1 rounded border">
+                                            {serverSettings?.fiscalYear ?? '2025'}
+                                        </span>
                                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 pointer-events-none whitespace-nowrap shadow-lg">
                                                 Année fiscale: {serverSettings?.fiscalYear ?? '2025'}
                                                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
@@ -919,7 +919,7 @@ function Settings() {
                                             <div className="flex items-center gap-2">
                                                 <ExclamationTriangleIcon className="w-4 h-4 text-red-600" />
                                                 <span className="text-sm text-red-800 font-medium">
-                                                    Alerte: Seuil critique atteint - {formatNumber(warningInfo.remaining)} restants sur {formatNumber(warningInfo.threshold)}
+                                                    Alerte: Seuil critique atteint - {formatNumber(warningInfo.remaining)} restants sur {formatNumber(warningInfo.max)}
                                                 </span>
                                             </div>
                                         </div>

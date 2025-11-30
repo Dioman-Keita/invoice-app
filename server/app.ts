@@ -8,6 +8,7 @@ import supplierRoute from './routes/supplier.route';
 import settingsRoute from './routes/settings.route';
 import searchRoute from './routes/search.route';
 import exportRoute from './routes/export.route';
+import statsRoute from  './routes/stats.route'
 import { requestIdMiddleware } from './middleware/requestIdMiddleware';
 import { debugCookies } from './middleware/debugCookie';
 import logger from './utils/Logger';
@@ -55,6 +56,7 @@ app.use('/api', supplierRoute);
 app.use('/api', settingsRoute);
 app.use('/api', searchRoute);
 app.use('/api', exportRoute);
+app.use('/api', statsRoute);
 
 // Route de test
 app.get('/api/health', (_req, res) => {
