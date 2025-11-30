@@ -1,6 +1,3 @@
-// Ajoute une pagination lorsque les facture en attente atteignent un certain nombre
-// Ameliore la lisibilite de la section "INFORMATION DE CATEGORISATION" qui voit ses texte deborder de l'interface des fois 
-
 import { useState, useEffect } from 'react';
 import useTitle from '../../../hooks/ui/useTitle.js';
 import Navbar from '../../../components/navbar/Navbar.jsx';
@@ -24,7 +21,8 @@ import {
   UserCircleIcon,
   ClipboardDocumentListIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  ExclamationCircleIcon
 } from '@heroicons/react/24/outline';
 import useBackground from '../../../hooks/ui/useBackground.js';
 
@@ -150,6 +148,17 @@ function DfcFormular() {
     setShowStats(false);
   };
 
+  // Fonction pour déterminer l'état de la facture
+  const getInvoiceStatusInfo = (invoice) => {
+    const isCancelled = invoice.status === 'Oui';
+    return {
+      isCancelled,
+      label: isCancelled ? 'Facture annulée' : 'Facture valide',
+      color: isCancelled ? 'red' : 'green',
+      icon: isCancelled ? ExclamationCircleIcon : CheckCircleIcon
+    };
+  };
+
   useEffect(() => {
     let mounted = true;
     const loadPending = async () => {
@@ -193,7 +202,8 @@ function DfcFormular() {
           invoice_type: inv.invoice_type,
           invoice_nature: inv.invoice_nature,
           folio: inv.folio,
-          status: inv.dfc_status || 'pending',
+          status: inv.status, // Propriété status pour l'état de la facture
+          dfc_status: inv.dfc_status || 'pending',
           created_by: inv.created_by,
           created_by_email: inv.created_by_email,
           created_by_role: inv.created_by_role,
@@ -351,7 +361,7 @@ function DfcFormular() {
                   </h2>
                   
                   {/* Sélecteur d'éléments par page */}
-                  {pendingInvoices.length > 5 && (
+                  {pendingInvoices.length > 3 && (
                     <div className="flex items-center space-x-2">
                       <label className="text-xs text-gray-600 whitespace-nowrap">
                         Afficher:
@@ -361,6 +371,7 @@ function DfcFormular() {
                         onChange={(e) => setInvoicesPerPage(Number(e.target.value))}
                         className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                       >
+                        <option value={3}>3</option>
                         <option value={5}>5</option>
                         <option value={10}>10</option>
                         <option value={15}>15</option>
@@ -372,59 +383,74 @@ function DfcFormular() {
                 
                 {pendingInvoices.length > 0 ? (
                   <div className="space-y-3">
-                    {currentInvoices.map((invoice) => (
-                      <div
-                        key={invoice.id}
-                        onClick={() => handleInvoiceSelect(invoice)}
-                        className={`p-4 border rounded-lg cursor-pointer transition-all duration-150 ${
-                          currentInvoice?.id === invoice.id
-                            ? 'border-green-500 bg-green-25 ring-1 ring-green-500'
-                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-25'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <span className="font-semibold text-gray-900 text-sm truncate">
-                                {invoice.id}
+                    {currentInvoices.map((invoice) => {
+                      const statusInfo = getInvoiceStatusInfo(invoice);
+                      const StatusIcon = statusInfo.icon;
+                      
+                      return (
+                        <div
+                          key={invoice.id}
+                          onClick={() => handleInvoiceSelect(invoice)}
+                          className={`p-4 border rounded-lg cursor-pointer transition-all duration-150 ${
+                            currentInvoice?.id === invoice.id
+                              ? 'border-green-500 bg-green-25 ring-1 ring-green-500'
+                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-25'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <span className="font-semibold text-gray-900 text-sm truncate">
+                                  {invoice.id}
+                                </span>
+                                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap`}>
+                                  {invoice.invoice_nature}
+                                </span>
+                              </div>
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {invoice.supplier}
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-end space-y-1 ml-2">
+                              <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-medium whitespace-nowrap">
+                                En attente
                               </span>
-                              <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap`}>
-                                {invoice.invoice_nature}
+                              <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
+                                statusInfo.color === 'red' 
+                                  ? 'bg-red-50 text-red-700 border border-red-200' 
+                                  : 'bg-green-50 text-green-700 border border-green-200'
+                              }`}>
+                                <StatusIcon className="w-3 h-3 mr-1" />
+                                {statusInfo.label}
                               </span>
                             </div>
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {invoice.supplier}
-                            </p>
                           </div>
-                          <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-medium whitespace-nowrap ml-2">
-                            En attente
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between mt-3">
-                          <div className="flex items-center space-x-4 text-xs text-gray-500">
-                            <span className="flex items-center whitespace-nowrap">
-                              <CalendarIcon className="w-3 h-3 mr-1 flex-shrink-0" />
-                              {formatDate(invoice.invoice_date)}
-                            </span>
-                            <span className="flex items-center whitespace-nowrap">
-                              <HashtagIcon className="w-3 h-3 mr-1 flex-shrink-0" />
-                              CMD: {invoice.num_cmdt}
+                          
+                          <div className="flex items-center justify-between mt-3">
+                            <div className="flex items-center space-x-4 text-xs text-gray-500">
+                              <span className="flex items-center whitespace-nowrap">
+                                <CalendarIcon className="w-3 h-3 mr-1 flex-shrink-0" />
+                                {formatDate(invoice.invoice_date)}
+                              </span>
+                              <span className="flex items-center whitespace-nowrap">
+                                <HashtagIcon className="w-3 h-3 mr-1 flex-shrink-0" />
+                                CMD: {invoice.num_cmdt}
+                              </span>
+                            </div>
+                            <span className="font-bold text-gray-900 text-sm whitespace-nowrap ml-2">
+                              {formatAmount(invoice.amount)}
                             </span>
                           </div>
-                          <span className="font-bold text-gray-900 text-sm whitespace-nowrap ml-2">
-                            {formatAmount(invoice.amount)}
-                          </span>
+                          
+                          {invoice.invoice_object && (
+                            <div className="mt-2 text-xs text-gray-600">
+                              <DocumentTextIcon className="w-3 h-3 inline mr-1 flex-shrink-0" />
+                              <span className="break-words">{truncateText(invoice.invoice_object, 50)}</span>
+                            </div>
+                          )}
                         </div>
-                        
-                        {invoice.invoice_object && (
-                          <div className="mt-2 text-xs text-gray-600">
-                            <DocumentTextIcon className="w-3 h-3 inline mr-1 flex-shrink-0" />
-                            <span className="break-words">{truncateText(invoice.invoice_object, 50)}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                     
                     {/* Pagination */}
                     {totalPages > 1 && (
@@ -494,30 +520,45 @@ function DfcFormular() {
               <div className="bg-white rounded-lg border border-gray-200 p-5">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Historique des traitements</h2>
                 <div className="space-y-2">
-                  {processedInvoices.slice(-5).map((invoice, index) => (
-                    <div key={index} className="p-3 border border-gray-150 rounded hover:bg-gray-25">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium text-gray-900 text-sm">{invoice.id}</span>
-                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                          invoice.decision === 'approved' 
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                            : 'bg-red-50 text-red-700 border border-red-200'
-                        } whitespace-nowrap`}>
-                          {invoice.decision === 'approved' ? 'Approuvée' : 'Rejetée'}
-                        </span>
+                  {processedInvoices.slice(-5).map((invoice, index) => {
+                    const statusInfo = getInvoiceStatusInfo(invoice);
+                    const StatusIcon = statusInfo.icon;
+                    
+                    return (
+                      <div key={index} className="p-3 border border-gray-150 rounded hover:bg-gray-25">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-gray-900 text-sm">{invoice.id}</span>
+                          <div className="flex items-center space-x-1">
+                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                              invoice.decision === 'approved' 
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                                : 'bg-red-50 text-red-700 border border-red-200'
+                            } whitespace-nowrap`}>
+                              {invoice.decision === 'approved' ? 'Approuvée' : 'Rejetée'}
+                            </span>
+                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
+                              statusInfo.color === 'red' 
+                                ? 'bg-red-50 text-red-700 border border-red-200' 
+                                : 'bg-green-50 text-green-700 border border-green-200'
+                            }`}>
+                              <StatusIcon className="w-3 h-3 mr-1" />
+                              {statusInfo.label}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-gray-600 mb-1">
+                          <span className="truncate flex-1 mr-2">{invoice.supplier}</span>
+                          <span className="font-medium whitespace-nowrap">{formatAmount(invoice.amount)}</span>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          <div className="whitespace-nowrap">Traitée le {formatDateTime(invoice.processedDate)}</div>
+                          {invoice.comments && (
+                            <div className="mt-1 text-gray-400 truncate">"{invoice.comments}"</div>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center text-xs text-gray-600 mb-1">
-                        <span className="truncate flex-1 mr-2">{invoice.supplier}</span>
-                        <span className="font-medium whitespace-nowrap">{formatAmount(invoice.amount)}</span>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        <div className="whitespace-nowrap">Traitée le {formatDateTime(invoice.processedDate)}</div>
-                        {invoice.comments && (
-                          <div className="mt-1 text-gray-400 truncate">"{invoice.comments}"</div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {processedInvoices.length === 0 && (
                     <div className="text-center py-4 text-gray-500">
                       <DocumentCheckIcon className="w-6 h-6 mx-auto mb-2 text-gray-300" />
@@ -623,6 +664,49 @@ function DfcFormular() {
                       </div>
                     )}
 
+                    {/* SECTION ÉTAT FACTURE - Créée séparément */}
+                    <div className="mb-6">
+                      <p className="text-xs font-medium text-gray-500 mb-3 flex items-center">
+                        <ExclamationCircleIcon className="w-3 h-3 mr-1" />
+                        ÉTAT FACTURE
+                      </p>
+                      <div className="grid grid-cols-1 gap-3">
+                        <div className={`p-4 rounded border ${
+                          currentInvoice.status === 'Oui' 
+                            ? 'bg-red-50 border-red-200' 
+                            : 'bg-green-50 border-green-200'
+                        }`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              {currentInvoice.status === 'Oui' ? (
+                                <ExclamationCircleIcon className="w-5 h-5 text-red-600 mr-3" />
+                              ) : (
+                                <CheckCircleIcon className="w-5 h-5 text-green-600 mr-3" />
+                              )}
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {currentInvoice.status === 'Oui' ? 'Facture annulée' : 'Facture valide'}
+                                </p>
+                                <p className="text-xs text-gray-600 mt-1">
+                                  {currentInvoice.status === 'Oui' 
+                                    ? 'Cette facture a été annulée et ne peut être utilisée pour le traitement.'
+                                    : 'Cette facture est valide et peut être traitée normalement.'
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              currentInvoice.status === 'Oui'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-green-100 text-green-800'
+                            }`}>
+                              {currentInvoice.status === 'Oui' ? 'Annulée' : 'Valide'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Catégories - Version améliorée avec meilleure gestion du débordement */}
                     <div className="mb-6">
                       <p className="text-xs font-medium text-gray-500 mb-3 flex items-center">
@@ -724,9 +808,12 @@ function DfcFormular() {
                       <div className="grid grid-cols-2 gap-3 mb-4">
                         <button
                           onClick={() => setDecision('approved')}
+                          disabled={currentInvoice.status === 'Oui'}
                           className={`p-3 border rounded-lg transition-all duration-150 flex items-center justify-center space-x-2 ${
                             decision === 'approved'
                               ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500'
+                              : currentInvoice.status === 'Oui'
+                              ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
                               : 'border-gray-300 bg-white text-gray-700 hover:border-emerald-300 hover:bg-emerald-25'
                           }`}
                         >
@@ -735,9 +822,12 @@ function DfcFormular() {
                         </button>
                         <button
                           onClick={() => setDecision('rejected')}
+                          disabled={currentInvoice.status === 'Oui'}
                           className={`p-3 border rounded-lg transition-all duration-150 flex items-center justify-center space-x-2 ${
                             decision === 'rejected'
                               ? 'border-red-500 bg-red-50 text-red-700 ring-1 ring-red-500'
+                              : currentInvoice.status === 'Oui'
+                              ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
                               : 'border-gray-300 bg-white text-gray-700 hover:border-red-300 hover:bg-red-25'
                           }`}
                         >
@@ -745,6 +835,17 @@ function DfcFormular() {
                           <span className="text-sm font-medium whitespace-nowrap">Rejeter</span>
                         </button>
                       </div>
+
+                      {currentInvoice.status === 'Oui' && (
+                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <div className="flex items-start">
+                            <ExclamationCircleIcon className="w-4 h-4 text-red-600 mr-2 mt-0.5 flex-shrink-0" />
+                            <p className="text-xs text-red-700">
+                              <strong>Facture annulée :</strong> Cette facture a été annulée et ne peut pas être traitée. Veuillez sélectionner une autre facture valide.
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="mb-4">
                         <label className="block text-xs font-medium text-gray-700 mb-2">
@@ -756,12 +857,15 @@ function DfcFormular() {
                             onChange={handleCommentsChange}
                             placeholder="Justification de la décision..."
                             rows={3}
+                            disabled={currentInvoice.status === 'Oui'}
                             className={`w-full px-3 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm transition-colors duration-150 resize-none ${
-                              commentError 
-                                ? 'border-red-500 bg-red-50' 
-                                : comments.length > COMMENT_WARNING_THRESHOLD 
-                                  ? 'border-amber-500 bg-amber-50'
-                                  : 'border-gray-300'
+                              currentInvoice.status === 'Oui'
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : commentError 
+                                  ? 'border-red-500 bg-red-50' 
+                                  : comments.length > COMMENT_WARNING_THRESHOLD 
+                                    ? 'border-amber-500 bg-amber-50'
+                                    : 'border-gray-300'
                             }`}
                           />
                           <div className={`absolute bottom-2 right-2 text-xs ${
@@ -770,7 +874,7 @@ function DfcFormular() {
                               : comments.length > COMMENT_WARNING_THRESHOLD
                                 ? 'text-amber-600'
                                 : 'text-gray-500'
-                          }`}>
+                          } ${currentInvoice.status === 'Oui' ? 'text-gray-400' : ''}`}>
                             {comments.length}/{MAX_COMMENT_LENGTH}
                           </div>
                         </div>
@@ -790,12 +894,13 @@ function DfcFormular() {
 
                       <button
                         onClick={handleProcessInvoice}
-                        disabled={!decision || loading || comments.length > MAX_COMMENT_LENGTH}
+                        disabled={!decision || loading || comments.length > MAX_COMMENT_LENGTH || currentInvoice.status === 'Oui'}
                         className="w-full bg-gray-900 text-white py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors duration-150 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                       >
                         <DocumentCheckIcon className="w-4 h-4 flex-shrink-0" />
                         <span className="whitespace-nowrap">
-                          {loading ? 'Traitement en cours...' : 'Traiter la facture'}
+                          {loading ? 'Traitement en cours...' : 
+                           currentInvoice.status === 'Oui' ? 'Facture annulée - Traitement impossible' : 'Traiter la facture'}
                         </span>
                       </button>
                     </div>

@@ -25,6 +25,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon
 } from '@heroicons/react/24/outline';
+import Header from '../../components/global/Header.jsx';
 
 function Search() {
   useTitle('CMDT - Recherche avancée');
@@ -707,6 +708,7 @@ function Search() {
   return (
     <>
       <div className="min-h-screen">
+        <Header />
         <Navbar />
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -56,6 +56,7 @@ export async function getInvoicesByEmployee(
          FROM invoice i
          LEFT JOIN employee e ON e.id = i.created_by
          WHERE i.fiscal_year = ?
+          AND i.status = 'Non'
          GROUP BY i.created_by, e.firstname, e.lastname
          ORDER BY total DESC`,
         [fy]
@@ -80,6 +81,7 @@ export async function getInvoicesByEmployee(
        FROM invoice i
        LEFT JOIN employee e ON e.id = i.created_by
        WHERE i.fiscal_year = ?
+         AND i.status = 'Non'
        GROUP BY bucket, i.created_by, e.firstname, e.lastname
        ORDER BY bucket ASC, total DESC`,
       [fy]
@@ -290,8 +292,6 @@ export async function getSuppliersActivity(
     }
 
     if (g === 'fiscal_year') {
-      // CORRECTION : Supprimer le filtre sur s.fiscal_year pour inclure tous les fournisseurs
-      // qui ont eu des factures dans l'année fiscale, peu importe quand ils ont été créés
       const rows = await database.execute<SupplierActivityRow[] | SupplierActivityRow>(
         `SELECT 
           s.id AS supplier_id,
@@ -303,13 +303,13 @@ export async function getSuppliersActivity(
             ELSE 'Inactif'
           END AS activity_status
         FROM supplier s
-        LEFT JOIN invoice i ON i.supplier_id = s.id AND i.fiscal_year = ?
-        -- SUPPRIMÉ : WHERE s.fiscal_year = ? 
-        -- MAINTENANT : Tous les fournisseurs sont inclus, peu importe leur année de création
+        LEFT JOIN invoice i ON i.supplier_id = s.id 
+          AND i.fiscal_year = ? 
+          AND i.status = 'Non'
         GROUP BY s.id, s.name
-        HAVING total_invoices > 0  -- Seulement les fournisseurs avec activité dans l'année
+        HAVING total_invoices > 0
         ORDER BY total_invoices DESC`,
-        [fy]  // Un seul paramètre maintenant
+        [fy]
       );
       
       const data = asArray<SupplierActivityRow>(rows);
@@ -321,7 +321,6 @@ export async function getSuppliersActivity(
       });
     }
 
-    // Pour les granularités temporelles, même correction
     const bucket = bucketExpr('invoice', g);
     const rows = await database.execute<(SupplierActivityRow & { bucket: string })[] | (SupplierActivityRow & { bucket: string })>(
       `SELECT 
@@ -332,10 +331,11 @@ export async function getSuppliersActivity(
          SUM(i.amount) AS total_amount
        FROM supplier s
        INNER JOIN invoice i ON i.supplier_id = s.id
-       WHERE i.fiscal_year = ?  -- Seulement le filtre sur les factures de l'année
+       WHERE i.fiscal_year = ? 
+         AND i.status = 'Non'  // ← AJOUT CRITIQUE
        GROUP BY bucket, s.id, s.name
        ORDER BY bucket, total_invoices DESC`,
-      [fy]  // Un seul paramètre
+      [fy]
     );
     
     const dataSeries = asArray<SupplierActivityRow & { bucket: string }>(rows);
@@ -384,7 +384,8 @@ export async function getInvoicesSummary(
            COUNT(*) AS total,
            SUM(amount) AS total_amount
          FROM invoice 
-         WHERE fiscal_year = ?`,
+         WHERE fiscal_year = ?
+           AND status = 'Non'`,
         [fy]
       );
       const arr = asArray<{ total: number; total_amount: number }>(row);
@@ -405,6 +406,7 @@ export async function getInvoicesSummary(
          SUM(amount) AS total_amount
        FROM invoice
        WHERE fiscal_year = ?
+        AND status = 'Non'
        GROUP BY bucket
        ORDER BY bucket`,
       [fy]
@@ -570,7 +572,7 @@ export async function getInvoicesByEmployeeTimeseries(
 
     if (g === 'fiscal_year') {
       const row = await database.execute<{ total: number }[] | { total: number }>(
-        `SELECT COUNT(*) AS total FROM invoice WHERE fiscal_year = ? AND created_by = ?`, 
+        `SELECT COUNT(*) AS total FROM invoice WHERE fiscal_year = ? AND created_by = ? AND status = 'Non'`, 
         [fy, id]
       );
       const arr = asArray<{ total: number }>(row);
@@ -588,6 +590,7 @@ export async function getInvoicesByEmployeeTimeseries(
       `SELECT ${bucket} AS bucket, COUNT(*) AS total
        FROM invoice
        WHERE fiscal_year = ? AND created_by = ?
+         AND status = 'Non'
        GROUP BY bucket
        ORDER BY bucket`,
       [fy, id]
@@ -857,7 +860,8 @@ export async function getSupplierSummary(
          COUNT(*) AS total_invoices, 
          SUM(amount) AS total_amount 
        FROM invoice 
-       WHERE fiscal_year = ? AND supplier_id = ?`,
+       WHERE fiscal_year = ? AND supplier_id = ?
+          AND status = 'Non'`,
       [fy, id]
     );
     const arr = asArray<{ total_invoices: number; total_amount: number }>(row);
@@ -900,7 +904,6 @@ export async function getSuppliersTop(
     }
 
     const orderBy = metric === 'amount' ? 'total_amount DESC' : 'total_invoices DESC';
-    const selectField = metric === 'amount' ? 'SUM(i.amount) AS total_amount' : 'COUNT(*) AS total_invoices';
 
     if (g === 'fiscal_year') {
       const rows = await database.execute<SupplierActivityRow[] | SupplierActivityRow>(
@@ -911,7 +914,8 @@ export async function getSuppliersTop(
            SUM(i.amount) AS total_amount
          FROM supplier s
          INNER JOIN invoice i ON i.supplier_id = s.id
-         WHERE i.fiscal_year = ?
+         WHERE i.fiscal_year = ? 
+           AND i.status = 'Non'
          GROUP BY s.id, s.name
          ORDER BY ${orderBy}
          LIMIT 10`,
@@ -937,7 +941,8 @@ export async function getSuppliersTop(
          SUM(i.amount) AS total_amount
        FROM supplier s
        INNER JOIN invoice i ON i.supplier_id = s.id
-       WHERE i.fiscal_year = ?
+       WHERE i.fiscal_year = ? 
+         AND i.status = 'Non'
        GROUP BY bucket, s.id, s.name
        ORDER BY bucket, ${orderBy}`,
       [fy]
@@ -977,30 +982,24 @@ export async function getGlobalDashboardKpis(
   try {
     const fy = req.query.fiscalYear || await getSetting('fiscal_year');
 
-    // 1. Requête principale pour Factures & Décisions (Agrégation conditionnelle optimisée)
+    // CORRECTION CRITIQUE : Ajouter le filtre sur le status
     const kpiInvoicesDfcQuery = `
       SELECT
-          COALESCE(SUM(CASE WHEN i.dfc_status = 'approved' THEN i.amount ELSE 0 END), 0) AS totalRevenue,
-          COALESCE(SUM(CASE WHEN i.dfc_status = 'pending' THEN 1 ELSE 0 END), 0) AS pendingInvoices,
-          COALESCE(SUM(CASE WHEN i.dfc_status = 'approved' THEN 1 ELSE 0 END), 0) AS approvedInvoices,
-          COALESCE(SUM(CASE WHEN i.dfc_status = 'rejected' THEN 1 ELSE 0 END), 0) AS rejectedInvoices,
+          COALESCE(SUM(CASE WHEN i.dfc_status = 'approved' AND i.status = 'Non' THEN i.amount ELSE 0 END), 0) AS totalRevenue,
+          COALESCE(SUM(CASE WHEN i.dfc_status = 'pending' AND i.status = 'Non' THEN 1 ELSE 0 END), 0) AS pendingInvoices,
+          COALESCE(SUM(CASE WHEN i.dfc_status = 'approved' AND i.status = 'Non' THEN 1 ELSE 0 END), 0) AS approvedInvoices,
+          COALESCE(SUM(CASE WHEN i.dfc_status = 'rejected' AND i.status = 'Non' THEN 1 ELSE 0 END), 0) AS rejectedInvoices,
           (SELECT COUNT(*) FROM dfc_decision dd WHERE dd.fiscal_year = i.fiscal_year) AS totalDfcDecisions
       FROM invoice i
       WHERE i.fiscal_year = ?
     `;
 
-    // 2. Requête pour les totaux (moins critique)
     const totalsQuery = `
       SELECT 
         (SELECT COUNT(*) FROM supplier s WHERE s.fiscal_year = ?) AS totalSuppliers,
         (SELECT COUNT(*) FROM employee e WHERE e.fiscal_year = ?) AS totalEmployees
     `;
 
-    // Exécution des requêtes
-    // Note : Tu devras peut-être adapter l'exécution si ton driver ne supporte pas les sous-requêtes corrélées efficacement.
-    // L'exécution du Kpi Invoices/DFC peut se faire en une seule fois. Les totaux peuvent se faire en parallèle.
-    
-    // Simplification pour la rapidité
     const [kpiResults] = await database.execute<any[]>(kpiInvoicesDfcQuery, [fy]);
     const [totalsResults] = await database.execute<any[]>(totalsQuery, [fy, fy]);
 

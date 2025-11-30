@@ -1,35 +1,39 @@
 import database from "../config/database";
 
+type EntityConfig = {
+  table: string;
+  dateColumn: string;
+  filters: string;
+};
+
 export async function getEntityDateRange(entity: 'invoice' | 'dfc_decision' | 'supplier', fiscalYear: string): Promise<{ dateFrom: string | null; dateTo: string | null }> {
   try {
-    let table: string;
-    let dateColumn: string;
-    
-    switch (entity) {
-      case 'invoice':
-        table = 'invoice';
-        dateColumn = 'IFNULL(update_at, create_at)';
-        break;
-      case 'dfc_decision':
-        table = 'dfc_decision';
-        // CORRECTION : Pas de update_at, utiliser seulement decided_at
-        dateColumn = 'decided_at';
-        break;
-      case 'supplier':
-        table = 'supplier';
-        dateColumn = 'IFNULL(update_at, create_at)';
-        break;
-      default:
-        throw new Error(`Entité non supportée: ${entity}`);
-    }
+    const configs: Record<typeof entity, EntityConfig> = {
+      'invoice': {
+        table: 'invoice',
+        dateColumn: 'IFNULL(update_at, create_at)',
+        filters: 'fiscal_year = ? AND status = "Non"' // ← EXCLURE LES ANNULEES
+      },
+      'dfc_decision': {
+        table: 'dfc_decision', 
+        dateColumn: 'decided_at',
+        filters: 'fiscal_year = ?' // Décisions = seulement factures valides
+      },
+      'supplier': {
+        table: 'supplier',
+        dateColumn: 'IFNULL(update_at, create_at)',
+        filters: 'fiscal_year = ?' // Tous les fournisseurs
+      }
+    };
 
-    // Récupérer les dates min et max pour l'année fiscale
+    const config = configs[entity];
+
     const result = await database.execute<Array<{ min_date: string; max_date: string }>>(
       `SELECT 
-         MIN(${dateColumn}) as min_date,
-         MAX(${dateColumn}) as max_date
-       FROM ${table} 
-       WHERE fiscal_year = ?`,
+         MIN(${config.dateColumn}) as min_date,
+         MAX(${config.dateColumn}) as max_date
+       FROM ${config.table} 
+       WHERE ${config.filters}`,
       [fiscalYear]
     );
 
