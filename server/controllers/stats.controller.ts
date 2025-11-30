@@ -5,6 +5,8 @@ import logger from '../utils/Logger';
 import database from '../config/database';
 import { getSetting } from '../helpers/settings';
 import { getEntityDateRange } from '../helpers/statsDateRange';
+import { getDatabaseCreationDate } from '../helpers/databaseCreationDate';
+import { error } from 'console';
 
 type Granularity = 'day' | 'week' | 'month' | 'fiscal_year';
 
@@ -964,59 +966,56 @@ export async function getSuppliersTop(
 }
 
 // ========================= KPIs Globaux du Dashboard =========================
-type GlobalKpis = {
-  totalRevenue: number;
-  pendingInvoices: number;
-  approvedInvoices: number;
-  rejectedInvoices: number;
-  totalDfcDecisions: number;
-  totalSuppliers: number;
-  totalEmployees: number;
-};
-
 export async function getGlobalDashboardKpis(
-  req: Request<unknown, unknown, unknown, { fiscalYear?: string }>,
+  req: Request<unknown, unknown, unknown, { type?: string; dateFrom?: string; dateTo?: string }>,
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
   try {
-    const fy = req.query.fiscalYear || await getSetting('fiscal_year');
+    const g = parseGranularity(req.query.type);
+    
+    // Période étendue : création DB à maintenant
+    const dateFrom = req.query.dateFrom || await getDatabaseCreationDate();
+    const dateTo = req.query.dateTo || new Date().toISOString().split('T')[0];
 
-    // CORRECTION CRITIQUE : Ajouter le filtre sur le status
-    const kpiInvoicesDfcQuery = `
-      SELECT
-          COALESCE(SUM(CASE WHEN i.dfc_status = 'approved' AND i.status = 'Non' THEN i.amount ELSE 0 END), 0) AS totalRevenue,
-          COALESCE(SUM(CASE WHEN i.dfc_status = 'pending' AND i.status = 'Non' THEN 1 ELSE 0 END), 0) AS pendingInvoices,
-          COALESCE(SUM(CASE WHEN i.dfc_status = 'approved' AND i.status = 'Non' THEN 1 ELSE 0 END), 0) AS approvedInvoices,
-          COALESCE(SUM(CASE WHEN i.dfc_status = 'rejected' AND i.status = 'Non' THEN 1 ELSE 0 END), 0) AS rejectedInvoices,
-          (SELECT COUNT(*) FROM dfc_decision dd WHERE dd.fiscal_year = i.fiscal_year) AS totalDfcDecisions
-      FROM invoice i
-      WHERE i.fiscal_year = ?
-    `;
+    const totalEmployee = await database.execute<{ total_employee: number }[] | { total_employee: number }>(
+      `SELECT COUNT(*) AS total_employee FROM employee WHERE isVerified = 1 AND isActive = 1 AND DATE(IFNULL(update_at, created_at)) BETWEEN ? AND ?`,
+      [dateFrom, dateTo]
+    );
+    const totalInvoices = await database.execute<{ total_invoices: number }[] | { total_invoices: number }>(
+      `SELECT COUNT(*) AS total_invoices FROM invoice WHERE DATE(IFNULL(update_at, create_at)) BETWEEN ? AND ?`,
+      [dateFrom, dateTo]
+    );
+    const totalSuppliers = await database.execute<{ total_suppliers: number }[] | { total_suppliers: number }>(
+      `SELECT COUNT(*) AS total_suppliers FROM supplier WHERE DATE(IFNULL(update_at, create_at)) BETWEEN ? AND ?`,
+      [dateFrom, dateTo]
+    );
+    const totalInvoicePendingDfc = await database.execute<{ total_invoice_pending: number }[] | { total_invoice_pending: number }>(
+      `SELECT COUNT(*) AS total_invoice_pending
+       FROM invoice 
+       WHERE status = 'Non' 
+         AND dfc_status = 'pending'
+         AND DATE(IFNULL(update_at, create_at)) BETWEEN ? AND ?`,
+      [dateFrom, dateTo]
+    );
 
-    const totalsQuery = `
-      SELECT 
-        (SELECT COUNT(*) FROM supplier s WHERE s.fiscal_year = ?) AS totalSuppliers,
-        (SELECT COUNT(*) FROM employee e WHERE e.fiscal_year = ?) AS totalEmployees
-    `;
+    const businessAmount = await database.execute<{ business_amount: number }[] | { business_amount: number }>(
+      `SELECT COALESCE(SUM(amount), 0) AS business_amount 
+       FROM invoice 
+       WHERE status = 'Non' 
+         AND DATE(IFNULL(update_at, create_at)) BETWEEN ? AND ?`,
+      [dateFrom, dateTo]
+    );
 
-    const [kpiResults] = await database.execute<any[]>(kpiInvoicesDfcQuery, [fy]);
-    const [totalsResults] = await database.execute<any[]>(totalsQuery, [fy, fy]);
-
-    const kpis = kpiResults[0] || {};
-    const totals = totalsResults[0] || {};
-
-    const data: GlobalKpis = {
-        totalRevenue: parseFloat(kpis.totalRevenue) || 0,
-        pendingInvoices: parseInt(kpis.pendingInvoices) || 0,
-        approvedInvoices: parseInt(kpis.approvedInvoices) || 0,
-        rejectedInvoices: parseInt(kpis.rejectedInvoices) || 0,
-        totalDfcDecisions: parseInt(kpis.totalDfcDecisions) || 0,
-        totalSuppliers: parseInt(totals.totalSuppliers) || 0,
-        totalEmployees: parseInt(totals.totalEmployees) || 0,
-    };
-
-    return ApiResponder.success(res, data, 'KPIs globaux du Dashboard', { fiscalYear: fy });
+    return ApiResponder.success(res, {
+      total_employee: asArray<{ total_employee: number }>(totalEmployee)[0]?.total_employee || 0,
+      total_invoices: asArray<{ total_invoices: number }>(totalInvoices)[0]?.total_invoices || 0,
+      total_suppliers: asArray<{ total_suppliers: number }>(totalSuppliers)[0]?.total_suppliers || 0,
+      total_invoice_pending: asArray<{ total_invoice_pending: number }>(totalInvoicePendingDfc)[0]?.total_invoice_pending || 0,
+      business_amount: asArray<{ business_amount: number }>(businessAmount)[0]?.business_amount || 0,
+      dateTo,
+      dateFrom
+    });
   } catch (error) {
     logger.error(`[${requestId}] Erreur getGlobalDashboardKpis`, { 
       error: error instanceof Error ? error.message : 'unknown' 

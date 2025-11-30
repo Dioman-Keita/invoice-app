@@ -19,8 +19,6 @@ import {
 
 const router = express.Router();
 
-router.use(authGuard);
-
 // KPIs (admin)
 router.get('/stats/dashboard/kpis', requireAgentOrManager, getGlobalDashboardKpis);
 

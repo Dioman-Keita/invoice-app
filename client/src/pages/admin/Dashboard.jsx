@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/auth/useAuth.js';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/global/Header.jsx';
@@ -11,240 +11,452 @@ import {
   ClockIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
+  ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline';
+import Chart from 'chart.js/auto';
+
+// Données de fallback minimales
+const FALLBACK_DATA = {
+  totalUsers: 0,
+  totalInvoices: 0,
+  totalRevenue: 0,
+  pendingInvoices: 0,
+  dateFrom: '2024-01-01',
+  dateTo: new Date().toISOString().split('T')[0]
+};
 
 function Dashboard({ requireAuth = false }) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalInvoices: 0,
-    totalRevenue: 0,
-    pendingInvoices: 0,
-    recentActivity: []
-  });
+  const chartRef = useRef(null);
+  const chartInstance = useRef(null);
+  const [dashboardData, setDashboardData] = useState(FALLBACK_DATA);
   const [loading, setLoading] = useState(true);
+  const [chartReady, setChartReady] = useState(false);
 
+  // Un seul useEffect pour tout gérer
   useEffect(() => {
-    // Vérification optionnelle du rôle admin
     if (requireAuth && (!user || user.role !== 'admin')) {
       navigate('/unauthorized');
       return;
     }
 
-    // Simulation de données - À remplacer par un appel API réel
+    let isMounted = true;
+
     const fetchDashboardData = async () => {
       try {
+        // Démarrer avec les fallbacks immédiatement
+        setDashboardData(FALLBACK_DATA);
         setLoading(true);
-        // Ici, vous feriez un appel à votre API pour récupérer les statistiques
-        // const response = await api.get('/admin/dashboard');
+
+        // Petit délai pour montrer le skeleton (optionnel)
+        await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Données simulées pour la démonstration
-        setTimeout(() => {
-          setStats({
-            totalUsers: 156,
-            totalInvoices: 1247,
-            totalRevenue: 2847500,
-            pendingInvoices: 23,
-            recentActivity: [
-              { type: 'new_user', message: 'Nouvel utilisateur: Jean Dupont', time: '2 min', status: 'success' },
-              { type: 'invoice_created', message: 'Facture #INV-2024-001 créée', time: '15 min', status: 'info' },
-              { type: 'payment_received', message: 'Paiement reçu: 150,000 FCFA', time: '1h', status: 'success' },
-              { type: 'system_alert', message: 'Sauvegarde automatique effectuée', time: '2h', status: 'info' },
-              { type: 'user_login', message: 'Connexion: Marie Kouassi', time: '3h', status: 'info' }
-            ]
-          });
-          setLoading(false);
-        }, 1000);
+        const response = await fetch('http://localhost:3000/api/stats/dashboard/kpis', {
+          credentials: 'include',
+          headers: { 
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok && isMounted) {
+          const result = await response.json();
+          const data = result.data;
+          
+          const newData = {
+            totalUsers: data.total_employee || 0,
+            totalInvoices: data.total_invoices || 0,
+            totalRevenue: data.business_amount || 0,
+            pendingInvoices: data.total_invoice_pending || 0,
+            dateFrom: data.dateFrom || FALLBACK_DATA.dateFrom,
+            dateTo: data.dateTo || FALLBACK_DATA.dateTo
+          };
+          
+          setDashboardData(newData);
+          
+          // Mettre à jour le graphique après un petit délai
+          setTimeout(() => {
+            if (isMounted && chartRef.current) {
+              createChart(newData);
+              setChartReady(true);
+            }
+          }, 50);
+        }
       } catch (error) {
         console.error('Erreur lors du chargement des données:', error);
-        setLoading(false);
+        // Garder les fallbacks en cas d'erreur
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchDashboardData();
+
+    return () => {
+      isMounted = false;
+      if (chartInstance.current) {
+        chartInstance.current.destroy();
+      }
+    };
   }, [user, navigate, requireAuth]);
 
-  const formatCurrency = (amount) => {
+  const createChart = (data) => {
+    if (chartInstance.current) {
+      chartInstance.current.destroy();
+    }
+
+    const ctx = chartRef.current.getContext('2d');
+
+    const labels = ['Utilisateurs', 'Factures', 'Chiffre d\'affaires', 'En attente DFC'];
+    
+    const maxValue = Math.max(data.totalUsers, data.totalInvoices, data.pendingInvoices, 1);
+    const dataValues = [
+      data.totalUsers,
+      data.totalInvoices,
+      data.totalRevenue / (data.totalRevenue / maxValue),
+      data.pendingInvoices
+    ];
+
+    const backgroundColors = [
+      'rgba(59, 130, 246, 0.7)',
+      'rgba(34, 197, 94, 0.7)',
+      'rgba(234, 179, 8, 0.7)',
+      'rgba(249, 115, 22, 0.7)'
+    ];
+
+    const borderColors = [
+      'rgb(59, 130, 246)',
+      'rgb(34, 197, 94)',
+      'rgb(234, 179, 8)',
+      'rgb(249, 115, 22)'
+    ];
+
+    chartInstance.current = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            data: dataValues,
+            backgroundColor: backgroundColors,
+            borderColor: borderColors,
+            borderWidth: 2,
+            borderRadius: 6,
+            borderSkipped: false,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          title: {
+            display: true,
+            text: `Comparaison des indicateurs - ${formatDateFrench(data.dateFrom)} à ${formatDateFrench(data.dateTo)}`,
+            font: {
+              size: 16,
+              weight: 'bold'
+            },
+            color: '#1F2937',
+            padding: {
+              bottom: 20
+            }
+          },
+          tooltip: {
+            enabled: true,
+            backgroundColor: 'rgba(255, 255, 255, 0.98)',
+            titleColor: '#1F2937',
+            bodyColor: '#374151',
+            borderColor: '#E5E7EB',
+            borderWidth: 1,
+            cornerRadius: 8,
+            displayColors: true,
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+            padding: 12,
+            bodyFont: {
+              size: 13,
+              weight: '500'
+            },
+            callbacks: {
+              title: function(tooltipItems) {
+                return tooltipItems[0].label;
+              },
+              label: function(context) {
+                const index = context.dataIndex;
+                let value;
+                
+                switch(index) {
+                  case 0: // Utilisateurs
+                    value = `${formatNumber(data.totalUsers)} utilisateurs`;
+                    break;
+                  case 1: // Factures
+                    value = `${formatNumber(data.totalInvoices)} factures`;
+                    break;
+                  case 2: // Chiffre d'affaires
+                    value = formatCurrencyExact(data.totalRevenue);
+                    break;
+                  case 3: // En attente DFC
+                    value = `${formatNumber(data.pendingInvoices)} en attente`;
+                    break;
+                  default:
+                    value = formatNumber(context.raw);
+                }
+                
+                return value;
+              },
+              labelColor: function(context) {
+                return {
+                  borderColor: borderColors[context.dataIndex],
+                  backgroundColor: borderColors[context.dataIndex],
+                  borderWidth: 2
+                };
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)',
+              drawBorder: false,
+            },
+            ticks: {
+              color: '#6B7280',
+              font: {
+                size: 11
+              },
+              callback: function(value) {
+                return formatNumber(value);
+              }
+            }
+          },
+          x: {
+            grid: {
+              display: false,
+              drawBorder: false,
+            },
+            ticks: {
+              color: '#6B7280',
+              font: {
+                size: 12,
+                weight: '600'
+              }
+            }
+          }
+        },
+        elements: {
+          bar: {
+            borderRadius: 6,
+            borderSkipped: false,
+          }
+        },
+        animation: {
+          duration: 1000,
+          easing: 'easeOutQuart'
+        }
+      }
+    });
+  };
+
+  // Format M/k pour le KPI
+  const formatCurrencyKPI = (amount) => {
+    if (amount >= 1000000) {
+      return (amount / 1000000).toFixed(1) + ' M';
+    } else if (amount >= 1000) {
+      return (amount / 1000).toFixed(0) + ' k';
+    }
     return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'XOF',
-      minimumFractionDigits: 0
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount);
   };
 
-  const getActivityIcon = (type) => {
-    switch (type) {
-      case 'new_user':
-        return <UserGroupIcon className="w-5 h-5 text-green-500" />;
-      case 'invoice_created':
-        return <DocumentTextIcon className="w-5 h-5 text-blue-500" />;
-      case 'payment_received':
-        return <CurrencyDollarIcon className="w-5 h-5 text-green-500" />;
-      case 'system_alert':
-        return <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500" />;
-      case 'user_login':
-        return <ClockIcon className="w-5 h-5 text-gray-500" />;
-      default:
-        return <CheckCircleIcon className="w-5 h-5 text-gray-500" />;
+  // Format exact pour le tooltip
+  const formatCurrencyExact = (amount) => {
+    return new Intl.NumberFormat('fr-FR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount) + ' F CFA';
+  };
+
+  const formatNumber = (number) => {
+    return new Intl.NumberFormat('fr-FR').format(number);
+  };
+
+  // Format de date français
+  const formatDateFrench = (dateString) => {
+    if (!dateString) return '';
+    
+    if (dateString.includes('/')) {
+      return dateString;
+    }
+    
+    if (dateString.includes('-')) {
+      const [year, month, day] = dateString.split('-');
+      return `${day}/${month}/${year}`;
+    }
+    
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch {
+      return dateString;
     }
   };
 
-  const getActivityStatusColor = (status) => {
-    switch (status) {
-      case 'success':
-        return 'text-green-600 bg-green-50';
-      case 'info':
-        return 'text-blue-600 bg-blue-50';
-      case 'warning':
-        return 'text-yellow-600 bg-yellow-50';
-      case 'error':
-        return 'text-red-600 bg-red-50';
-      default:
-        return 'text-gray-600 bg-gray-50';
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-admin">
-        <Header />
-        <div className="container mx-auto px-4 py-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="bg-white p-6 rounded-lg shadow">
-                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                  <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // Afficher le contenu principal même pendant le chargement avec les fallbacks
   return (
     <div className="min-h-screen bg-admin">
       <Header />
       <Navbar />
       <div className="container mx-auto px-4 py-8">
-        {/* En-tête */}
+        {/* En-tête avec période */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Tableau de bord</h1>
-          <p className="text-gray-900">Vue d'ensemble du système CMDT</p>
-        </div>
-
-        {/* Statistiques principales */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Utilisateurs totaux */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Utilisateurs</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
-              </div>
-              <UserGroupIcon className="w-8 h-8 text-blue-500" />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Tableau de bord</h1>
+              <p className="text-gray-900">Vue d'ensemble du système CMDT</p>
             </div>
-            <div className="mt-2">
-              <span className="text-sm text-green-600">+12% ce mois</span>
-            </div>
-          </div>
-
-          {/* Factures totales */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Factures</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalInvoices}</p>
-              </div>
-              <DocumentTextIcon className="w-8 h-8 text-green-500" />
-            </div>
-            <div className="mt-2">
-              <span className="text-sm text-green-600">+8% ce mois</span>
-            </div>
-          </div>
-
-          {/* Chiffre d'affaires */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Chiffre d'affaires</p>
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalRevenue)}</p>
-              </div>
-              <CurrencyDollarIcon className="w-8 h-8 text-yellow-500" />
-            </div>
-            <div className="mt-2">
-              <span className="text-sm text-green-600">+15% ce mois</span>
-            </div>
-          </div>
-
-          {/* Factures en attente */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">En attente</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.pendingInvoices}</p>
-              </div>
-              <ClockIcon className="w-8 h-8 text-orange-500" />
-            </div>
-            <div className="mt-2">
-              <span className="text-sm text-orange-600">Nécessite attention</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Graphiques et activité récente */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Graphique des ventes (placeholder) */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Évolution des ventes</h3>
-            <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-              <div className="text-center">
-                <ChartBarIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                <p className="text-gray-500">Graphique des ventes</p>
-                <p className="text-sm text-gray-400">À implémenter</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Activité récente */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Activité récente</h3>
-            <div className="space-y-3">
-              {stats.recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-start space-x-3 p-3 rounded-lg bg-gray-50">
-                  {getActivityIcon(activity.type)}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900">{activity.message}</p>
-                    <p className="text-xs text-gray-500">{activity.time}</p>
+            {dashboardData.dateFrom && dashboardData.dateTo && (
+              <div className="mt-4 sm:mt-0">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 rounded-lg border border-blue-200">
+                  <div className="flex items-center">
+                    <ArrowTrendingUpIcon className="w-5 h-5 text-blue-600 mr-2" />
+                    <span className="text-sm font-medium text-blue-900">
+                      Période : {formatDateFrench(dashboardData.dateFrom)} → {formatDateFrench(dashboardData.dateTo)}
+                    </span>
                   </div>
-                  <span className={`px-2 py-1 text-xs rounded-full ${getActivityStatusColor(activity.status)}`}>
-                    {activity.status}
-                  </span>
                 </div>
-              ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Indicateur de chargement subtil */}
+        {loading && (
+          <div className="fixed top-20 right-4 z-50">
+            <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm animate-pulse">
+              Chargement...
             </div>
-            <div className="mt-4">
-              <button 
-                onClick={() => navigate('/users')}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Voir toute l'activité →
-              </button>
+          </div>
+        )}
+
+        {/* Statistiques principales - Toujours affichées */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl shadow-sm border border-blue-100 text-center">
+            <div className="flex flex-col items-center justify-center">
+              <div className="bg-blue-100 p-3 rounded-full mb-3">
+                <UserGroupIcon className="w-6 h-6 text-blue-600" />
+              </div>
+              <p className="text-sm font-medium text-blue-600 mb-1">Utilisateurs</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {loading ? (
+                  <span className="inline-block h-8 w-16 bg-gray-200 rounded animate-pulse"></span>
+                ) : (
+                  formatNumber(dashboardData.totalUsers)
+                )}
+              </p>
             </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-green-50 to-white p-6 rounded-xl shadow-sm border border-green-100 text-center">
+            <div className="flex flex-col items-center justify-center">
+              <div className="bg-green-100 p-3 rounded-full mb-3">
+                <DocumentTextIcon className="w-6 h-6 text-green-600" />
+              </div>
+              <p className="text-sm font-medium text-green-600 mb-1">Factures</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {loading ? (
+                  <span className="inline-block h-8 w-16 bg-gray-200 rounded animate-pulse"></span>
+                ) : (
+                  formatNumber(dashboardData.totalInvoices)
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-yellow-50 to-white p-6 rounded-xl shadow-sm border border-yellow-100 text-center">
+            <div className="flex flex-col items-center justify-center">
+              <div className="bg-yellow-100 p-3 rounded-full mb-3">
+                <CurrencyDollarIcon className="w-6 h-6 text-yellow-600" />
+              </div>
+              <p className="text-sm font-medium text-yellow-600 mb-1">Chiffre d'affaires</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {loading ? (
+                  <span className="inline-block h-8 w-20 bg-gray-200 rounded animate-pulse"></span>
+                ) : (
+                  `${formatCurrencyKPI(dashboardData.totalRevenue)} F CFA`
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-orange-50 to-white p-6 rounded-xl shadow-sm border border-orange-100 text-center">
+            <div className="flex flex-col items-center justify-center">
+              <div className="bg-orange-100 p-3 rounded-full mb-3">
+                <ClockIcon className="w-6 h-6 text-orange-600" />
+              </div>
+              <p className="text-sm font-medium text-orange-600 mb-1">En attente DFC</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {loading ? (
+                  <span className="inline-block h-8 w-16 bg-gray-200 rounded animate-pulse"></span>
+                ) : (
+                  formatNumber(dashboardData.pendingInvoices)
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Histogramme - Toujours affiché */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+          <div className="h-96">
+            {!chartReady && (
+              <div className="h-full flex items-center justify-center bg-gray-50 rounded-lg">
+                <div className="text-center">
+                  <ChartBarIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-500">Chargement du graphique...</p>
+                </div>
+              </div>
+            )}
+            <canvas 
+              ref={chartRef} 
+              className={!chartReady ? 'hidden' : ''}
+            />
+          </div>
+        </div>
+
+        {/* Le reste du contenu... */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-8">
+          <div className="flex items-center">
+            <ChartBarIcon className="w-5 h-5 text-blue-600 mr-3" />
+            <p className="text-sm text-blue-700">
+              <strong>Info :</strong> Les hauteurs des barres sont normalisées pour une visualisation optimale. 
+              Passez la souris sur chaque barre pour voir la valeur réelle.
+            </p>
           </div>
         </div>
 
         {/* Actions rapides */}
-        <div className="mt-8 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div className="mt-8 bg-gradient-to-br from-gray-50 to-white p-6 rounded-xl shadow-sm border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions rapides</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               onClick={() => navigate('/users')}
-              className="p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="p-4 text-left border border-gray-200 rounded-lg hover:bg-white transition-all duration-200 hover:shadow-md hover:border-blue-200"
             >
               <UserGroupIcon className="w-6 h-6 text-blue-500 mb-2" />
               <h4 className="font-medium text-gray-900">Gérer les utilisateurs</h4>
@@ -253,7 +465,7 @@ function Dashboard({ requireAuth = false }) {
             
             <button
               onClick={() => navigate('/settings')}
-              className="p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="p-4 text-left border border-gray-200 rounded-lg hover:bg-white transition-all duration-200 hover:shadow-md hover:border-orange-200"
             >
               <ExclamationTriangleIcon className="w-6 h-6 text-orange-500 mb-2" />
               <h4 className="font-medium text-gray-900">Paramètres système</h4>
@@ -262,7 +474,7 @@ function Dashboard({ requireAuth = false }) {
             
             <button
               onClick={() => navigate('/admin-stats')}
-              className="p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="p-4 text-left border border-gray-200 rounded-lg hover:bg-white transition-all duration-200 hover:shadow-md hover:border-green-200"
             >
               <ChartBarIcon className="w-6 h-6 text-green-500 mb-2" />
               <h4 className="font-medium text-gray-900">Statistiques avancées</h4>
