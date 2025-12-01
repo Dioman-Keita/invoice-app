@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+import { useAuth } from '../../hooks/auth/useAuth.js';
 import {
   DocumentArrowDownIcon,
   ChartBarIcon,
@@ -19,6 +19,7 @@ import { StarIcon } from '@heroicons/react/24/outline';
 
 function NavbarPanel({ isOpen, onClose }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [favoriteActions, setFavoriteActions] = useState(() => {
     try {
       const raw = localStorage.getItem('cmdt:favorites');
@@ -70,8 +71,8 @@ function NavbarPanel({ isOpen, onClose }) {
     ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
   `;
 
-  // Menu de base pour les utilisateurs non connectés
-  const baseMenuItems = useMemo(() => ([
+  // Tous les items disponibles (y compris GitHub)
+  const allMenuItems = useMemo(() => ([
     { label: 'Statistiques', icon: <ChartBarIcon className="w-6 h-6" />, action: 'stats' },
     { label: 'Nouvelle facture', icon: <DocumentPlusIcon className="w-6 h-6" />, action: 'newInvoice' },
     { label: 'Rechercher', icon: <MagnifyingGlassIcon className="w-6 h-6" />, action: 'search' },
@@ -79,18 +80,10 @@ function NavbarPanel({ isOpen, onClose }) {
     { label: 'Traitement DFC', icon: <DocumentCheckIcon className="w-6 h-6" />, action: 'dfc_traitment' },
     { label: 'Accueil', icon: <HomeIcon className="w-6 h-6" />, action: 'home' },
     { label: 'Mon Profil', icon: <UserIcon className="w-6 h-6" />, action: 'profile' },
-    { label: 'Aide & Support', icon: <QuestionMarkCircleIcon className="w-6 h-6" />, action: 'help' }
-  ]), []);
-
-  // Menu admin uniquement
-  const adminMenuItems = useMemo(() => ([
+    { label: 'Aide & Support', icon: <QuestionMarkCircleIcon className="w-6 h-6" />, action: 'help' },
     { label: 'Tableau de bord', icon: <ChartBarIcon className="w-6 h-6" />, action: 'dashboard' },
     { label: 'Gestion des utilisateurs', icon: <UserGroupIcon className="w-6 h-6" />, action: 'users' },
     { label: 'Statistiques avancées', icon: <ChartBarIcon className="w-6 h-6" />, action: 'adminStats' },
-  ]), []);
-
-  // Options supplémentaires (GitHub)
-  const additionalItems = useMemo(() => ([
     { 
       label: 'Code Source GitHub', 
       icon: (
@@ -103,9 +96,70 @@ function NavbarPanel({ isOpen, onClose }) {
     }
   ]), []);
 
+  // Filtrer les actions disponibles selon le rôle
   const availableActions = useMemo(() => {
-    return [...baseMenuItems, ...adminMenuItems, ...additionalItems];
-  }, [baseMenuItems, adminMenuItems, additionalItems]);
+    const userRole = user?.role;
+    
+    // Définir les actions admin
+    const adminActions = ['dashboard', 'users', 'adminStats'];
+    
+    // Pour les non-connectés, montrer le menu de base
+    if (!userRole) {
+      return allMenuItems;
+    }
+    
+    // Filtrer selon le rôle
+    let filteredItems = [...allMenuItems];
+    
+    switch(userRole) {
+      case 'admin':
+        // Admin voit tout SAUF joinDFC
+        filteredItems = filteredItems.filter(item => item.action !== 'joinDFC');
+        break;
+        
+      case 'invoice_manager':
+        // Invoice manager voit tout SAUF les pages admin ET dfc_traitment
+        filteredItems = filteredItems.filter(item => 
+          !adminActions.includes(item.action) && 
+          item.action !== 'dfc_traitment'
+        );
+        break;
+        
+      case 'dfc_agent':
+        // DFC agent voit tout SAUF admin, joinDFC et newInvoice
+        filteredItems = filteredItems.filter(item => 
+          !adminActions.includes(item.action) && 
+          item.action !== 'joinDFC' && 
+          item.action !== 'newInvoice'
+        );
+        break;
+        
+      default:
+        // Par défaut, montrer tout
+        break;
+    }
+    
+    return filteredItems;
+  }, [user, allMenuItems]);
+
+  // Séparer les items en catégories
+  const { baseItems, adminItems, additionalItems } = useMemo(() => {
+    const adminActions = ['dashboard', 'users', 'adminStats'];
+    
+    const baseItems = availableActions.filter(item => 
+      !adminActions.includes(item.action) && item.action !== 'github'
+    );
+    
+    const adminItems = availableActions.filter(item => 
+      adminActions.includes(item.action)
+    );
+    
+    const additionalItems = availableActions.filter(item => 
+      item.action === 'github'
+    );
+    
+    return { baseItems, adminItems, additionalItems };
+  }, [availableActions]);
 
   const toggleFavorite = (action) => {
     setFavoriteActions((prev) =>
@@ -194,6 +248,11 @@ function NavbarPanel({ isOpen, onClose }) {
         <div className="p-6 border-b border-gray-200/50 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-semibold text-gray-800">Menu CMDT</h2>
+            {user?.role && (
+              <p className="text-sm text-gray-500 mt-1">
+                Rôle: <span className="font-medium capitalize">{user.role.replace('_', ' ')}</span>
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -262,13 +321,13 @@ function NavbarPanel({ isOpen, onClose }) {
           )}
           
           {/* Menu principal - Afficher le titre seulement si la section n'est pas vide */}
-          {!isSectionEmpty(baseMenuItems) && (
+          {!isSectionEmpty(baseItems) && (
             <div className="pt-1 pb-1">
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider pl-4">Menu Principal</h3>
             </div>
           )}
           
-          {baseMenuItems
+          {baseItems
             .filter(({ action }) => !favoriteActions.includes(action))
             .map(({ label, icon, action }) => (
             <button
@@ -302,13 +361,13 @@ function NavbarPanel({ isOpen, onClose }) {
           ))}
 
           {/* Menu admin - Afficher le titre seulement si la section n'est pas vide */}
-          {!isSectionEmpty(adminMenuItems) && (
+          {!isSectionEmpty(adminItems) && (
             <div className="pt-6 pb-2">
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider pl-4">Administration</h3>
             </div>
           )}
           
-          {adminMenuItems
+          {adminItems
             .filter(({ action }) => !favoriteActions.includes(action))
             .map(({ label, icon, action }) => (
             <button
