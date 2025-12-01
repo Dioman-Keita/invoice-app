@@ -1,6 +1,6 @@
 import express from 'express';
 import authGuard from '../middleware/authGuard';
-import { requireAgentOrManager } from '../middleware/roleGuard';
+import { requireAdmin, requireAgentOrManager } from '../middleware/roleGuard';
 import {
   getInvoicesSummary,
   getDfcOverview,
@@ -14,7 +14,9 @@ import {
   getSuppliersActivity as getSuppliersOverview,
   getSupplierSummary,
   getSuppliersTop,
-  getGlobalDashboardKpis
+  getGlobalDashboardKpis,
+  getPersonalStats,
+  getAllAgentsStats
 } from '../controllers/stats.controller';
 
 const router = express.Router();
@@ -41,5 +43,9 @@ router.get('/stats/suppliers/created/by-employee/:id/timeseries', requireAgentOr
 router.get('/stats/suppliers/activity', requireAgentOrManager, getSuppliersOverview);
 router.get('/stats/suppliers/:id/summary', requireAgentOrManager, getSupplierSummary);
 router.get('/stats/suppliers/top', requireAgentOrManager, getSuppliersTop);
+
+// Personal stats
+router.get('/stats/personal', requireAgentOrManager, getPersonalStats);
+router.get('/stats/agents', requireAdmin, getAllAgentsStats);
 
 export default router;

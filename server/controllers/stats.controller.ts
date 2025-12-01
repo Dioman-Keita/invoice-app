@@ -6,7 +6,6 @@ import database from '../config/database';
 import { getSetting } from '../helpers/settings';
 import { getEntityDateRange } from '../helpers/statsDateRange';
 import { getDatabaseCreationDate } from '../helpers/databaseCreationDate';
-import { error } from 'console';
 
 type Granularity = 'day' | 'week' | 'month' | 'fiscal_year';
 
@@ -1018,6 +1017,284 @@ export async function getGlobalDashboardKpis(
     });
   } catch (error) {
     logger.error(`[${requestId}] Erreur getGlobalDashboardKpis`, { 
+      error: error instanceof Error ? error.message : 'unknown' 
+    });
+    return ApiResponder.error(res, error);
+  }
+}
+
+// ========================= Statistiques Personnelles =========================
+// Types pour les stats personnelles
+type PersonalStats = {
+  // Pour invoice_manager
+  totalInvoices?: number;
+  totalSuppliers?: number;
+  invoiceCreationRate?: number;
+  
+  // Pour dfc_agent
+  approvalRate?: number;
+  rejectionRate?: number;
+  processingRate?: number;
+  
+  // Pour admin (combinaison des deux)
+  role: string;
+};
+
+// Interface pour la requête authentifiée
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    role: string;
+    email: string;
+  };
+}
+
+export async function getPersonalStats(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<Response> {
+  const requestId = req.headers['x-request-id'] || 'unknown';
+  
+  try {
+    const userId = (req.user as any).sup;
+    const userRole = req.user?.role;
+    
+    if (!userId) {
+      return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
+    }
+
+    const fy = await getSetting('fiscal_year');
+    
+    // Récupérer les stats selon le rôle
+    let personalStats: PersonalStats = { role: userRole as string };
+
+    if (userRole === 'invoice_manager' || userRole === 'admin') {
+      const invoiceStats = await getInvoiceManagerStats(userId, fy);
+      personalStats = { ...personalStats, ...invoiceStats };
+    }
+
+    if (userRole === 'dfc_agent' || userRole === 'admin') {
+      const dfcStats = await getDfcAgentStats(userId, fy);
+      personalStats = { ...personalStats, ...dfcStats };
+    }
+
+    return ApiResponder.success(res, personalStats, 'Statistiques personnelles récupérées', {
+      fiscalYear: fy,
+      userId,
+      userRole
+    });
+
+  } catch (error) {
+    logger.error(`[${requestId}] Erreur getPersonalStats`, { 
+      error: error instanceof Error ? error.message : 'unknown',
+      userId: req.user?.id 
+    });
+    return ApiResponder.error(res, error);
+  }
+}
+
+// ========================= Stats pour Invoice Manager =========================
+async function getInvoiceManagerStats(userId: string, fiscalYear: string): Promise<Partial<PersonalStats>> {
+  const { dateFrom, dateTo } = await getEntityDateRange('invoice', fiscalYear);
+  
+  if (!dateFrom || !dateTo) {
+    return {
+      totalInvoices: 0,
+      totalSuppliers: 0,
+      invoiceCreationRate: 0
+    };
+  }
+
+  // 1. Nombre total de factures créées par l'utilisateur
+  const invoicesResult = await database.execute<{ total_invoices: number }[] | { total_invoices: number }>(
+    `SELECT COUNT(*) as total_invoices 
+     FROM invoice 
+     WHERE fiscal_year = ? 
+       AND created_by = ?`,
+    [fiscalYear, userId]
+  );
+  const totalInvoices = asArray<{ total_invoices: number }>(invoicesResult)[0]?.total_invoices || 0;
+
+  // 2. Nombre de fournisseurs créés par l'utilisateur
+  const suppliersResult = await database.execute<{ total_suppliers: number }[] | { total_suppliers: number }>(
+    `SELECT COUNT(*) as total_suppliers 
+     FROM supplier 
+     WHERE fiscal_year = ? 
+       AND created_by = ?`,
+    [fiscalYear, userId]
+  );
+  const totalSuppliers = asArray<{ total_suppliers: number }>(suppliersResult)[0]?.total_suppliers || 0;
+
+  // 3. Taux de création moyen (factures/jour) - CORRIGÉ
+  const creationRateResult = await database.execute<{ avg_daily_invoices: any }[] | { avg_daily_invoices: any }>(
+    `SELECT 
+       COUNT(*) / NULLIF(DATEDIFF(MAX(create_at), MIN(create_at)) + 1, 0) as avg_daily_invoices
+     FROM invoice 
+     WHERE fiscal_year = ? 
+       AND created_by = ?
+     HAVING COUNT(*) > 0`,
+    [fiscalYear, userId]
+  );
+  
+  const avgDailyResult = asArray<{ avg_daily_invoices: any }>(creationRateResult)[0];
+  let invoiceCreationRate = 0;
+  
+  if (avgDailyResult?.avg_daily_invoices) {
+    // Convertir en number et formater
+    const rate = parseFloat(avgDailyResult.avg_daily_invoices);
+    invoiceCreationRate = isNaN(rate) ? 0 : parseFloat(rate.toFixed(1));
+  }
+
+  return {
+    totalInvoices,
+    totalSuppliers,
+    invoiceCreationRate
+  };
+}
+
+// ========================= Stats pour Agent DFC =========================
+async function getDfcAgentStats(userId: string, fiscalYear: string): Promise<Partial<PersonalStats>> {
+  const { dateFrom, dateTo } = await getEntityDateRange('dfc_decision', fiscalYear);
+  
+  if (!dateFrom || !dateTo) {
+    return {
+      approvalRate: 0,
+      rejectionRate: 0,
+      processingRate: 0
+    };
+  }
+
+  // 1. Décisions totales et taux
+  const decisionsResult = await database.execute<{ 
+    approved: number; 
+    rejected: number; 
+    total: number 
+  }[] | { 
+    approved: number; 
+    rejected: number; 
+    total: number 
+  }>(
+    `SELECT 
+       SUM(decision = 'approved') as approved,
+       SUM(decision = 'rejected') as rejected,
+       COUNT(*) as total
+     FROM dfc_decision 
+     WHERE fiscal_year = ? 
+       AND decided_by = ?`,
+    [fiscalYear, userId]
+  );
+
+  const decisions = asArray<{ approved: number; rejected: number; total: number }>(decisionsResult)[0] || {
+    approved: 0,
+    rejected: 0,
+    total: 0
+  };
+
+  const approvalRate = decisions.total > 0 ? 
+    parseFloat(((decisions.approved / decisions.total) * 100).toFixed(1)) : 0;
+  
+  const rejectionRate = decisions.total > 0 ? 
+    parseFloat(((decisions.rejected / decisions.total) * 100).toFixed(1)) : 0;
+
+  // 2. Taux de traitement moyen (décisions/jour) - CORRIGÉ
+  const processingRateResult = await database.execute<{ avg_daily_decisions: any }[] | { avg_daily_decisions: any }>(
+    `SELECT 
+       COUNT(*) / NULLIF(DATEDIFF(MAX(decided_at), MIN(decided_at)) + 1, 0) as avg_daily_decisions
+     FROM dfc_decision 
+     WHERE fiscal_year = ? 
+       AND decided_by = ?
+     HAVING COUNT(*) > 0`,
+    [fiscalYear, userId]
+  );
+  
+  const avgDailyDecisions = asArray<{ avg_daily_decisions: any }>(processingRateResult)[0];
+  let processingRate = 0;
+  
+  if (avgDailyDecisions?.avg_daily_decisions) {
+    // Convertir en number et formater
+    const rate = parseFloat(avgDailyDecisions.avg_daily_decisions);
+    processingRate = isNaN(rate) ? 0 : parseFloat(rate.toFixed(1));
+  }
+
+  return {
+    approvalRate,
+    rejectionRate,
+    processingRate
+  };
+}
+// ========================= Stats pour Tous les Agents (Admin seulement) =========================
+export async function getAllAgentsStats(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<Response> {
+  const requestId = req.headers['x-request-id'] || 'unknown';
+  
+  try {
+    const userRole = req.user?.role;
+    
+    if (userRole !== 'admin') {
+      return ApiResponder.forbidden(res, 'Accès réservé aux administrateurs');
+    }
+
+    const fy = await getSetting('fiscal_year');
+
+    // Récupérer tous les employés actifs
+    const employeesResult = await database.execute<{
+      id: string;
+      firstname: string;
+      lastname: string;
+      email: string;
+      role: string;
+      department: string;
+    }[] | {
+      id: string;
+      firstname: string;
+      lastname: string;
+      email: string;
+      role: string;
+      department: string;
+    }>(
+      `SELECT id, firstname, lastname, email, role, department
+       FROM employee 
+       WHERE isActive = 1 AND isVerified = 1
+       ORDER BY role, firstname, lastname`,
+      []
+    );
+
+    const employees = asArray(employeesResult);
+    const agentsStats = [];
+
+    for (const employee of employees) {
+      let stats: any = {
+        id: employee.id,
+        name: `${employee.firstname} ${employee.lastname}`,
+        email: employee.email,
+        role: employee.role,
+        department: employee.department
+      };
+
+      // Stats pour invoice_manager et admin
+      if (employee.role === 'invoice_manager' || employee.role === 'admin') {
+        const invoiceStats = await getInvoiceManagerStats(employee.id, fy);
+        stats = { ...stats, ...invoiceStats };
+      }
+
+      // Stats pour dfc_agent et admin
+      if (employee.role === 'dfc_agent' || employee.role === 'admin') {
+        const dfcStats = await getDfcAgentStats(employee.id, fy);
+        stats = { ...stats, ...dfcStats };
+      }
+
+      agentsStats.push(stats);
+    }
+
+    return ApiResponder.success(res, agentsStats, 'Statistiques de tous les agents récupérées', {
+      fiscalYear: fy,
+      totalAgents: agentsStats.length
+    });
+
+  } catch (error) {
+    logger.error(`[${requestId}] Erreur getAllAgentsStats`, { 
       error: error instanceof Error ? error.message : 'unknown' 
     });
     return ApiResponder.error(res, error);
