@@ -469,7 +469,7 @@ function Search() {
       document.body.removeChild(a);
     } catch (err) {
       console.error('Erreur export:', err);
-      alert('Erreur lors de l\'export des données');
+      alert(err?.message || 'Erreur lors de l\'export des données');
     } finally {
       // Reset the appropriate loading state
       if (format === 'pdf') {

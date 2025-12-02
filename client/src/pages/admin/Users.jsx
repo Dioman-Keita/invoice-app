@@ -1,7 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react'; // Ajout de useRef
 import { useAuth } from '../../hooks/auth/useAuth.js';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/global/Header.jsx';
+import useBackground from '../../hooks/ui/useBackground.js';
+import useTitle from '../../hooks/ui/useTitle.js';
+import { useInputFilters } from '../../hooks/ui/useInputFilter.js';
+import { useForm, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { registerSchema } from '../../shema/loginShema.ts';
+
 import {
   UserGroupIcon,
   MagnifyingGlassIcon,
@@ -13,13 +20,35 @@ import {
   UserIcon,
   ShieldCheckIcon,
   CheckCircleIcon,
-  ClockIcon
+  ClockIcon,
+  XMarkIcon,
+  EyeSlashIcon,
+  EyeIcon as EyeOpenIcon,
+  ExclamationTriangleIcon,
+  NoSymbolIcon,
+  CheckBadgeIcon,
+  ShieldExclamationIcon
 } from '@heroicons/react/24/outline';
 import Navbar from '../../components/navbar/Navbar.jsx';
+import api from '../../services/api.js';
+import Footer from '../../components/global/Footer.jsx';
 
 function Users({ requireAuth = false }) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  useTitle('CMDT - Gestion des utilisateurs');
+  useBackground('bg-settings');
+  
+  const { 
+    filterEmail, 
+    filterFirstName,
+    filterLastName, 
+    filterPassword, 
+    filterConfirmPassword,
+    filterEmployeeId,
+    filterPhone
+  } = useInputFilters();
+  
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,9 +56,50 @@ function Users({ requireAuth = false }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  // Gestion du focus pour la recherche - CORRIGÉ: useRef au lieu de useState
+  const searchInputRef = useRef(null);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  // Form configuration
+  const { 
+    register, 
+    handleSubmit, 
+    formState: { errors }, 
+    control, 
+    trigger,
+    setValue,
+    reset,
+    watch
+  } = useForm({
+    mode: "onChange",
+    reValidateMode: "onChange",
+    shouldFocusError: true,
+    resolver: zodResolver(registerSchema),
+    criteriaMode: 'all',
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      employeeId: "",
+      phone: "",
+      password: "",
+      confirm_password: "",
+      department: "",
+      role: 'invoice_manager',
+    }
+  });
+
+  const password = useWatch({ control, name: "password" });
+  const confirmPassword = useWatch({ control, name: "confirm_password" });
+  const formRole = useWatch({ control, name: "role" });
 
   useEffect(() => {
-    // Vérification optionnelle du rôle admin
     if (requireAuth && (!user || user.role !== 'admin')) {
       navigate('/unauthorized');
       return;
@@ -38,76 +108,242 @@ function Users({ requireAuth = false }) {
     fetchUsers();
   }, [requireAuth, user, navigate]);
 
+  useEffect(() => {
+    if (password && confirmPassword) {
+      trigger("confirm_password");
+    }
+  }, [password, confirmPassword, trigger]);
+
+  useEffect(() => {
+    if (showUserModal) {
+      if (selectedUser) {
+        // Pour la modification, email en read-only
+        reset({
+          firstName: selectedUser.firstName || '',
+          lastName: selectedUser.lastName || '',
+          email: selectedUser.email || '',
+          employeeId: selectedUser.employeeId || '',
+          phone: selectedUser.phone || '',
+          department: selectedUser.department || '',
+          role: selectedUser.role === 'admin' ? 'admin' : selectedUser.role,
+          password: '',
+          confirm_password: '',
+        });
+      } else {
+        // Pour la création
+        reset({
+          firstName: '',
+          lastName: '',
+          email: '',
+          employeeId: '',
+          phone: '',
+          department: '',
+          role: 'invoice_manager',
+          password: '',
+          confirm_password: '',
+        });
+      }
+      setErrorMsg('');
+      setShowPassword(false);
+      setShowConfirmPassword(false);
+    }
+  }, [showUserModal, selectedUser, reset]);
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      // Simulation de données - À remplacer par un appel API réel
-      // const response = await api.get('/admin/users');
-      
-      // Données simulées pour la démonstration
-      setTimeout(() => {
-        setUsers([
-          {
-            id: 1,
-            firstName: 'Jean',
-            lastName: 'Dupont',
-            email: 'jean.dupont@example.com',
-            role: 'admin',
-            status: 'active',
-            lastLogin: '2024-01-15T10:30:00Z',
-            createdAt: '2023-06-15T08:00:00Z',
-            phone: '+225 07 12 34 56 78'
-          },
-          {
-            id: 2,
-            firstName: 'Marie',
-            lastName: 'Kouassi',
-            email: 'marie.kouassi@example.com',
-            role: 'invoice_manager',
-            status: 'active',
-            lastLogin: '2024-01-14T16:45:00Z',
-            createdAt: '2023-08-20T09:15:00Z',
-            phone: '+225 07 23 45 67 89'
-          },
-          {
-            id: 3,
-            firstName: 'Paul',
-            lastName: 'Konan',
-            email: 'paul.konan@example.com',
-            role: 'dfc_agent',
-            status: 'inactive',
-            lastLogin: '2024-01-10T14:20:00Z',
-            createdAt: '2023-09-10T11:30:00Z',
-            phone: '+225 07 34 56 78 90'
-          },
-          {
-            id: 4,
-            firstName: 'Fatou',
-            lastName: 'Traoré',
-            email: 'fatou.traore@example.com',
-            role: 'dfc_agent',
-            status: 'active',
-            lastLogin: '2024-01-15T09:15:00Z',
-            createdAt: '2023-11-05T13:45:00Z',
-            phone: '+225 07 45 67 89 01'
-          },
-          {
-            id: 5,
-            firstName: 'Kouadio',
-            lastName: 'Bamba',
-            email: 'kouadio.bamba@example.com',
-            role: 'invoice_manager',
-            status: 'pending',
-            lastLogin: null,
-            createdAt: '2024-01-12T15:20:00Z',
-            phone: '+225 07 56 78 90 12'
-          }
-        ]);
-        setLoading(false);
-      }, 1000);
+      const response = await api.get('/api/users');
+      const list = response?.data?.users || [];
+      setUsers(list);
+      setLoading(false);
     } catch (error) {
       console.error('Erreur lors du chargement des utilisateurs:', error);
       setLoading(false);
+    }
+  };
+
+  const showCustomMessage = ({ type, title, message, detail, buttons = ['OK'] }) => {
+    // Correction du problème d'icône: créer les icônes sous forme de chaînes HTML
+    const icons = {
+      warning: `
+        <div class="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center">
+          <svg class="h-5 w-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+        </div>
+      `,
+      error: `
+        <div class="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
+          <svg class="h-5 w-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+          </svg>
+        </div>
+      `,
+      info: `
+        <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+          <svg class="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+          </svg>
+        </div>
+      `,
+      success: `
+        <div class="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+          <svg class="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+        </div>
+      `
+    };
+
+    return new Promise((resolve) => {
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center p-4';
+      modal.innerHTML = `
+        <div class="fixed inset-0 bg-black/50"></div>
+        <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md">
+          <div class="p-6">
+            <div class="flex items-start gap-3">
+              <div class="flex-shrink-0">
+                ${icons[type] || icons.info}
+              </div>
+              <div class="flex-1">
+                <h3 class="text-lg font-semibold text-gray-900">${title}</h3>
+                <div class="mt-2">
+                  <p class="text-sm font-medium text-gray-700">${message}</p>
+                  <p class="mt-2 text-sm text-gray-600">${detail}</p>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                  ${buttons.map((btn, index) => `
+                    <button 
+                      type="button" 
+                      class="px-4 py-2 text-sm font-medium ${index === buttons.length - 1 ? 'text-white bg-blue-600 hover:bg-blue-700' : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'} rounded-md transition-colors"
+                      data-action="${btn.toLowerCase()}"
+                    >
+                      ${btn}
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      
+      buttons.forEach((btn) => {
+        modal.querySelector(`[data-action="${btn.toLowerCase()}"]`).addEventListener('click', () => {
+          document.body.removeChild(modal);
+          resolve(btn);
+        });
+      });
+      
+      modal.querySelector('.fixed.inset-0').addEventListener('click', () => {
+        document.body.removeChild(modal);
+        resolve('Cancel');
+      });
+    });
+  };
+
+  const handleDisableUser = async (user) => {
+    if (user.role === 'admin') {
+      await showCustomMessage({
+        type: 'warning',
+        title: 'Action non autorisée',
+        message: 'Impossible de désactiver',
+        detail: 'Vous ne pouvez pas désactiver un administrateur.'
+      });
+      return;
+    }
+
+    const confirm = await showCustomMessage({
+      type: 'warning',
+      title: 'Désactiver l\'utilisateur',
+      message: 'Confirmer la désactivation ?',
+      detail: `${user.firstName} ${user.lastName} ne pourra plus se connecter.`,
+      buttons: ['Annuler', 'Désactiver']
+    });
+
+    if (confirm !== 'Désactiver') return;
+
+    try {
+      await api.post(`/api/users/${user.id}/disable`);
+      await fetchUsers();
+      await showCustomMessage({
+        type: 'success',
+        title: 'Utilisateur désactivé',
+        message: 'Désactivation réussie',
+        detail: `${user.firstName} ${user.lastName} est maintenant inactif.`
+      });
+    } catch (err) {
+      const backendError = err?.response?.data?.message || err?.response?.data?.error;
+      await showCustomMessage({
+        type: 'error',
+        title: 'Erreur',
+        message: 'Échec de la désactivation',
+        detail: backendError || 'Impossible de désactiver cet utilisateur. Veuillez réessayer.'
+      });
+    }
+  };
+
+  const handleEnableUser = async (user) => {
+    const confirm = await showCustomMessage({
+      type: 'info',
+      title: 'Réactiver l\'utilisateur',
+      message: 'Confirmer la réactivation ?',
+      detail: `${user.firstName} ${user.lastName} pourra à nouveau se connecter.`,
+      buttons: ['Annuler', 'Réactiver']
+    });
+
+    if (confirm !== 'Réactiver') return;
+
+    try {
+      await api.post(`/api/users/${user.id}/enable`);
+      await fetchUsers();
+      await showCustomMessage({
+        type: 'success',
+        title: 'Utilisateur réactivé',
+        message: 'Réactivation réussie',
+        detail: `${user.firstName} ${user.lastName} est maintenant actif.`
+      });
+    } catch (err) {
+      const backendError = err?.response?.data?.message || err?.response?.data?.error;
+      await showCustomMessage({
+        type: 'error',
+        title: 'Erreur',
+        message: 'Échec de la réactivation',
+        detail: backendError || 'Impossible de réactiver cet utilisateur. Veuillez réessayer.'
+      });
+    }
+  };
+
+  const handleVerifyUser = async (user) => {
+    const confirm = await showCustomMessage({
+      type: 'info',
+      title: 'Vérifier l\'email',
+      message: 'Confirmer la vérification ?',
+      detail: `L'adresse email ${user.email} sera marquée comme vérifiée et le compte activé.`,
+      buttons: ['Annuler', 'Vérifier']
+    });
+
+    if (confirm !== 'Vérifier') return;
+
+    try {
+      await api.post(`/api/users/${user.id}/verify`);
+      await fetchUsers();
+      await showCustomMessage({
+        type: 'success',
+        title: 'Email vérifié',
+        message: 'Vérification réussie',
+        detail: `Le compte de ${user.email} est maintenant vérifié et actif.`
+      });
+    } catch (err) {
+      const backendError = err?.response?.data?.message || err?.response?.data?.error;
+      await showCustomMessage({
+        type: 'error',
+        title: 'Erreur',
+        message: 'Échec de la vérification',
+        detail: backendError || `Impossible de vérifier l'email de ${user.email}. Veuillez réessayer.`
+      });
     }
   };
 
@@ -177,30 +413,83 @@ function Users({ requireAuth = false }) {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Jamais';
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      return new Date(dateString).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Date invalide';
+    }
   };
 
-  const handleEditUser = (user) => {
+  const handleViewDetails = (user) => {
+    setSelectedUser(user);
+    setShowDetailModal(true);
+  };
+
+  const handleEditUser = async (user) => {
+    if (user.role === 'admin') {
+      await showCustomMessage({
+        type: 'warning',
+        title: 'Modification non autorisée',
+        message: 'Modification des administrateurs',
+        detail: 'Vous ne pouvez pas modifier les comptes administrateurs.'
+      });
+      return;
+    }
     setSelectedUser(user);
     setShowUserModal(true);
   };
 
   const handleDeleteUser = async (userId) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
-      try {
-        // Ici, vous feriez un appel API pour supprimer l'utilisateur
-        // await api.delete(`/admin/users/${userId}`);
-        setUsers(users.filter(u => u.id !== userId));
-        console.log('Utilisateur supprimé:', userId);
-      } catch (error) {
-        console.error('Erreur lors de la suppression:', error);
-      }
+    const userToDelete = users.find(u => u.id === userId);
+    
+    if (userToDelete?.role === 'admin') {
+      await showCustomMessage({
+        type: 'error',
+        title: 'Suppression non autorisée',
+        message: 'Suppression des administrateurs',
+        detail: 'Vous ne pouvez pas supprimer les comptes administrateurs.'
+      });
+      return;
+    }
+
+    const confirm = await showCustomMessage({
+      type: 'warning',
+      title: 'Confirmer la suppression',
+      message: 'Supprimer cet utilisateur ?',
+      detail: 'La suppression est irréversible et entraînera la perte de toutes les données associées à cet utilisateur.',
+      buttons: ['Annuler', 'Supprimer']
+    });
+
+    if (confirm !== 'Supprimer') return;
+
+    try {
+      await api.delete(`/api/users/${userId}`);
+      setUsers(users.filter(u => u.id !== userId));
+      await showCustomMessage({
+        type: 'success',
+        title: 'Suppression réussie',
+        message: 'Utilisateur supprimé',
+        detail: 'L\'utilisateur a été supprimé avec succès.'
+      });
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      const isConflict = error?.response?.status === 409;
+      const backendError = error?.response?.data?.message || error?.response?.data?.error;
+      
+      await showCustomMessage({
+        type: 'error',
+        title: 'Erreur',
+        message: 'Échec de la suppression',
+        detail: backendError || (isConflict
+          ? "Impossible de supprimer cet utilisateur: des ressources associées existent (factures, fournisseurs ou décisions)."
+          : "Une erreur est survenue lors de la suppression de l'utilisateur.")
+      });
     }
   };
 
@@ -209,9 +498,107 @@ function Users({ requireAuth = false }) {
     setShowUserModal(true);
   };
 
+  const getRoleIcon = (roleType) => {
+    switch(roleType) {
+      case 'dfc_agent':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        );
+      case 'invoice_manager':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const onSubmit = async (data) => {
+    setSubmitting(true);
+    setErrorMsg('');
+    
+    try {
+      if (selectedUser) {
+        // Pour la modification
+        const payload = {
+          firstName: data.firstName.trim(),
+          lastName: data.lastName.trim(),
+          email: data.email.trim().toLowerCase(),
+          role: selectedUser.role === 'admin' ? 'admin' : data.role,
+          phone: data.phone.trim(),
+          department: data.department.trim(),
+          employeeId: data.employeeId.trim(),
+        };
+        
+        await api.put(`/api/users/${selectedUser.id}`, payload);
+        
+        await showCustomMessage({
+          type: 'success',
+          title: 'Modification réussie',
+          message: 'Utilisateur modifié',
+          detail: 'L\'utilisateur a été modifié avec succès.'
+        });
+        
+      } else {
+        // Pour la création
+        const payload = {
+          firstName: data.firstName.trim(),
+          lastName: data.lastName.trim(),
+          email: data.email.trim().toLowerCase(),
+          password: data.password,
+          employeeId: data.employeeId.trim(),
+          role: data.role,
+          phone: data.phone.trim(),
+          department: data.department.trim(),
+        };
+        
+        await api.post('/api/users', payload);
+        
+        await showCustomMessage({
+          type: 'success',
+          title: 'Création réussie',
+          message: 'Utilisateur créé',
+          detail: 'Le nouvel utilisateur a été créé avec succès.'
+        });
+      }
+      
+      await fetchUsers();
+      setShowUserModal(false);
+      setSelectedUser(null);
+      
+    } catch (err) {
+      console.error('Erreur détaillée:', err.response || err);
+      const backendError = err?.response?.data?.message || err?.response?.data?.error;
+      
+      if (backendError) {
+        setErrorMsg(backendError);
+      } else if (err.response?.status === 409) {
+        setErrorMsg('Cet email est déjà utilisé par un autre utilisateur.');
+      } else if (err.response?.status === 400) {
+        setErrorMsg('Données invalides. Vérifiez les informations saisies.');
+      } else {
+        setErrorMsg('Une erreur est survenue. Veuillez réessayer.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const closeModal = () => {
+    setShowUserModal(false);
+    setShowDetailModal(false);
+    setSelectedUser(null);
+    setErrorMsg('');
+    reset();
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-admin">
+      <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="container mx-auto px-4 py-8">
           <div className="animate-pulse">
@@ -230,14 +617,14 @@ function Users({ requireAuth = false }) {
   }
 
   return (
-    <div className="min-h-screen bg-admin">
+    <div className="min-h-screen">
       <Header />
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         {/* En-tête */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestion des utilisateurs</h1>
-          <p className="text-gray-900">Gérez les comptes utilisateurs et leurs permissions</p>
+          <p className="text-gray-900 font-semibold">Gérez les comptes utilisateurs et leurs permissions</p>
         </div>
 
         {/* Statistiques rapides */}
@@ -289,16 +676,49 @@ function Users({ requireAuth = false }) {
         {/* Barre d'outils */}
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
           <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            {/* Recherche */}
+            {/* Recherche améliorée */}
             <div className="relative flex-1 max-w-md">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <MagnifyingGlassIcon className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors ${
+                isSearchFocused ? 'text-blue-500' : 'text-gray-400'
+              }`} />
               <input
                 type="text"
                 placeholder="Rechercher un utilisateur..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  if (e.target.value) {
+                    setIsSearchFocused(true);
+                  }
+                }}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => {
+                  if (!searchTerm) {
+                    setIsSearchFocused(false);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setSearchTerm('');
+                    e.target.blur();
+                  }
+                }}
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                ref={searchInputRef} // Référence corrigée
               />
+              {searchTerm && (
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    if (searchInputRef.current) {
+                      searchInputRef.current.focus();
+                    }
+                  }}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <XMarkIcon className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Filtres */}
@@ -395,24 +815,51 @@ function Users({ requireAuth = false }) {
                       {formatDate(user.lastLogin)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
+                      <div className="flex flex-wrap gap-1">
                         <button
                           onClick={() => handleEditUser(user)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-blue-600 hover:text-blue-900 p-1.5 rounded hover:bg-blue-50 transition-colors"
                           title="Modifier"
                         >
                           <PencilIcon className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => setSelectedUser(user)}
-                          className="text-green-600 hover:text-green-900"
+                          onClick={() => handleViewDetails(user)}
+                          className="text-green-600 hover:text-green-900 p-1.5 rounded hover:bg-green-50 transition-colors"
                           title="Voir détails"
                         >
                           <EyeIcon className="w-4 h-4" />
                         </button>
+                        {user.role !== 'admin' && user.status === 'active' && (
+                          <button
+                            onClick={() => handleDisableUser(user)}
+                            className="text-amber-600 hover:text-amber-900 p-1.5 rounded hover:bg-amber-50 transition-colors flex items-center gap-1"
+                            title="Désactiver l'utilisateur"
+                          >
+                            <NoSymbolIcon className="w-4 h-4" />
+                          </button>
+                        )}
+                        {user.status === 'inactive' && (
+                          <button
+                            onClick={() => handleEnableUser(user)}
+                            className="text-emerald-600 hover:text-emerald-900 p-1.5 rounded hover:bg-emerald-50 transition-colors flex items-center gap-1"
+                            title="Réactiver l'utilisateur"
+                          >
+                            <CheckCircleIcon className="w-4 h-4" />
+                          </button>
+                        )}
+                        {user.status === 'pending' && (
+                          <button
+                            onClick={() => handleVerifyUser(user)}
+                            className="text-indigo-600 hover:text-indigo-900 p-1.5 rounded hover:bg-indigo-50 transition-colors flex items-center gap-1"
+                            title="Vérifier l'email (activer le compte)"
+                          >
+                            <CheckBadgeIcon className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-red-600 hover:text-red-900 p-1.5 rounded hover:bg-red-50 transition-colors"
                           title="Supprimer"
                         >
                           <TrashIcon className="w-4 h-4" />
@@ -440,30 +887,508 @@ function Users({ requireAuth = false }) {
         </div>
       </div>
 
-      {/* Modal utilisateur (placeholder) */}
+      {/* Modal création/édition utilisateur - Design simplifié */}
       {showUserModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowUserModal(false)}></div>
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  {selectedUser ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur'}
-                </h3>
-                <p className="text-gray-600">Fonctionnalité à implémenter</p>
-              </div>
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 bg-black/50"
+            onClick={closeModal}
+          />
+          
+          <div 
+            className="relative bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header simplifié */}
+            <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <UserIcon className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {selectedUser ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur'}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {selectedUser ? 'Mettez à jour les informations' : 'Créez un nouveau compte utilisateur'}
+                    </p>
+                  </div>
+                </div>
                 <button
-                  onClick={() => setShowUserModal(false)}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={closeModal}
+                  className="text-gray-400 hover:text-gray-500 transition-colors p-1 rounded-lg hover:bg-gray-100"
                 >
-                  Fermer
+                  <XMarkIcon className="w-5 h-5" />
                 </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {errorMsg && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-red-800 mb-1">Erreur</p>
+                    <p className="text-sm text-red-600">{errorMsg}</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Sélection du type d'utilisateur - Style simplifié */}
+              <div className="mb-8">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Type d'utilisateur
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { key: 'invoice_manager', label: "Gestionnaire de factures", icon: (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    )},
+                    { key: 'dfc_agent', label: "Agent DFC", icon: (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                    )}
+                  ].map(({ key, label, icon }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setValue('role', key, { shouldValidate: true })}
+                      className={`p-4 rounded-lg border transition-all duration-200 flex items-center gap-3 ${
+                        formRole === key
+                          ? 'border-blue-500 bg-blue-50 shadow-sm'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                    >
+                      <div className={`p-2 rounded-md ${
+                        formRole === key ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {icon}
+                      </div>
+                      <span className={`text-sm font-medium ${
+                        formRole === key ? 'text-blue-700' : 'text-gray-700'
+                      }`}>
+                        {label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit(onSubmit)} method='post' className="space-y-6">
+                <input type="hidden" {...register("role")} />
+
+                {/* Informations personnelles */}
+                <div className="space-y-6">
+                  <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                    Informations personnelles
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
+                        Prénom <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="firstName"
+                        onInput={filterFirstName}
+                        {...register("firstName")}
+                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
+                          errors['firstName']?.message 
+                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                            : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                        }`}
+                        placeholder="Votre prénom"
+                      />
+                      {errors['firstName'] && (
+                        <p className="text-sm text-red-600 mt-1.5 flex items-center gap-1">
+                          <ExclamationTriangleIcon className="w-4 h-4" />
+                          {errors['firstName'].message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
+                        Nom <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="lastName"
+                        onInput={filterLastName}
+                        {...register("lastName")}
+                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
+                          errors['lastName']?.message 
+                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                            : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                        }`}
+                        placeholder="Votre nom"
+                      />
+                      {errors['lastName']?.message && (
+                        <p className="text-sm text-red-600 mt-1.5 flex items-center gap-1">
+                          <ExclamationTriangleIcon className="w-4 h-4" />
+                          {errors.lastName.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Email et Identifiant employé */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                        Adresse email <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        {...register("email")}
+                        readOnly={!!selectedUser} // Email en read-only pour la modification
+                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
+                          errors['email']?.message 
+                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                            : selectedUser
+                            ? 'border-gray-300 bg-gray-50 text-gray-500 cursor-not-allowed'
+                            : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                        }`}
+                        placeholder="prenom.nom@cmdt.ml"
+                        onInput={filterEmail}
+                      />
+                      {errors.email?.message && (
+                        <p className="text-sm text-red-600 mt-1.5 flex items-center gap-1">
+                          <ExclamationTriangleIcon className="w-4 h-4" />
+                          {errors.email.message}
+                        </p>
+                      )}
+                      {selectedUser && (
+                        <p className="text-xs text-gray-500 mt-1.5">
+                          L'adresse email ne peut pas être modifiée
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label htmlFor="employeeId" className="block text-sm font-medium text-gray-700 mb-2">
+                        Identifiant employé <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        onInput={filterEmployeeId}
+                        id="employeeId"
+                        {...register("employeeId")}
+                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
+                          errors.employeeId?.message 
+                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                            : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                        }`}
+                        placeholder="Votre identifiant CMDT"
+                      />
+                      {errors.employeeId?.message && (
+                        <p className="text-sm text-red-600 mt-1.5 flex items-center gap-1">
+                          <ExclamationTriangleIcon className="w-4 h-4" />
+                          {errors.employeeId.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Téléphone et Département */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                        Numéro de téléphone
+                      </label>
+                      <input
+                        type="tel"
+                        id="phone"
+                        onInput={filterPhone}
+                        onFocus={(e) => {
+                          if (e.target.value === '') {
+                            e.target.value = '+223 ';
+                          }
+                        }}
+                        {...register("phone")}
+                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
+                          errors.phone?.message 
+                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                            : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                        }`}
+                        placeholder="+223 00 00 00 00"
+                      />
+                      {errors.phone?.message && (
+                        <p className="text-sm text-red-600 mt-1.5 flex items-center gap-1">
+                          <ExclamationTriangleIcon className="w-4 h-4" />
+                          {errors.phone.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-2">
+                        Département <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        id="department"
+                        {...register("department")}
+                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
+                          errors.department?.message 
+                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                            : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                        }`}
+                      >
+                        <option value="">Sélectionnez un département</option>
+                        {formRole === 'dfc_agent' ? (
+                          <>
+                            <option value="Finance">Finance</option>
+                            <option value="Comptabilité">Comptabilité</option>
+                            <option value="Contrôle de gestion">Contrôle de gestion</option>
+                            <option value="Audit interne">Audit interne</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="Facturation">Facturation</option>
+                            <option value="Comptabilité Client">Comptabilité Client</option>
+                            <option value="Gestion des factures">Gestion des Factures</option>
+                          </>
+                        )}
+                      </select>
+                      {errors.department?.message && (
+                        <p className="text-sm text-red-600 mt-1.5 flex items-center gap-1">
+                          <ExclamationTriangleIcon className="w-4 h-4" />
+                          {errors.department.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mot de passe (uniquement pour la création) */}
+                {!selectedUser && (
+                  <div className="space-y-6">
+                    <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                      Sécurité
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                          Mot de passe <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            id="password"
+                            onInput={filterPassword}
+                            className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${
+                              errors.password?.message 
+                                ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                                : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                            }`}
+                            placeholder="Mot de passe"
+                            {...register("password")}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(v => !v)}
+                            className="absolute inset-y-0 right-0 px-3 text-gray-500 hover:text-gray-700 transition-colors"
+                            aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                          >
+                            {showPassword ? (
+                              <EyeSlashIcon className="w-5 h-5" />
+                            ) : (
+                              <EyeOpenIcon className="w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
+                        {errors.password?.message && (
+                          <p className="text-sm text-red-600 mt-1.5 flex items-center gap-1">
+                            <ExclamationTriangleIcon className="w-4 h-4" />
+                            {errors.password.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700 mb-2">
+                          Confirmation <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            id="confirm_password"
+                            onInput={filterConfirmPassword}
+                            className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${
+                              errors.confirm_password?.message 
+                                ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                                : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                            }`}
+                            placeholder="Confirmez le mot de passe"
+                            {...register("confirm_password")}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(v => !v)}
+                            className="absolute inset-y-0 right-0 px-3 text-gray-500 hover:text-gray-700 transition-colors"
+                            aria-label={showConfirmPassword ? 'Masquer la confirmation' : 'Afficher la confirmation'}
+                          >
+                            {showConfirmPassword ? (
+                              <EyeSlashIcon className="w-5 h-5" />
+                            ) : (
+                              <EyeOpenIcon className="w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
+                        {errors.confirm_password?.message && (
+                          <p className="text-sm text-red-600 mt-1.5 flex items-center gap-1">
+                            <ExclamationTriangleIcon className="w-4 h-4" />
+                            {errors.confirm_password.message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+                  <button 
+                    type="button" 
+                    onClick={closeModal}
+                    className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Annuler
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={submitting}
+                    className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                  >
+                    {submitting ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Enregistrement...
+                      </>
+                    ) : selectedUser ? 'Mettre à jour' : 'Créer l\'utilisateur'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal détails utilisateur - Style simplifié */}
+      {showDetailModal && selectedUser && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 bg-black/50"
+            onClick={closeModal}
+          />
+          
+          <div 
+            className="relative bg-white rounded-xl shadow-xl w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-green-100 flex items-center justify-center">
+                    <EyeIcon className="h-5 w-5 text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">Détails de l'utilisateur</h3>
+                </div>
+                <button
+                  onClick={closeModal}
+                  className="text-gray-400 hover:text-gray-500 transition-colors p-1 rounded-lg hover:bg-gray-100"
+                >
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="h-14 w-14 rounded-full bg-gray-300 flex items-center justify-center">
+                    <UserIcon className="w-7 h-7 text-gray-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 text-lg">
+                      {selectedUser.firstName} {selectedUser.lastName}
+                    </h4>
+                    <p className="text-sm text-gray-500">{selectedUser.email}</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-sm font-medium text-gray-500 mb-1">Rôle</p>
+                      <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${getRoleBadgeColor(selectedUser.role)}`}>
+                        {getRoleDisplayName(selectedUser.role)}
+                      </span>
+                    </div>
+                    
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-sm font-medium text-gray-500 mb-1">Statut</p>
+                      <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(selectedUser.status)}`}>
+                        {getStatusDisplayName(selectedUser.status)}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {selectedUser.phone && (
+                      <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                        <span className="text-sm font-medium text-gray-500">Téléphone</span>
+                        <span className="text-sm text-gray-900">{selectedUser.phone}</span>
+                      </div>
+                    )}
+                    
+                    {selectedUser.department && (
+                      <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                        <span className="text-sm font-medium text-gray-500">Département</span>
+                        <span className="text-sm text-gray-900">{selectedUser.department}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <span className="text-sm font-medium text-gray-500">Dernière connexion</span>
+                      <span className="text-sm text-gray-900">{formatDate(selectedUser.lastLogin)}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between py-2">
+                      <span className="text-sm font-medium text-gray-500">Date de création</span>
+                      <span className="text-sm text-gray-900">{formatDate(selectedUser.createdAt)}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end pt-6">
+                  <button
+                    onClick={closeModal}
+                    className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Fermer
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
+      <Footer />
     </div>
   );
 }

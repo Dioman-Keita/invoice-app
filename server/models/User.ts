@@ -246,6 +246,12 @@ export class UserModel {
             if (!isValidEmail(data.email) || !isValidPasswordStrength(data.password)) {
                 return null;
             }
+            // Verification du statut de l'utilisateur
+            const result = await database.execute<{ isActive: 0 | 1 | Array<{ isActive: 0 | 1 }> }>('SELECT isActive FROM employee WHERE LOWER(email) = LOWER(?) AND role = ? AND isVerified = 1 LIMIT 1', [data.email, data.role]);
+            const isActive = Array.isArray(result) ? result[0].isActive : result.isActive;
+            if (isActive === 0) {
+                return { error: "Vous avez été desactivé par un administrateur" }
+            }
     
             // Requête sécurisée - comparaison insensible à la casse
             const rows = await database.execute(

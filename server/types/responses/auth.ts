@@ -9,4 +9,4 @@ export type VerifiedUser = {
     role: UserRole;
 };
 
-export type VerifyCredentialsResult = VerifiedUser | { error?: 'DATABASE_CONNECTION_ERROR'} | null;
+export type VerifyCredentialsResult = VerifiedUser | { error?: 'DATABASE_CONNECTION_ERROR' | string } | null;

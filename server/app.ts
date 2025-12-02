@@ -14,6 +14,7 @@ import { debugCookies } from './middleware/debugCookie';
 import logger from './utils/Logger';
 import ApiResponder from './utils/ApiResponder';
 import type { Response, Request, NextFunction } from 'express';
+import usersRoute from './routes/users.route';
 const app = express();
 
 // Configuration CORS
@@ -57,6 +58,7 @@ app.use('/api', settingsRoute);
 app.use('/api', searchRoute);
 app.use('/api', exportRoute);
 app.use('/api', statsRoute);
+app.use('/api', usersRoute);
 
 // Route de test
 app.get('/api/health', (_req, res) => {

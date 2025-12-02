@@ -203,6 +203,8 @@ export async function login(req: Request<unknown, unknown, LoginDto>, res: Respo
       if (authUser && typeof authUser === 'object' && 'error' in authUser && authUser.error === 'DATABASE_CONNECTION_ERROR') {
         logger.error(`[${requestId}] Erreur de connexion à la base de données`, { email });
         return ApiResponder.error(res, null, "Service temporairement indisponible. Veuillez réessayer plus tard.");
+      } else if (authUser && typeof authUser === 'object'  && 'error' in authUser && authUser.error !== 'DATABASE_CONNECTION_ERROR') {
+        return ApiResponder.error(res, null, authUser.error);
       }
 
       if (
@@ -280,7 +282,7 @@ export async function login(req: Request<unknown, unknown, LoginDto>, res: Respo
       });
       return ApiResponder.badRequest(res, "Service temporairement indisponible veuillez reéssayer plus tard");
     }
-  }
+}
 
 export async function getCurrentToken(req: Request, res: Response): Promise<Response> {
     const token = req.cookies?.auth_token;
