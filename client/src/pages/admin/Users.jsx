@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from 'react'; // Ajout de useRef
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/auth/useAuth.js';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/global/Header.jsx';
 import useBackground from '../../hooks/ui/useBackground.js';
 import useTitle from '../../hooks/ui/useTitle.js';
-import { useInputFilters } from '../../hooks/ui/useInputFilter.js';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema } from '../../shema/loginShema.ts';
@@ -27,7 +26,6 @@ import {
   ExclamationTriangleIcon,
   NoSymbolIcon,
   CheckBadgeIcon,
-  ShieldExclamationIcon
 } from '@heroicons/react/24/outline';
 import Navbar from '../../components/navbar/Navbar.jsx';
 import api from '../../services/api.js';
@@ -38,16 +36,6 @@ function Users({ requireAuth = false }) {
   const navigate = useNavigate();
   useTitle('CMDT - Gestion des utilisateurs');
   useBackground('bg-settings');
-  
-  const { 
-    filterEmail, 
-    filterFirstName,
-    filterLastName, 
-    filterPassword, 
-    filterConfirmPassword,
-    filterEmployeeId,
-    filterPhone
-  } = useInputFilters();
   
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -62,11 +50,70 @@ function Users({ requireAuth = false }) {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  const [actionLoading, setActionLoading] = useState({ active: false, label: '', seconds: 0 });
+  const actionTimerRef = useRef(null);
+
+  const startAction = (label) => {
+    setActionLoading({ active: true, label, seconds: 0 });
+    if (actionTimerRef.current) clearInterval(actionTimerRef.current);
+    actionTimerRef.current = setInterval(() => {
+      setActionLoading(prev => ({ ...prev, seconds: prev.seconds + 1 }));
+    }, 1000);
+  };
+
+  const handleFirstNameInput = (e) => {
+    const v = e.target.value;
+    e.target.value = v.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ'\-\s]/g, '').replace(/\s{2,}/g, ' ');
+  };
+
+  const handleLastNameInput = (e) => {
+    const v = e.target.value;
+    e.target.value = v.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ'\-\s]/g, '').replace(/\s{2,}/g, ' ');
+  };
+
+  const handleEmailInput = (e) => {
+    const v = e.target.value;
+    e.target.value = v.replace(/\s+/g, '').toLowerCase();
+  };
+
+  const handleEmployeeIdInput = (e) => {
+    const v = e.target.value;
+    e.target.value = v.replace(/[^0-9]/g, '');
+  };
+
+  const handlePhoneInput = (e) => {
+    let v = e.target.value;
+    if (!v.startsWith('+223')) {
+      v = '+223 ' + v.replace(/[^0-9\s]/g, '').trim();
+    } else {
+      const rest = v.slice(4);
+      v = '+223 ' + rest.replace(/[^0-9\s]/g, '');
+    }
+    e.target.value = v.replace(/\s{2,}/g, ' ');
+  };
+
+  const handlePasswordInput = (e) => {
+    const v = e.target.value;
+    e.target.value = v.replace(/\s+/g, ' ');
+  };
+
+  const handleConfirmPasswordInput = (e) => {
+    const v = e.target.value;
+    e.target.value = v.replace(/\s+/g, ' ');
+  };
+
+  const stopAction = () => {
+    if (actionTimerRef.current) {
+      clearInterval(actionTimerRef.current);
+      actionTimerRef.current = null;
+    }
+    setActionLoading({ active: false, label: '', seconds: 0 });
+  };
+
   // Gestion du focus pour la recherche - CORRIGÉ: useRef au lieu de useState
   const searchInputRef = useRef(null);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  // Form configuration
   const { 
     register, 
     handleSubmit, 
@@ -75,7 +122,6 @@ function Users({ requireAuth = false }) {
     trigger,
     setValue,
     reset,
-    watch
   } = useForm({
     mode: "onChange",
     reValidateMode: "onChange",
@@ -92,8 +138,17 @@ function Users({ requireAuth = false }) {
       confirm_password: "",
       department: "",
       role: 'invoice_manager',
+      terms: true,
     }
   });
+
+  useEffect(() => {
+    return () => {
+      if (actionTimerRef.current) {
+        clearInterval(actionTimerRef.current);
+      }
+    };
+  }, [actionTimerRef]);
 
   const password = useWatch({ control, name: "password" });
   const confirmPassword = useWatch({ control, name: "confirm_password" });
@@ -128,6 +183,7 @@ function Users({ requireAuth = false }) {
           role: selectedUser.role === 'admin' ? 'admin' : selectedUser.role,
           password: '',
           confirm_password: '',
+          terms: true,
         });
       } else {
         // Pour la création
@@ -141,6 +197,7 @@ function Users({ requireAuth = false }) {
           role: 'invoice_manager',
           password: '',
           confirm_password: '',
+          terms: true,
         });
       }
       setErrorMsg('');
@@ -266,6 +323,7 @@ function Users({ requireAuth = false }) {
     if (confirm !== 'Désactiver') return;
 
     try {
+      startAction('Désactivation en cours');
       await api.post(`/api/users/${user.id}/disable`);
       await fetchUsers();
       await showCustomMessage({
@@ -282,6 +340,8 @@ function Users({ requireAuth = false }) {
         message: 'Échec de la désactivation',
         detail: backendError || 'Impossible de désactiver cet utilisateur. Veuillez réessayer.'
       });
+    } finally {
+      stopAction();
     }
   };
 
@@ -297,6 +357,7 @@ function Users({ requireAuth = false }) {
     if (confirm !== 'Réactiver') return;
 
     try {
+      startAction('Réactivation en cours');
       await api.post(`/api/users/${user.id}/enable`);
       await fetchUsers();
       await showCustomMessage({
@@ -313,6 +374,8 @@ function Users({ requireAuth = false }) {
         message: 'Échec de la réactivation',
         detail: backendError || 'Impossible de réactiver cet utilisateur. Veuillez réessayer.'
       });
+    } finally {
+      stopAction();
     }
   };
 
@@ -328,6 +391,7 @@ function Users({ requireAuth = false }) {
     if (confirm !== 'Vérifier') return;
 
     try {
+      startAction('Vérification en cours');
       await api.post(`/api/users/${user.id}/verify`);
       await fetchUsers();
       await showCustomMessage({
@@ -344,6 +408,8 @@ function Users({ requireAuth = false }) {
         message: 'Échec de la vérification',
         detail: backendError || `Impossible de vérifier l'email de ${user.email}. Veuillez réessayer.`
       });
+    } finally {
+      stopAction();
     }
   };
 
@@ -469,6 +535,7 @@ function Users({ requireAuth = false }) {
     if (confirm !== 'Supprimer') return;
 
     try {
+      startAction('Suppression en cours');
       await api.delete(`/api/users/${userId}`);
       setUsers(users.filter(u => u.id !== userId));
       await showCustomMessage({
@@ -490,6 +557,8 @@ function Users({ requireAuth = false }) {
           ? "Impossible de supprimer cet utilisateur: des ressources associées existent (factures, fournisseurs ou décisions)."
           : "Une erreur est survenue lors de la suppression de l'utilisateur.")
       });
+    } finally {
+      stopAction();
     }
   };
 
@@ -518,23 +587,52 @@ function Users({ requireAuth = false }) {
   };
 
   const onSubmit = async (data) => {
+    // Vérification JS: mots de passe identiques
+    if (!selectedUser && data.password !== data.confirm_password) {
+      setErrorMsg('Les mots de passe ne correspondent pas.');
+      return;
+    }
+    // En mode édition: si un nouveau mot de passe est saisi, la confirmation doit correspondre
+    if (selectedUser && data.password) {
+      if (data.password !== data.confirm_password) {
+        setErrorMsg('Les mots de passe ne correspondent pas.');
+        return;
+      }
+    }
     setSubmitting(true);
     setErrorMsg('');
     
     try {
       if (selectedUser) {
         // Pour la modification
+        // Avertissement si un changement de rôle est détecté
+        if (data.role && data.role !== selectedUser.role) {
+          const confirm = await showCustomMessage({
+            type: 'warning',
+            title: 'Changement de rôle',
+            message: `Vous allez changer le rôle de ${selectedUser.firstName} ${selectedUser.lastName} de "${getRoleDisplayName(selectedUser.role)}" vers "${getRoleDisplayName(data.role)}"`,
+            detail: `Conséquences:\n- Les factures déjà créées par cet utilisateur garderont l'information historique de leur rôle au moment de la création.\n- Après le changement :\n  - S'il passe à "Agent DFC", il ne pourra plus enregistrer de nouvelles factures.\n  - S'il passe à "Gestionnaire de factures", il ne pourra plus valider de factures.\n- Les validations déjà effectuées conserveront le rôle historique au moment de l'action.`,
+            buttons: ['Annuler', 'Confirmer le changement']
+          });
+          if (confirm !== 'Confirmer le changement') {
+            setSubmitting(false);
+            return;
+          }
+        }
         const payload = {
           firstName: data.firstName.trim(),
           lastName: data.lastName.trim(),
-          email: data.email.trim().toLowerCase(),
           role: selectedUser.role === 'admin' ? 'admin' : data.role,
           phone: data.phone.trim(),
           department: data.department.trim(),
           employeeId: data.employeeId.trim(),
         };
         
-        await api.put(`/api/users/${selectedUser.id}`, payload);
+        if (data.password && data.password.trim().length > 0) {
+          payload.password = data.password; // envoyé au backend, hashé côté serveur
+        }
+        
+        await api.put(`/api/users/${selectedUser.id}`, payload, { timeout: 30000 });
         
         await showCustomMessage({
           type: 'success',
@@ -554,19 +652,35 @@ function Users({ requireAuth = false }) {
           role: data.role,
           phone: data.phone.trim(),
           department: data.department.trim(),
+          terms: data.terms,
         };
         
-        await api.post('/api/users', payload);
+        await api.post('/api/users', payload, { timeout: 30000 });
         
         await showCustomMessage({
           type: 'success',
-          title: 'Création réussie',
-          message: 'Utilisateur créé',
-          detail: 'Le nouvel utilisateur a été créé avec succès.'
+          title: 'Email de vérification envoyé',
+          message: 'Utilisateur créé en attente de vérification',
+          detail: "Un email de vérification a été envoyé à cet utilisateur. Demandez-lui de cliquer sur le lien pour finaliser son inscription. Si vous êtes administrateur et certain de l'intégrité de son email, vous pouvez activer son compte manuellement."
         });
       }
       
       await fetchUsers();
+      // Nettoyer le formulaire après soumission (surtout en création)
+      if (!selectedUser) {
+        reset({
+          firstName: '',
+          lastName: '',
+          email: '',
+          employeeId: '',
+          phone: '',
+          department: '',
+          role: 'invoice_manager',
+          password: '',
+          confirm_password: '',
+          terms: true,
+        });
+      }
       setShowUserModal(false);
       setSelectedUser(null);
       
@@ -620,6 +734,19 @@ function Users({ requireAuth = false }) {
     <div className="min-h-screen">
       <Header />
       <Navbar />
+      {actionLoading.active && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-lg px-6 py-4 flex items-center gap-3">
+            <svg className="animate-spin h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <div className="text-sm font-medium text-gray-700">
+              {actionLoading.label} · {actionLoading.seconds}s
+            </div>
+          </div>
+        </div>
+      )}
       <div className="container mx-auto px-4 py-8">
         {/* En-tête */}
         <div className="mb-8">
@@ -983,6 +1110,7 @@ function Users({ requireAuth = false }) {
 
               <form onSubmit={handleSubmit(onSubmit)} method='post' className="space-y-6">
                 <input type="hidden" {...register("role")} />
+                <input type="checkbox" className="hidden" defaultChecked={true} {...register("terms")} />
 
                 {/* Informations personnelles */}
                 <div className="space-y-6">
@@ -998,7 +1126,7 @@ function Users({ requireAuth = false }) {
                       <input
                         type="text"
                         id="firstName"
-                        onInput={filterFirstName}
+                        onInput={handleFirstNameInput}
                         {...register("firstName")}
                         className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
                           errors['firstName']?.message 
@@ -1007,6 +1135,7 @@ function Users({ requireAuth = false }) {
                         }`}
                         placeholder="Votre prénom"
                       />
+
                       {errors['firstName'] && (
                         <p className="text-sm text-red-600 mt-1.5 flex items-center gap-1">
                           <ExclamationTriangleIcon className="w-4 h-4" />
@@ -1021,7 +1150,7 @@ function Users({ requireAuth = false }) {
                       <input
                         type="text"
                         id="lastName"
-                        onInput={filterLastName}
+                        onInput={handleLastNameInput}
                         {...register("lastName")}
                         className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
                           errors['lastName']?.message 
@@ -1030,6 +1159,7 @@ function Users({ requireAuth = false }) {
                         }`}
                         placeholder="Votre nom"
                       />
+
                       {errors['lastName']?.message && (
                         <p className="text-sm text-red-600 mt-1.5 flex items-center gap-1">
                           <ExclamationTriangleIcon className="w-4 h-4" />
@@ -1058,8 +1188,9 @@ function Users({ requireAuth = false }) {
                             : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
                         }`}
                         placeholder="prenom.nom@cmdt.ml"
-                        onInput={filterEmail}
+                        onInput={handleEmailInput}
                       />
+
                       {errors.email?.message && (
                         <p className="text-sm text-red-600 mt-1.5 flex items-center gap-1">
                           <ExclamationTriangleIcon className="w-4 h-4" />
@@ -1080,7 +1211,7 @@ function Users({ requireAuth = false }) {
                       <input
                         type="text"
                         inputMode="numeric"
-                        onInput={filterEmployeeId}
+                        onInput={handleEmployeeIdInput}
                         id="employeeId"
                         {...register("employeeId")}
                         className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
@@ -1090,6 +1221,7 @@ function Users({ requireAuth = false }) {
                         }`}
                         placeholder="Votre identifiant CMDT"
                       />
+
                       {errors.employeeId?.message && (
                         <p className="text-sm text-red-600 mt-1.5 flex items-center gap-1">
                           <ExclamationTriangleIcon className="w-4 h-4" />
@@ -1108,7 +1240,7 @@ function Users({ requireAuth = false }) {
                       <input
                         type="tel"
                         id="phone"
-                        onInput={filterPhone}
+                        onInput={handlePhoneInput}
                         onFocus={(e) => {
                           if (e.target.value === '') {
                             e.target.value = '+223 ';
@@ -1122,6 +1254,7 @@ function Users({ requireAuth = false }) {
                         }`}
                         placeholder="+223 00 00 00 00"
                       />
+
                       {errors.phone?.message && (
                         <p className="text-sm text-red-600 mt-1.5 flex items-center gap-1">
                           <ExclamationTriangleIcon className="w-4 h-4" />
@@ -1144,20 +1277,21 @@ function Users({ requireAuth = false }) {
                         }`}
                       >
                         <option value="">Sélectionnez un département</option>
-                        {formRole === 'dfc_agent' ? (
-                          <>
-                            <option value="Finance">Finance</option>
-                            <option value="Comptabilité">Comptabilité</option>
-                            <option value="Contrôle de gestion">Contrôle de gestion</option>
-                            <option value="Audit interne">Audit interne</option>
-                          </>
-                        ) : (
-                          <>
-                            <option value="Facturation">Facturation</option>
-                            <option value="Comptabilité Client">Comptabilité Client</option>
-                            <option value="Gestion des factures">Gestion des Factures</option>
-                          </>
-                        )}
+                        {(() => {
+                          const base = formRole === 'dfc_agent'
+                            ? ['Finance', 'Comptabilité', 'Contrôle de gestion', 'Audit interne']
+                            : ['Facturation', 'Comptabilité Client', 'Gestion des Factures'];
+                          const current = selectedUser?.department || '';
+                          let options = base;
+                          if (current && !base.includes(current)) {
+                            if (formRole !== 'dfc_agent') {
+                              options = [current, ...base];
+                            }
+                          }
+                          return options.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ));
+                        })()}
                       </select>
                       {errors.department?.message && (
                         <p className="text-sm text-red-600 mt-1.5 flex items-center gap-1">
@@ -1169,7 +1303,7 @@ function Users({ requireAuth = false }) {
                   </div>
                 </div>
 
-                {/* Mot de passe (uniquement pour la création) */}
+                {/* Mot de passe (création) */}
                 {!selectedUser && (
                   <div className="space-y-6">
                     <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
@@ -1185,7 +1319,7 @@ function Users({ requireAuth = false }) {
                           <input
                             type={showPassword ? 'text' : 'password'}
                             id="password"
-                            onInput={filterPassword}
+                            onInput={handlePasswordInput}
                             className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${
                               errors.password?.message 
                                 ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
@@ -1223,7 +1357,7 @@ function Users({ requireAuth = false }) {
                           <input
                             type={showConfirmPassword ? 'text' : 'password'}
                             id="confirm_password"
-                            onInput={filterConfirmPassword}
+                            onInput={handleConfirmPasswordInput}
                             className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${
                               errors.confirm_password?.message 
                                 ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
@@ -1255,6 +1389,94 @@ function Users({ requireAuth = false }) {
                     </div>
                   </div>
                 )}
+
+                {/* Changement de mot de passe (édition - optionnel) */}
+                {selectedUser && (
+                  <div className="space-y-6">
+                    <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                      Changer le mot de passe (optionnel)
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                          Nouveau mot de passe
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            id="password"
+                            onInput={handlePasswordInput}
+                            className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${
+                              errors.password?.message 
+                                ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                                : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                            }`}
+                            placeholder="Laisser vide pour ne pas changer"
+                            {...register("password")}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(v => !v)}
+                            className="absolute inset-y-0 right-0 px-3 text-gray-500 hover:text-gray-700 transition-colors"
+                            aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                          >
+                            {showPassword ? (
+                              <EyeSlashIcon className="w-5 h-5" />
+                            ) : (
+                              <EyeOpenIcon className="w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
+                        {errors.password?.message && (
+                          <p className="text-sm text-red-600 mt-1.5 flex items-center gap-1">
+                            <ExclamationTriangleIcon className="w-4 h-4" />
+                            {errors.password.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700 mb-2">
+                          Confirmation (si changement)
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            id="confirm_password"
+                            onInput={handleConfirmPasswordInput}
+                            className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${
+                              errors.confirm_password?.message 
+                                ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                                : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                            }`}
+                            placeholder="Répétez le nouveau mot de passe"
+                            {...register("confirm_password")}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(v => !v)}
+                            className="absolute inset-y-0 right-0 px-3 text-gray-500 hover:text-gray-700 transition-colors"
+                            aria-label={showConfirmPassword ? 'Masquer la confirmation' : 'Afficher la confirmation'}
+                          >
+                            {showConfirmPassword ? (
+                              <EyeSlashIcon className="w-5 h-5" />
+                            ) : (
+                              <EyeOpenIcon className="w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
+                        {errors.confirm_password?.message && (
+                          <p className="text-sm text-red-600 mt-1.5 flex items-center gap-1">
+                            <ExclamationTriangleIcon className="w-4 h-4" />
+                            {errors.confirm_password.message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
 
                 {/* Actions */}
                 <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
@@ -1349,6 +1571,12 @@ function Users({ requireAuth = false }) {
                   </div>
                   
                   <div className="space-y-3">
+                    {selectedUser.employeeId && (
+                      <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                        <span className="text-sm font-medium text-gray-500">Matricule</span>
+                        <span className="text-sm text-gray-900">{selectedUser.employeeId}</span>
+                      </div>
+                    )}
                     {selectedUser.phone && (
                       <div className="flex items-center justify-between py-2 border-b border-gray-100">
                         <span className="text-sm font-medium text-gray-500">Téléphone</span>

@@ -37,6 +37,19 @@ CREATE TABLE employee (
     isActive BOOLEAN DEFAULT TRUE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- Table d'historique des migrations de rôle utilisateur
+CREATE TABLE user_role_migration (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id VARCHAR(50) NOT NULL,
+    old_role ENUM('dfc_agent', 'invoice_manager', 'admin') NOT NULL,
+    new_role ENUM('dfc_agent', 'invoice_manager', 'admin') NOT NULL,
+    reason ENUM('user_requested', 'admin_initiated') DEFAULT 'admin_initiated',
+    approved_by VARCHAR(50) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES employee(id) ON DELETE CASCADE,
+    FOREIGN KEY (approved_by) REFERENCES employee(id) ON DELETE SET NULL
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- Table des paramètres utilisateurs
 CREATE TABLE user_settings (
     id INT PRIMARY KEY AUTO_INCREMENT,

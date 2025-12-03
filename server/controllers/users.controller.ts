@@ -2,6 +2,8 @@ import type { Request, Response } from 'express';
 import database from '../config/database';
 import ApiResponder from '../utils/ApiResponder';
 import logger from '../utils/Logger';
+import { BcryptHasher } from '../utils/PasswordHasher';
+import { isValidPasswordStrength } from '../middleware/validator';
 
 function toStatus(isActive?: number, isVerified?: number): 'active' | 'inactive' | 'pending' {
   if (isVerified === 0) return 'pending';
@@ -48,6 +50,7 @@ export async function listUsers(req: Request, res: Response): Promise<Response> 
                    e.role, 
                    e.phone, 
                    e.department, 
+                   e.employee_cmdt_id AS employeeId,
                    e.isActive, 
                    e.isVerified, 
                    e.created_at,
@@ -70,6 +73,7 @@ export async function listUsers(req: Request, res: Response): Promise<Response> 
       role: u.role,
       phone: u.phone,
       department: u.department,
+      employeeId: u.employeeId,
       status: toStatus(u.isActive, u.isVerified),
       lastLogin: u.lastLogin ?? null,
       createdAt: u.created_at,
@@ -96,6 +100,7 @@ export async function getUser(req: Request, res: Response): Promise<Response> {
          e.role, 
          e.phone, 
          e.department, 
+         e.employee_cmdt_id AS employeeId,
          e.isActive, 
          e.isVerified, 
          e.created_at,
@@ -120,6 +125,7 @@ export async function getUser(req: Request, res: Response): Promise<Response> {
       role: user.role,
       phone: user.phone,
       department: user.department,
+      employeeId: user.employeeId,
       status: toStatus(user.isActive, user.isVerified),
       lastLogin: user.lastLogin ?? null,
       createdAt: user.created_at,
@@ -137,11 +143,15 @@ export async function updateUser(req: Request, res: Response): Promise<Response>
   const requestId = (req.headers['x-request-id'] as string) || 'unknown';
   const { id } = req.params;
   try {
-    const allowedFields = ['firstName', 'lastName', 'role', 'phone', 'department', 'status'];
+    const allowedFields = ['firstName', 'lastName', 'role', 'phone', 'department', 'status', 'password'];
     const payload = req.body || {};
 
     const fields: string[] = [];
     const params: unknown[] = [];
+
+    // Récupérer l'état actuel pour détecter une migration de rôle
+    const currentRows = await database.execute<Array<{ role: string }>>('SELECT role FROM employee WHERE id = ? LIMIT 1', [id]);
+    const currentRole = Array.isArray(currentRows) && currentRows.length ? currentRows[0].role : undefined;
 
     if (payload.firstName !== undefined) { fields.push('firstname = ?'); params.push(String(payload.firstName)); }
     if (payload.lastName !== undefined) { fields.push('lastname = ?'); params.push(String(payload.lastName)); }
@@ -152,6 +162,18 @@ export async function updateUser(req: Request, res: Response): Promise<Response>
     if (payload.role !== undefined) { fields.push('role = ?'); params.push(String(payload.role)); }
     if (payload.phone !== undefined) { fields.push('phone = ?'); params.push(String(payload.phone)); }
     if (payload.department !== undefined) { fields.push('department = ?'); params.push(String(payload.department)); }
+    if (payload.employeeId !== undefined) { fields.push('employee_cmdt_id = ?'); params.push(String(payload.employeeId)); }
+
+    // Mot de passe optionnel: si fourni, vérifier robustesse et hasher
+    if (payload.password !== undefined) {
+      const raw = String(payload.password);
+      if (!isValidPasswordStrength(raw)) {
+        return ApiResponder.badRequest(res, 'Mot de passe trop faible');
+      }
+      const hash = await BcryptHasher.hash(raw);
+      fields.push('password = ?');
+      params.push(hash);
+    }
 
     // status -> isActive/isVerified
     if (payload.status !== undefined) {
@@ -171,7 +193,23 @@ export async function updateUser(req: Request, res: Response): Promise<Response>
     const sql = `UPDATE employee SET ${fields.join(', ')} WHERE id = ?`;
     params.push(id);
 
+    // Si un changement de rôle est demandé, journaliser la migration avant de répondre
+    const isRoleChange = payload.role !== undefined && currentRole !== undefined && String(payload.role) !== String(currentRole);
+
     await database.execute(sql, params);
+
+    if (isRoleChange) {
+      try {
+        await database.execute(
+          'INSERT INTO user_role_migration (user_id, old_role, new_role, reason, approved_by) VALUES (?, ?, ?, ?, ?)',
+          [id, String(currentRole), String(payload.role), 'admin_initiated', null]
+        );
+        logger.info(`[${requestId}] Migration de rôle enregistrée`, { id, from: currentRole, to: payload.role });
+      } catch (e) {
+        logger.error(`[${requestId}] Échec d'enregistrement migration de rôle`, { id, error: e });
+      }
+    }
+
     logger.info(`[${requestId}] Utilisateur mis à jour`, { id });
     return ApiResponder.success(res, null, 'Utilisateur mis à jour avec succès.');
   } catch (error) {
@@ -188,14 +226,18 @@ export async function deleteUser(req: Request, res: Response): Promise<Response>
     const [inv] = await database.execute<Array<{ cnt: number }>>('SELECT COUNT(*) AS cnt FROM invoice WHERE created_by = ?', [id]);
     const [sup] = await database.execute<Array<{ cnt: number }>>('SELECT COUNT(*) AS cnt FROM supplier WHERE created_by = ?', [id]);
     const [dec] = await database.execute<Array<{ cnt: number }>>('SELECT COUNT(*) AS cnt FROM dfc_decision WHERE decided_by = ?', [id]);
+    const [aud] = await database.execute<Array<{ cnt: number }>>('SELECT COUNT(*) AS cnt FROM audit_log WHERE performed_by = ?', [id]);
+    const [act] = await database.execute<Array<{ cnt: number }>>('SELECT COUNT(*) AS cnt FROM user_activity WHERE user_id = ?', [id]);
 
     const invCount = Array.isArray(inv) ? inv[0]?.cnt ?? 0 : (inv as any)?.cnt ?? 0;
     const supCount = Array.isArray(sup) ? sup[0]?.cnt ?? 0 : (sup as any)?.cnt ?? 0;
     const decCount = Array.isArray(dec) ? dec[0]?.cnt ?? 0 : (dec as any)?.cnt ?? 0;
+    const audCount = Array.isArray(aud) ? aud[0]?.cnt ?? 0 : (aud as any)?.cnt ?? 0;
+    const actCount = Array.isArray(act) ? act[0]?.cnt ?? 0 : (act as any)?.cnt ?? 0;
 
-    if (invCount > 0 || supCount > 0 || decCount > 0) {
-      const details = { invoices: invCount, suppliers: supCount, dfc_decisions: decCount };
-      return ApiResponder.error(res, details, "Impossible de supprimer cet utilisateur: des ressources associées existent (factures, fournisseurs ou décisions).", 409);
+    if (invCount > 0 || supCount > 0 || decCount > 0 || audCount > 0 || actCount > 0) {
+      const details = { invoices: invCount, suppliers: supCount, dfc_decisions: decCount, audit_logs: audCount, activities: actCount };
+      return ApiResponder.error(res, details, "Impossible de supprimer cet utilisateur: des ressources associées existent (factures, fournisseurs, décisions, journaux d'audit ou activités utilisateur).", 409);
     }
 
     await database.execute('DELETE FROM employee WHERE id = ?', [id]);
