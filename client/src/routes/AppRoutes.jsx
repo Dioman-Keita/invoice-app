@@ -85,11 +85,25 @@ function AppRoutes() {
             } />
 
 
-            {/* Tableau de bord admin - Accès libre pour test */}
-            <Route path="/dashboard" element={<Dashboard />} />
+            {/* Tableau de bord admin - Accès admin seulement */}
+            <Route path="/dashboard" element={
+                <PrivateRoute 
+                    requiredRoles={['admin']}
+                    customMessage="Tableau de bord réservé aux administrateurs"
+                >
+                    <Dashboard />
+                </PrivateRoute>
+            } />
 
-            {/* Gestion des utilisateurs - Accès libre pour test */}
-            <Route path="/users" element={<Users />} />
+            {/* Gestion des utilisateurs - Accès admin seulement */}
+            <Route path="/users" element={
+                <PrivateRoute 
+                    requiredRoles={['admin']}
+                    customMessage="Gestion des utilisateurs réservée aux administrateurs"
+                >
+                    <Users />
+                </PrivateRoute>
+            } />
 
             {/* Statistiques avancées - Admin seulement */}
             <Route path="/admin-stats" element={

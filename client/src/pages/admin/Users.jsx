@@ -607,11 +607,57 @@ function Users({ requireAuth = false }) {
         // Pour la modification
         // Avertissement si un changement de rôle est détecté
         if (data.role && data.role !== selectedUser.role) {
+          // Messages conditionnels selon le type de changement
+          let detailMessage = '';
+          
+          if (selectedUser.role === 'invoice_manager' && data.role === 'dfc_agent') {
+            detailMessage = `
+              <div style="margin-top: 8px;">
+                <p style="margin-bottom: 12px; font-weight: 500;">Vous changez ${selectedUser.firstName} ${selectedUser.lastName} de <strong>Gestionnaire de factures</strong> à <strong>Agent DFC</strong>.</p>
+                
+                <p style="margin-bottom: 8px; font-weight: 500;">Conséquences :</p>
+                <ul style="margin-left: 16px; margin-bottom: 12px;">
+                  <li style="margin-bottom: 4px;">L'utilisateur ne pourra plus enregistrer de nouvelles factures</li>
+                  <li style="margin-bottom: 4px;">Il pourra uniquement valider les factures existantes</li>
+                  <li style="margin-bottom: 4px;">Les factures déjà créées garderont l'information historique de son rôle précédent</li>
+                  <li>Les validations déjà effectuées conserveront son rôle historique</li>
+                </ul>
+              </div>
+            `;
+          } else if (selectedUser.role === 'dfc_agent' && data.role === 'invoice_manager') {
+            detailMessage = `
+              <div style="margin-top: 8px;">
+                <p style="margin-bottom: 12px; font-weight: 500;">Vous changez ${selectedUser.firstName} ${selectedUser.lastName} de <strong>Agent DFC</strong> à <strong>Gestionnaire de factures</strong>.</p>
+                
+                <p style="margin-bottom: 8px; font-weight: 500;">Conséquences :</p>
+                <ul style="margin-left: 16px; margin-bottom: 12px;">
+                  <li style="margin-bottom: 4px;">L'utilisateur ne pourra plus valider de factures</li>
+                  <li style="margin-bottom: 4px;">Il pourra uniquement enregistrer de nouvelles factures</li>
+                  <li style="margin-bottom: 4px;">Les factures déjà créées garderont l'information historique de son rôle précédent</li>
+                  <li>Les validations déjà effectuées conserveront son rôle historique</li>
+                </ul>
+              </div>
+            `;
+          } else {
+            detailMessage = `
+              <div style="margin-top: 8px;">
+                <p style="margin-bottom: 12px; font-weight: 500;">Vous changez ${selectedUser.firstName} ${selectedUser.lastName} de <strong>${getRoleDisplayName(selectedUser.role)}</strong> à <strong>${getRoleDisplayName(data.role)}</strong>.</p>
+                
+                <p style="margin-bottom: 8px; font-weight: 500;">Conséquences :</p>
+                <ul style="margin-left: 16px; margin-bottom: 12px;">
+                  <li style="margin-bottom: 4px;">Les actions précédentes garderont l'information historique</li>
+                  <li style="margin-bottom: 4px;">Les nouvelles actions seront enregistrées avec le nouveau rôle</li>
+                  <li>Les permissions d'accès seront mises à jour immédiatement</li>
+                </ul>
+              </div>
+            `;
+          }
+          
           const confirm = await showCustomMessage({
             type: 'warning',
             title: 'Changement de rôle',
-            message: `Vous allez changer le rôle de ${selectedUser.firstName} ${selectedUser.lastName} de "${getRoleDisplayName(selectedUser.role)}" vers "${getRoleDisplayName(data.role)}"`,
-            detail: `Conséquences:\n- Les factures déjà créées par cet utilisateur garderont l'information historique de leur rôle au moment de la création.\n- Après le changement :\n  - S'il passe à "Agent DFC", il ne pourra plus enregistrer de nouvelles factures.\n  - S'il passe à "Gestionnaire de factures", il ne pourra plus valider de factures.\n- Les validations déjà effectuées conserveront le rôle historique au moment de l'action.`,
+            message: `Confirmer le changement de rôle ?`,
+            detail: detailMessage,
             buttons: ['Annuler', 'Confirmer le changement']
           });
           if (confirm !== 'Confirmer le changement') {
@@ -1390,11 +1436,11 @@ function Users({ requireAuth = false }) {
                   </div>
                 )}
 
-                {/* Changement de mot de passe (édition - optionnel) */}
+                {/* Changement de mot de passe */}
                 {selectedUser && (
                   <div className="space-y-6">
                     <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
-                      Changer le mot de passe (optionnel)
+                      Changer le mot de passe
                     </h4>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1438,7 +1484,7 @@ function Users({ requireAuth = false }) {
 
                       <div>
                         <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700 mb-2">
-                          Confirmation (si changement)
+                          Confirmation
                         </label>
                         <div className="relative">
                           <input
