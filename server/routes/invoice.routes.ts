@@ -1,12 +1,12 @@
 import express from 'express';
 import authGuard from '../middleware/authGuard';
-import { 
-  createInvoice, 
-  deleteInvoice, 
-  getInvoice, 
-  getLastInvoiceNumber, 
-  getNextInvoiceNumber, 
-  getUserInvoices, 
+import {
+  createInvoice,
+  deleteInvoice,
+  getInvoice,
+  getLastInvoiceNumber,
+  getNextInvoiceNumber,
+  getUserInvoices,
   updateInvoice,
   getDfcPendingInvoices,
   approveDfcInvoice,
@@ -19,8 +19,6 @@ import {
 import { requireAdmin, requireAgentOrManager, requireManagerOrAdmin } from '../middleware/roleGuard';
 
 const router = express.Router();
-
-// Toutes les routes de factures nécessitent une authentification
 router.use(authGuard);
 
 // Routes protégées

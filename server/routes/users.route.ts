@@ -5,9 +5,10 @@ import { listUsers, getUser, updateUser, deleteUser, disableUser, enableUser, ve
 import { createUser } from '../controllers/user.controller';
 
 const router = express.Router();
+router.use(authGuard);
 
 // Toutes les routes utilisateurs sont protégées et nécessitent le rôle admin
-router.use(authGuard, requireAdmin);
+router.use(requireAdmin);
 
 // Listing avec filtres et pagination
 router.get('/users', listUsers);

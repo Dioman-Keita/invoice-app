@@ -8,13 +8,15 @@ import supplierRoute from './routes/supplier.route';
 import settingsRoute from './routes/settings.route';
 import searchRoute from './routes/search.route';
 import exportRoute from './routes/export.route';
-import statsRoute from  './routes/stats.route'
+import statsRoute from './routes/stats.route'
 import { requestIdMiddleware } from './middleware/requestIdMiddleware';
 import { debugCookies } from './middleware/debugCookie';
 import logger from './utils/Logger';
 import ApiResponder from './utils/ApiResponder';
 import type { Response, Request, NextFunction } from 'express';
 import usersRoute from './routes/users.route';
+import migrationRoutes from './routes/migration.route';
+import authGuard from './middleware/authGuard';
 const app = express();
 
 // Configuration CORS
@@ -51,6 +53,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Montage des routes
+app.use('/api/migration', migrationRoutes);
 app.use('/api', authRoutes);
 app.use('/api', invoiceRoutes);
 app.use('/api', supplierRoute);
@@ -71,7 +74,7 @@ app.use((err: Error & { type?: string; status?: number }, req: Request, res: Res
         logger.error('Erreur de parsing JSON', { error: err.message, stack: err.stack });
         return ApiResponder.badRequest(res, 'Requête JSON invalide');
     }
-    logger.error('Erreur non gérée', { error: err.message, stack: err.stack});
+    logger.error('Erreur non gérée', { error: err.message, stack: err.stack });
     return ApiResponder.error(res, err);
 });
 

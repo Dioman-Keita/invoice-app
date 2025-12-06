@@ -170,7 +170,7 @@ function Profile() {
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8 gap-4">
                     <div>
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Mon Profil</h1>
-                        <p className="text-gray-600">Consultez et gérez vos informations personnelles</p>
+                        <p className="text-gray-900 font-semibold">Consultez et gérez vos informations personnelles</p>
                     </div>
                     <button 
                         onClick={handleRefresh}

@@ -37,6 +37,23 @@ CREATE TABLE employee (
     isActive BOOLEAN DEFAULT TRUE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- Canal officiel: demandes de migration de rôle (soumission par l'utilisateur)
+CREATE TABLE IF NOT EXISTS role_migration_request (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    requester_id VARCHAR(50) NOT NULL,
+    from_role ENUM('dfc_agent', 'invoice_manager', 'admin') NOT NULL,
+    to_role ENUM('dfc_agent', 'invoice_manager', 'admin') NOT NULL,
+    department VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    motivation TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+    review_note TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
+    reviewed_by VARCHAR(50) NULL,
+    reviewed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (requester_id) REFERENCES employee(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by) REFERENCES employee(id) ON DELETE SET NULL
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- Table d'historique des migrations de rôle utilisateur
 CREATE TABLE user_role_migration (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -45,9 +62,23 @@ CREATE TABLE user_role_migration (
     new_role ENUM('dfc_agent', 'invoice_manager', 'admin') NOT NULL,
     reason ENUM('user_requested', 'admin_initiated') DEFAULT 'admin_initiated',
     approved_by VARCHAR(50) NULL,
+    request_id INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES employee(id) ON DELETE CASCADE,
-    FOREIGN KEY (approved_by) REFERENCES employee(id) ON DELETE SET NULL
+    FOREIGN KEY (approved_by) REFERENCES employee(id) ON DELETE SET NULL,
+    FOREIGN KEY (request_id) REFERENCES role_migration_request(id) ON DELETE SET NULL
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Journal détaillé des événements du flux de migration de rôle
+CREATE TABLE IF NOT EXISTS role_migration_event (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    request_id INT NOT NULL,
+    event ENUM('submitted','email_sent','approved','rejected','user_role_updated','error') NOT NULL,
+    metadata JSON NULL,
+    performed_by VARCHAR(50) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (request_id) REFERENCES role_migration_request(id) ON DELETE CASCADE,
+    FOREIGN KEY (performed_by) REFERENCES employee(id) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Table des paramètres utilisateurs
@@ -255,6 +286,13 @@ CREATE INDEX idx_employee_fiscal_year_counter_year ON employee_fiscal_year_count
 CREATE INDEX idx_pending_verification_fiscal_year ON pending_verification(fiscal_year);
 CREATE INDEX idx_employee_created_at ON employee(created_at);
 CREATE INDEX idx_employee_isVerified_created_at ON employee(isVerified, created_at);
+-- Index pour le flux de migration de rôle
+CREATE INDEX idx_role_mig_req_status_created ON role_migration_request(status, created_at);
+CREATE INDEX idx_role_mig_req_requester ON role_migration_request(requester_id, created_at);
+CREATE INDEX idx_role_mig_event_request ON role_migration_event(request_id, created_at);
+CREATE INDEX idx_role_mig_event_event_created ON role_migration_event(event, created_at);
+CREATE INDEX idx_user_role_mig_user_created ON user_role_migration(user_id, created_at);
+CREATE INDEX idx_user_role_mig_request ON user_role_migration(request_id);
 
 -- Vues sur les audits
 CREATE VIEW view_audit_log AS SELECT * FROM audit_log;

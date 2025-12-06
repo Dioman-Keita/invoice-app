@@ -11,11 +11,11 @@ type AllowedRole = 'admin' | 'invoice_manager' | 'dfc_agent';
 export function requireRole(allowedRoles: AllowedRole[]) {
     return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
         const requestId = req.headers['x-request-id'] || 'unknown';
-        
+
         try {
             // Récupérer l'utilisateur depuis req.user (peuplé par authGuard)
             const user = req.user;
-            
+
             if (!user) {
                 logger.warn(`[${requestId}] Tentative d'accès sans utilisateur authentifié`);
                 return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
@@ -23,23 +23,23 @@ export function requireRole(allowedRoles: AllowedRole[]) {
 
             // Vérifier si le rôle de l'utilisateur est autorisé
             if (!allowedRoles.includes(user.role as AllowedRole)) {
-                logger.warn(`[${requestId}] Accès refusé - rôle insuffisant`, { 
-                    userRole: user.role, 
+                logger.warn(`[${requestId}] Accès refusé - rôle insuffisant`, {
+                    userRole: user.role,
                     allowedRoles,
-                    userId: user.sup 
+                    userId: user.sup
                 });
                 return ApiResponder.forbidden(res, 'Accès refusé - permissions insuffisantes');
             }
 
-            logger.debug(`[${requestId}] Accès autorisé`, { 
-                userRole: user.role, 
-                userId: user.sup 
+            logger.debug(`[${requestId}] Accès autorisé`, {
+                userRole: user.role,
+                userId: user.sup
             });
 
             next();
         } catch (error) {
-            logger.error(`[${requestId}] Erreur lors de la vérification des rôles`, { 
-                error: error instanceof Error ? error.message : 'Erreur inconnue' 
+            logger.error(`[${requestId}] Erreur lors de la vérification des rôles`, {
+                error: error instanceof Error ? error.message : 'Erreur inconnue'
             });
             return ApiResponder.error(res, error);
         }
@@ -70,11 +70,11 @@ export function canAccessInvoice(user: UserDto, invoiceOwnerId: string): boolean
     return isAdmin(user) || user.sup === invoiceOwnerId;
 }
 
-export default { 
-    requireRole, 
-    requireAdmin, 
-    requireManagerOrAdmin, 
-    requireAgentOrManager, 
+export default {
+    requireRole,
+    requireAdmin,
+    requireManagerOrAdmin,
+    requireAgentOrManager,
     requireAnyRole,
     hasRole,
     isAdmin,

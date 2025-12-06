@@ -2,17 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/auth/useAuth.js';
 import {
-  DocumentArrowDownIcon,
   ChartBarIcon,
   DocumentPlusIcon,
   MagnifyingGlassIcon,
-  UserPlusIcon,
   HomeIcon,
   UserGroupIcon,
   Cog6ToothIcon,
   QuestionMarkCircleIcon,
   UserIcon,
   DocumentCheckIcon,
+  ArrowsRightLeftIcon,
+  EnvelopeIcon, // Icône de messagerie ajoutée
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid, CommandLineIcon } from '@heroicons/react/24/solid';
 import { StarIcon } from '@heroicons/react/24/outline';
@@ -71,12 +71,16 @@ function NavbarPanel({ isOpen, onClose }) {
     ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
   `;
 
-  // Tous les items disponibles (y compris GitHub)
+  // Tous les items disponibles (y compris GitHub et Messagerie)
   const allMenuItems = useMemo(() => ([
     { label: 'Statistiques', icon: <ChartBarIcon className="w-6 h-6" />, action: 'stats' },
     { label: 'Nouvelle facture', icon: <DocumentPlusIcon className="w-6 h-6" />, action: 'newInvoice' },
     { label: 'Rechercher', icon: <MagnifyingGlassIcon className="w-6 h-6" />, action: 'search' },
-    { label: 'Devenir agent DFC', icon: <UserPlusIcon className="w-6 h-6" />, action: 'joinDFC' },
+    { 
+      label: 'Migration de rôle', 
+      icon: <ArrowsRightLeftIcon className="w-6 h-6" />, 
+      action: 'roleMigration' 
+    },
     { label: 'Traitement DFC', icon: <DocumentCheckIcon className="w-6 h-6" />, action: 'dfc_traitment' },
     { label: 'Accueil', icon: <HomeIcon className="w-6 h-6" />, action: 'home' },
     { label: 'Mon Profil', icon: <UserIcon className="w-6 h-6" />, action: 'profile' },
@@ -84,6 +88,12 @@ function NavbarPanel({ isOpen, onClose }) {
     { label: 'Tableau de bord', icon: <ChartBarIcon className="w-6 h-6" />, action: 'dashboard' },
     { label: 'Gestion des utilisateurs', icon: <UserGroupIcon className="w-6 h-6" />, action: 'users' },
     { label: 'Statistiques avancées', icon: <ChartBarIcon className="w-6 h-6" />, action: 'adminStats' },
+    // NOUVEAU: Messagerie admin
+    { 
+      label: 'Messagerie Admin', 
+      icon: <EnvelopeIcon className="w-6 h-6" />, 
+      action: 'adminMessaging' 
+    },
     { 
       label: 'Code Source GitHub', 
       icon: (
@@ -100,12 +110,12 @@ function NavbarPanel({ isOpen, onClose }) {
   const availableActions = useMemo(() => {
     const userRole = user?.role;
     
-    // Définir les actions admin
-    const adminActions = ['dashboard', 'users', 'adminStats'];
+    // Définir les actions admin (y compris la messagerie)
+    const adminActions = ['dashboard', 'users', 'adminStats', 'adminMessaging'];
     
-    // Pour les non-connectés, montrer le menu de base
+    // Pour les non-connectés, montrer le menu de base sans action de migration
     if (!userRole) {
-      return allMenuItems;
+      return allMenuItems.filter(item => item.action !== 'roleMigration');
     }
     
     // Filtrer selon le rôle
@@ -113,12 +123,12 @@ function NavbarPanel({ isOpen, onClose }) {
     
     switch(userRole) {
       case 'admin':
-        // Admin voit tout SAUF joinDFC
-        filteredItems = filteredItems.filter(item => item.action !== 'joinDFC');
+        // Admin voit tout SAUF roleMigration
+        filteredItems = filteredItems.filter(item => item.action !== 'roleMigration');
         break;
         
       case 'invoice_manager':
-        // Invoice manager voit tout SAUF les pages admin ET dfc_traitment
+        // Invoice manager voit tout SAUF les pages admin, dfc_traitment ET adminMessaging
         filteredItems = filteredItems.filter(item => 
           !adminActions.includes(item.action) && 
           item.action !== 'dfc_traitment'
@@ -126,16 +136,20 @@ function NavbarPanel({ isOpen, onClose }) {
         break;
         
       case 'dfc_agent':
-        // DFC agent voit tout SAUF admin, joinDFC et newInvoice
+        // DFC agent voit tout SAUF admin, newInvoice, adminMessaging
+        // MAIS IL VOIT roleMigration (car il peut migrer vers invoice_manager)
         filteredItems = filteredItems.filter(item => 
           !adminActions.includes(item.action) && 
-          item.action !== 'joinDFC' && 
           item.action !== 'newInvoice'
         );
         break;
         
       default:
-        // Par défaut, montrer tout
+        // Par défaut, cacher roleMigration et adminMessaging pour les autres rôles
+        filteredItems = filteredItems.filter(item => 
+          item.action !== 'roleMigration' && 
+          !adminActions.includes(item.action)
+        );
         break;
     }
     
@@ -144,7 +158,7 @@ function NavbarPanel({ isOpen, onClose }) {
 
   // Séparer les items en catégories
   const { baseItems, adminItems, additionalItems } = useMemo(() => {
-    const adminActions = ['dashboard', 'users', 'adminStats'];
+    const adminActions = ['dashboard', 'users', 'adminStats', 'adminMessaging'];
     
     const baseItems = availableActions.filter(item => 
       !adminActions.includes(item.action) && item.action !== 'github'
@@ -203,8 +217,8 @@ function NavbarPanel({ isOpen, onClose }) {
       case 'search':
         navigate('/search');
         break;
-      case 'joinDFC':
-        navigate('/joinDFC');
+      case 'roleMigration':
+        navigate('/role-migration');
         break;
       case 'dfc_traitment':
         navigate('/dfc_traitment');
@@ -223,6 +237,10 @@ function NavbarPanel({ isOpen, onClose }) {
         break;
       case 'adminStats':
         navigate('/admin-stats');
+        break;
+      // NOUVEAU: Navigation vers la page de messagerie admin
+      case 'adminMessaging':
+        navigate('/admin-messaging');
         break;
       case 'settings':
         navigate('/settings');

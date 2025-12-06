@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { AuthenticatedRequest } from '../types/express/request';
 import database from '../config/database';
 import ApiResponder from '../utils/ApiResponder';
 import logger from '../utils/Logger';
@@ -139,9 +140,11 @@ export async function getUser(req: Request, res: Response): Promise<Response> {
   }
 }
 
-export async function updateUser(req: Request, res: Response): Promise<Response> {
+export async function updateUser(req: AuthenticatedRequest, res: Response): Promise<Response> {
   const requestId = (req.headers['x-request-id'] as string) || 'unknown';
   const { id } = req.params;
+  const admin = req.user;
+
   try {
     const allowedFields = ['firstName', 'lastName', 'role', 'phone', 'department', 'status', 'password'];
     const payload = req.body || {};
@@ -202,7 +205,7 @@ export async function updateUser(req: Request, res: Response): Promise<Response>
       try {
         await database.execute(
           'INSERT INTO user_role_migration (user_id, old_role, new_role, reason, approved_by) VALUES (?, ?, ?, ?, ?)',
-          [id, String(currentRole), String(payload.role), 'admin_initiated', null]
+          [id, String(currentRole), String(payload.role), 'admin_initiated', admin ? admin.sup : null]
         );
         logger.info(`[${requestId}] Migration de rôle enregistrée`, { id, from: currentRole, to: payload.role });
       } catch (e) {

@@ -82,8 +82,8 @@ input[type=number]::-webkit-out-spin-button {
   background-image: url('/image-coton-5.jpg');
 }
 
-.bg-joinDFC {
-  background-image: url('/image-coton-5.jpg');
+.bg-roleMigration {
+  background-image: url('/image-coton-7.jpg');
 }
 
 .bg-print {
@@ -143,4 +143,27 @@ input[type=number]::-webkit-out-spin-button {
 }
 .animate-slideDown {
   animation: slideDown 0.3s ease-out;
+}
+
+/* Styles pour useBackground dynamique */
+.bg-gradient-invoice-to-dfc {
+  background: linear-gradient(135deg, #f0f9ff 0%, #f5f3ff 50%, #fef2f2 100%);
+  background-attachment: fixed;
+}
+
+.bg-gradient-dfc-to-invoice {
+  background: linear-gradient(135deg, #f5f3ff 0%, #f0f9ff 50%, #ecfdf5 100%);
+  background-attachment: fixed;
+}
+
+/* Animation subtile pour le fond */
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.bg-gradient-invoice-to-dfc,
+.bg-gradient-dfc-to-invoice {
+  background-size: 200% 200%;
+  animation: gradientShift 15s ease infinite;
 }

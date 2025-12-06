@@ -7,7 +7,8 @@ import Invoice from "../pages/agent/manager/Invoice.jsx";
 import Search from "../pages/global/Search.jsx";
 import Stats from "../pages/admin/Stats.jsx";
 import Settings from "../pages/admin/Settings.jsx";
-import JoinDfc from "../pages/global/JoinDfc.jsx";
+import RoleMigration from "../pages/global/RoleMigration.jsx";
+import Messaging from "../pages/admin/Messaging.jsx";
 import DfcFormular from "../pages/agent/dfc/DfcFormular.jsx";
 import Verify from "../pages/global/Verify.jsx";
 import ResetPassword from "../pages/auth/ResetPassword.jsx";
@@ -77,11 +78,11 @@ function AppRoutes() {
                     <Settings />
                 </PrivateRoute>
             } />
-            <Route path="/joinDFC" element={
+            <Route path="/role-migration" element={
                 <PrivateRoute
-                    requiredRoles={['admin', 'invoice_manager']}
-                    customMessage="Accès réservé aux gestionnaires de facturation et administrateurs système"
-                ><JoinDfc /></PrivateRoute>
+                    requiredRoles={['dfc_agent', 'invoice_manager']}
+                    customMessage="Accès réservé aux gestionnaires et agents DFC"
+                ><RoleMigration /></PrivateRoute>
             } />
 
 
@@ -112,6 +113,16 @@ function AppRoutes() {
                     customMessage="Statistiques avancées réservées aux administrateurs"
                 >
                     <Stats />
+                </PrivateRoute>
+            } />
+
+            {/* Messagerie admin - Accès admin seulement */}
+            <Route path="/admin-messaging" element={
+                <PrivateRoute 
+                    requiredRoles={['admin']}
+                    customMessage="Messagerie réservée aux administrateurs"
+                >
+                    <Messaging />
                 </PrivateRoute>
             } />
 
