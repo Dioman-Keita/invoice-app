@@ -369,9 +369,21 @@ export class NotificationFactory {
 		return { subject, html, text };
 	}
 
+	// Helper pour formater les rôles en libellés lisibles
+	private static formatRole(role?: string): string {
+		if (!role) return 'Non défini';
+		switch (role) {
+			case 'invoice_manager': return 'Chargé de facture';
+			case 'dfc_agent': return 'Agent DFC';
+			case 'admin': return 'Administrateur';
+			default: return role;
+		}
+	}
+
 	private static migrationSubmittedTemplate({ name, role, department, motivation }: NotificationPayload & { role?: string, department?: string, motivation?: string }): NotificationTemplate {
 		const subject = 'Confirmation de réception - Demande de migration de rôle';
 		const safeName = name ?? 'Cher employé';
+		const displayRole = this.formatRole(role);
 
 		const html = `
 			<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional //EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -402,7 +414,7 @@ export class NotificationFactory {
 								</tr>
 								<tr>
 									<td align="center" style="padding:0 40px 20px;font-size:16px;line-height:24px;color:#5f6368;text-align:center;" class="text-dark">
-										Bonjour ${safeName},<br>Votre demande de migration vers le rôle d'<b>${role}</b> a bien été enregistrée.
+										Bonjour ${safeName},<br>Votre demande de migration vers le rôle d'<b>${displayRole}</b> a bien été enregistrée.
 									</td>
 								</tr>
 								<tr>
@@ -428,13 +440,14 @@ export class NotificationFactory {
 			</html>
 		`;
 
-		const text = `Bonjour ${safeName},\n\nVotre demande de migration vers le rôle de ${role} (Département: ${department}) a bien été enregistrée.\n\nVotre motivation:\n${motivation}\n\nSi vous n'êtes pas l'auteur de cette demande, contactez immédiatement l'administrateur.`;
+		const text = `Bonjour ${safeName},\n\nVotre demande de migration vers le rôle de ${displayRole} (Département: ${department}) a bien été enregistrée.\n\nVotre motivation:\n${motivation}\n\nSi vous n'êtes pas l'auteur de cette demande, contactez immédiatement l'administrateur.`;
 		return { subject, html, text };
 	}
 
 	private static migrationApprovedTemplate({ name, role }: NotificationPayload & { role?: string }): NotificationTemplate {
 		const subject = 'Félicitations - Demande Approuvée';
 		const safeName = name ?? 'Cher employé';
+		const displayRole = this.formatRole(role);
 
 		const html = `
 			<!DOCTYPE html>
@@ -449,7 +462,7 @@ export class NotificationFactory {
 								<tr><td align="center" style="padding:40px 0 20px;">${this.logoSVG()}</td></tr>
 								<tr><td align="center" style="padding:0 40px 10px;font-size:24px;font-weight:500;color:#1e8e3e;">Demande Approuvée !</td></tr>
 								<tr><td align="center" style="padding:0 40px 20px;font-size:16px;color:#5f6368;">
-									Bonjour ${safeName},<br>L'administrateur a validé votre migration vers le rôle d'<b>${role}</b>.
+									Bonjour ${safeName},<br>L'administrateur a validé votre migration vers le rôle d'<b>${displayRole}</b>.
 								</td></tr>
 								<tr><td align="center" style="padding:0 40px 30px;font-size:14px;color:#5f6368;background-color:#e6f4ea;margin:0 40px;border-radius:4px;">
 									<p style="margin:15px;">Votre mot de passe reste inchangé. Veuillez vous reconnecter pour accéder à votre nouvelle interface.</p>
@@ -462,7 +475,7 @@ export class NotificationFactory {
 			</body>
 			</html>
 		`;
-		return { subject, html, text: `Félicitations ${safeName}, votre demande pour devenir ${role} a été approuvée.` };
+		return { subject, html, text: `Félicitations ${safeName}, votre demande pour devenir ${displayRole} a été approuvée.` };
 	}
 
 	private static migrationRejectedTemplate({ name, review_note }: NotificationPayload & { review_note?: string }): NotificationTemplate {

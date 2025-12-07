@@ -151,7 +151,7 @@ export async function listRoleMigrationRequests(req: AuthenticatedRequest, res: 
 
 export async function roleMigrationStats(_req: AuthenticatedRequest, res: Response) {
   try {
-    const [agg] = await database.execute<Array<{ total: number; pending: number; approved: number; rejected: number }>>(`
+    const rows = await database.execute<Array<{ total: number; pending: number; approved: number; rejected: number }>>(`
       SELECT 
         COUNT(*) AS total,
         SUM(status = 'pending') AS pending,
@@ -160,7 +160,7 @@ export async function roleMigrationStats(_req: AuthenticatedRequest, res: Respon
       FROM role_migration_request
     `);
 
-    const stats = Array.isArray(agg) && agg.length ? agg[0] : { total: 0, pending: 0, approved: 0, rejected: 0 } as any;
+    const stats = Array.isArray(rows) && rows.length ? rows[0] : { total: 0, pending: 0, approved: 0, rejected: 0 } as any;
     return ApiResponder.success(res, { stats });
   } catch (error) {
     return ApiResponder.error(res, error);

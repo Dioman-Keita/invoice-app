@@ -1,4 +1,4 @@
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
 import { NotificationProvider } from './context/NotificationContext.jsx';
 import NotificationManager from './components/notification/NotificationManager.jsx';
@@ -6,12 +6,12 @@ import NotificationManager from './components/notification/NotificationManager.j
 function App() {
   return (
 
-    <BrowserRouter>
+    <HashRouter>
       <NotificationProvider>
         <AppRoutes />
         <NotificationManager />
       </NotificationProvider>
-    </BrowserRouter> 
+    </HashRouter>
   )
 }
 

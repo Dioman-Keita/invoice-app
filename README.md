@@ -140,11 +140,22 @@ MySQL 8.2 via Docker
 git clone https://github.com/Dioman-Keita/invoice-app.git
 cd invoice-app
 
+# Build for Production (.exe)
+npm run dist
+
 # Install dependencies
 npm install
 cd server && npm install && cd ..
 cd client && npm install && cd ..
 ```
+
+### 🔗 Deep Linking
+The application uses the custom protocol `invoice-app://` for:
+- Email verification (`invoice-app://verify?token=...`)
+- Password reset (`invoice-app://reset-password?token=...`)
+
+This allows emails to open directly inside the desktop application.
+
 
 ###  ⚠️ Warning: Docker Stack Management
 
@@ -335,4 +346,4 @@ MIT License — see [LICENSE](LICENSE)
 
 This solution is provided with a focus on robustness and high-volume performance for enterprise invoice management.
 
-*Last updated: November 2025*
+*Last updated: December 2025*

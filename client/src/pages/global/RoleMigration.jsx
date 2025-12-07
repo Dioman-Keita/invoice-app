@@ -400,69 +400,75 @@ const NoAccessScreen = () => (
 const SuccessScreen = ({ config, department, resetForm, user }) => (
   <div className="min-h-screen flex items-center justify-center p-4 bg-roleMigration bg-cover bg-center">
     <div className="max-w-md w-full">
-      <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <CheckCircleIcon className="w-8 h-8 text-green-600" />
-        </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Demande transmise à l'administrateur</h1>
-        <p className="text-gray-600">Votre demande a été soumise avec succès.</p>
-      </div>
+      {/* Div wrapper principale avec background uniforme */}
+      <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
 
-      <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6 shadow-sm">
-        <div className="space-y-4">
-          <div>
-            <div className="text-sm text-gray-500">Migration demandée</div>
-            <div className="font-medium text-gray-800 flex items-center gap-3">
-              <span>{config.fromRole}</span>
-              <ArrowPathIcon className="w-4 h-4 text-gray-400" />
-              <span className="text-blue-600">{config.toRole}</span>
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircleIcon className="w-8 h-8 text-green-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Demande transmise à l'administrateur</h1>
+          <p className="text-gray-600">Votre demande a été soumise avec succès.</p>
+        </div>
+
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-6">
+          <div className="space-y-4">
+            <div>
+              <div className="text-sm text-gray-500">Migration demandée</div>
+              <div className="font-medium text-gray-800 flex items-center gap-3">
+                <span>{config.fromRole}</span>
+                <ArrowPathIcon className="w-4 h-4 text-gray-400" />
+                <span className="text-blue-600">{config.toRole}</span>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm text-gray-500">Département</div>
+              <div className="font-medium text-gray-800">{department}</div>
+            </div>
+
+            <div>
+              <div className="text-sm text-gray-500">Demandeur</div>
+              <div className="font-medium text-gray-800">{user?.email}</div>
+            </div>
+
+            <div>
+              <div className="text-sm text-gray-500">Statut</div>
+              <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                En attente de validation par l'administrateur
+              </div>
             </div>
           </div>
+        </div>
 
-          <div>
-            <div className="text-sm text-gray-500">Département</div>
-            <div className="font-medium text-gray-800">{department}</div>
-          </div>
-
-          <div>
-            <div className="text-sm text-gray-500">Demandeur</div>
-            <div className="font-medium text-gray-800">{user?.email}</div>
-          </div>
-
-          <div>
-            <div className="text-sm text-gray-500">Statut</div>
-            <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-              En attente de validation par l'administrateur
-            </div>
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+          <div className="text-center">
+            <p className="text-sm text-green-700">
+              Une confirmation a été envoyée à l'<strong>administrateur</strong> et à votre adresse email
+            </p>
+            <p className="text-xs text-green-600 mt-2">
+              Vous recevrez une réponse sous 24 à 48 heures.
+            </p>
           </div>
         </div>
-      </div>
 
-      <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
-        <div className="text-center">
-          <p className="text-sm text-green-700">
-            Une confirmation a été envoyée à l'<strong>administrateur</strong> et à votre adresse email
-          </p>
-          <p className="text-xs text-green-600 mt-2">
-            Vous recevrez une réponse sous 24 à 48 heures.
-          </p>
+        <div className="space-y-3">
+          <button
+            onClick={resetForm}
+            className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Nouvelle demande
+          </button>
+          <button
+            onClick={() => window.location.href = '/'}
+            className="w-full py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Retour à l'accueil
+          </button>
         </div>
-      </div>
 
-      <div className="space-y-3">
-        <button
-          onClick={resetForm}
-          className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          Nouvelle demande
-        </button>
-        <button
-          onClick={() => window.location.href = '/'}
-          className="w-full py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-        >
-          Retour à l'accueil
-        </button>
       </div>
+      {/* Fin du wrapper principal */}
     </div>
   </div>
 );

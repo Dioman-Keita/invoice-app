@@ -16,69 +16,69 @@ import { BcryptHasher } from "../utils/PasswordHasher";
 import { AuthenticatedRequest } from "../types/express/request";
 
 export async function createUser(
-    req: Request<unknown, unknown, RegisterDto>, 
+    req: Request<unknown, unknown, RegisterDto>,
     res: Response
-  ): Promise<Response> {
+): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
     const data = req.body as UserType;
-    
-    logger.info(`[${requestId}] Tentative de création d'utilisateur`, { 
-      email: data.email, 
-      role: data.role 
+
+    logger.info(`[${requestId}] Tentative de création d'utilisateur`, {
+        email: data.email,
+        role: data.role
     });
     const validationResult = await UserDataValidator.validateUserCreation(data);
-  
+
     if (!validationResult.isValid) {
-      logger.warn(`[${requestId}] Validation des données utilisateur échouée`, {
-        errors: validationResult.errors,
-        email: data.email
-      });
-      
-      const firstError = validationResult.errors[0];
-      return ApiResponder.badRequest(res, firstError.message, {
-        field: firstError.field,
-        allErrors: validationResult.errors
-      });
+        logger.warn(`[${requestId}] Validation des données utilisateur échouée`, {
+            errors: validationResult.errors,
+            email: data.email
+        });
+
+        const firstError = validationResult.errors[0];
+        return ApiResponder.badRequest(res, firstError.message, {
+            field: firstError.field,
+            allErrors: validationResult.errors
+        });
     }
-  
+
     try {
-      const result = await Users.create(data);
-      
-      if (!result.success) {
-        logger.warn(`[${requestId}] Échec de création d'utilisateur`, {
-          email: data.email,
-          employeeId: data.employeeId,
-          role: data.role,
-          error: result.message
+        const result = await Users.create(data);
+
+        if (!result.success) {
+            logger.warn(`[${requestId}] Échec de création d'utilisateur`, {
+                email: data.email,
+                employeeId: data.employeeId,
+                role: data.role,
+                error: result.message
+            });
+
+            return ApiResponder.badRequest(res, result.message, {
+                success: false,
+                message: result.message,
+                field: result.field
+            });
+        }
+
+        logger.info(`[${requestId}] Utilisateur créé avec succès`, {
+            email: data.email,
+            employeeId: data.employeeId,
+            role: data.role,
+            userId: result.userId
         });
-  
-        return ApiResponder.badRequest(res, result.message, {
-          success: false,
-          message: result.message,
-          field: result.field
-        });
-      }
-  
-      logger.info(`[${requestId}] Utilisateur créé avec succès`, { 
-        email: data.email, 
-        employeeId: data.employeeId,
-        role: data.role,
-        userId: result.userId
-      });
-  
-      return ApiResponder.created(res, { 
-        userId: result.userId 
-      }, 'Un email de verification vous a été envoyé pour completer votre inscription 😊');
-      
+
+        return ApiResponder.created(res, {
+            userId: result.userId
+        }, 'Un email de verification vous a été envoyé pour completer votre inscription 😊');
+
     } catch (error) {
-      logger.error(`[${requestId}] Échec de création d'utilisateur`, { 
-        email: data.email, 
-        error: error instanceof Error ? error.message : 'Erreur inconnue',
-        stack: error instanceof Error ? error.stack : undefined
-      });
-      return ApiResponder.badRequest(res, "Service temporairement indisponible veuillez reéssayer plus tard");
+        logger.error(`[${requestId}] Échec de création d'utilisateur`, {
+            email: data.email,
+            error: error instanceof Error ? error.message : 'Erreur inconnue',
+            stack: error instanceof Error ? error.stack : undefined
+        });
+        return ApiResponder.badRequest(res, "Service temporairement indisponible veuillez reéssayer plus tard");
     }
-  }
+}
 
 // Renvoi d'email de vérification d'inscription
 export async function resendVerificationEmail(req: Request, res: Response): Promise<Response> {
@@ -109,8 +109,8 @@ export async function resendVerificationEmail(req: Request, res: Response): Prom
             activity: 'SIGN_UP'
         });
 
-        const verifyLinkBase = process.env.APP_URL || "http://localhost:5173";
-        const verifyLink = `${verifyLinkBase}/verify?token=${encodeURIComponent(token)}`;
+
+        const verifyLink = `invoice-app://verify?token=${encodeURIComponent(token)}`;
 
         const template = NotificationFactory.create('register', {
             name: `${(user as any).firstname ?? ''} ${(user as any).lastname ?? ''}`.trim(),
@@ -174,113 +174,113 @@ export async function resendVerificationEmail(req: Request, res: Response): Prom
 export async function login(req: Request<unknown, unknown, LoginDto>, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
     const { email, rememberMe } = req.body;
-    
-    try {
-      logger.info(`[${requestId}] Tentative de connexion`, { email });
-  
-      // Validation des données de connexion
-      const validationResult = await UserDataValidator.validateLogin(req.body);
-  
-      if (!validationResult.isValid) {
-        logger.warn(`[${requestId}] Validation des données de connexion échouée`, {
-          errors: validationResult.errors,
-          email
-        });
-        
-        const firstError = validationResult.errors[0];
-        return ApiResponder.badRequest(res, firstError.message, {
-          field: firstError.field
-        });
-      }
-  
-      const authUser = await Users.verifyCredentials({ 
-        email, 
-        password: req.body.password, 
-        role: req.body.role 
-      });
-      
-      // Vérifier si c'est une erreur de connexion à la base de données
-      if (authUser && typeof authUser === 'object' && 'error' in authUser && authUser.error === 'DATABASE_CONNECTION_ERROR') {
-        logger.error(`[${requestId}] Erreur de connexion à la base de données`, { email });
-        return ApiResponder.error(res, null, "Service temporairement indisponible. Veuillez réessayer plus tard.");
-      } else if (authUser && typeof authUser === 'object'  && 'error' in authUser && authUser.error !== 'DATABASE_CONNECTION_ERROR') {
-        return ApiResponder.error(res, null, authUser.error);
-      }
 
-      if (
-        !authUser ||
-        typeof authUser !== 'object' ||
-        !('id' in authUser) ||
-        typeof authUser.id !== 'string'
-      ) {
-        logger.warn(`[${requestId}] Échec de connexion - identifiants invalides`, { email });
-        return ApiResponder.unauthorized(res, "Identifiants invalides");
-      }
-  
-      // Génération des tokens
-      const accessToken = generateUserToken({
-        sup: authUser.id,
-        email: authUser.email,
-        role: authUser.role,
-        activity: 'LOGIN'
-      }, { expiresIn: rememberMe ? '2h' : '1h' });
-  
-      const refreshToken = generateRefreshToken({ id: authUser.id });
-      
-      // Configuration des cookies
-      const cookieConfig = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' as 'none' | 'lax' | 'strict',
-        domain: process.env.COOKIE_DOMAIN,
-        path: '/',
-      }
-  
-      // Définition des cookies
-      res.cookie('auth_token', accessToken, {
-        ...cookieConfig,
-        maxAge: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000,
-      });
-  
-      res.cookie('refresh_token', refreshToken, {
-        ...cookieConfig,
-        maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000,
-      });
-  
-      res.cookie('rememberMe', Boolean(rememberMe) ? 'true' : 'false', {
-        ...cookieConfig,
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-      });
-      
-      logger.info(`[${requestId}] Connexion réussie`, { 
-        userId: authUser.id, 
-        email: authUser.email, 
-        role: authUser.role
-      });
-  
-      // Tracking de l'activité
-      const isTrack = await activityTracker.track('LOGIN', authUser.id);
-      
-      if (!isTrack) {
-        logger.warn(`[${requestId}] Erreur lors du suivi de l'activité utilisateur`, {
-          userId: authUser.id,
-          role: authUser.role,
-          email: authUser.email
+    try {
+        logger.info(`[${requestId}] Tentative de connexion`, { email });
+
+        // Validation des données de connexion
+        const validationResult = await UserDataValidator.validateLogin(req.body);
+
+        if (!validationResult.isValid) {
+            logger.warn(`[${requestId}] Validation des données de connexion échouée`, {
+                errors: validationResult.errors,
+                email
+            });
+
+            const firstError = validationResult.errors[0];
+            return ApiResponder.badRequest(res, firstError.message, {
+                field: firstError.field
+            });
+        }
+
+        const authUser = await Users.verifyCredentials({
+            email,
+            password: req.body.password,
+            role: req.body.role
         });
-        // On ne bloque pas la connexion pour une erreur de tracking
-      }
-  
-      return ApiResponder.success(res, { 
-        userId: authUser.id, 
-        role: authUser.role 
-      }, "Connecté avec succès 🎉");
-      
+
+        // Vérifier si c'est une erreur de connexion à la base de données
+        if (authUser && typeof authUser === 'object' && 'error' in authUser && authUser.error === 'DATABASE_CONNECTION_ERROR') {
+            logger.error(`[${requestId}] Erreur de connexion à la base de données`, { email });
+            return ApiResponder.error(res, null, "Service temporairement indisponible. Veuillez réessayer plus tard.");
+        } else if (authUser && typeof authUser === 'object' && 'error' in authUser && authUser.error !== 'DATABASE_CONNECTION_ERROR') {
+            return ApiResponder.error(res, null, authUser.error);
+        }
+
+        if (
+            !authUser ||
+            typeof authUser !== 'object' ||
+            !('id' in authUser) ||
+            typeof authUser.id !== 'string'
+        ) {
+            logger.warn(`[${requestId}] Échec de connexion - identifiants invalides`, { email });
+            return ApiResponder.unauthorized(res, "Identifiants invalides");
+        }
+
+        // Génération des tokens
+        const accessToken = generateUserToken({
+            sup: authUser.id,
+            email: authUser.email,
+            role: authUser.role,
+            activity: 'LOGIN'
+        }, { expiresIn: rememberMe ? '2h' : '1h' });
+
+        const refreshToken = generateRefreshToken({ id: authUser.id });
+
+        // Configuration des cookies
+        const cookieConfig = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' as 'none' | 'lax' | 'strict',
+            domain: process.env.COOKIE_DOMAIN,
+            path: '/',
+        }
+
+        // Définition des cookies
+        res.cookie('auth_token', accessToken, {
+            ...cookieConfig,
+            maxAge: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000,
+        });
+
+        res.cookie('refresh_token', refreshToken, {
+            ...cookieConfig,
+            maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000,
+        });
+
+        res.cookie('rememberMe', Boolean(rememberMe) ? 'true' : 'false', {
+            ...cookieConfig,
+            maxAge: 30 * 24 * 60 * 60 * 1000,
+        });
+
+        logger.info(`[${requestId}] Connexion réussie`, {
+            userId: authUser.id,
+            email: authUser.email,
+            role: authUser.role
+        });
+
+        // Tracking de l'activité
+        const isTrack = await activityTracker.track('LOGIN', authUser.id);
+
+        if (!isTrack) {
+            logger.warn(`[${requestId}] Erreur lors du suivi de l'activité utilisateur`, {
+                userId: authUser.id,
+                role: authUser.role,
+                email: authUser.email
+            });
+            // On ne bloque pas la connexion pour une erreur de tracking
+        }
+
+        return ApiResponder.success(res, {
+            userId: authUser.id,
+            role: authUser.role
+        }, "Connecté avec succès 🎉");
+
     } catch (error) {
-      logger.error(`[${requestId}] Erreur lors de la connexion`, { 
-        email, 
-        error: error instanceof Error ? error.message : 'Erreur inconnue' 
-      });
-      return ApiResponder.badRequest(res, "Service temporairement indisponible veuillez reéssayer plus tard");
+        logger.error(`[${requestId}] Erreur lors de la connexion`, {
+            email,
+            error: error instanceof Error ? error.message : 'Erreur inconnue'
+        });
+        return ApiResponder.badRequest(res, "Service temporairement indisponible veuillez reéssayer plus tard");
     }
 }
 
@@ -293,8 +293,8 @@ export async function getCurrentToken(req: Request, res: Response): Promise<Resp
         const payload = verifyUserToken(token);
         return ApiResponder.success(res, { token, payload }, 'Jeton actuel');
     } catch (error) {
-        logger.error('Erreur lors de la vérification du jeton', { 
-            error: error instanceof Error ? error.message : 'Erreur inconnue' 
+        logger.error('Erreur lors de la vérification du jeton', {
+            error: error instanceof Error ? error.message : 'Erreur inconnue'
         });
         return ApiResponder.unauthorized(res, 'Veuillez vous connecter pour accéder à cette page.', error);
     }
@@ -314,24 +314,24 @@ export async function logout(req: AuthenticatedRequest, res: Response): Promise<
     const user = req.user || undefined;
     const requestId = req.headers['x-request-id'] as string || 'unknown';
     try {
-        
+
         const cookieOptions = {
             secure: process.env.NODE_ENV === 'production',
             sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax' | 'strict', // or as const
             domain: process.env.COOKIE_DOMAIN,
             path: '/',
         }
-        
+
         res.clearCookie('auth_token', { ...cookieOptions, httpOnly: true });
-        res.clearCookie('refresh_token', { ...cookieOptions, httpOnly: true});
+        res.clearCookie('refresh_token', { ...cookieOptions, httpOnly: true });
         res.clearCookie('rememberMe', { ...cookieOptions, httpOnly: true });
-        
+
         if (user && user.sup) {
             try {
                 await activityTracker.track('LOGOUT', user.sup);
                 logger.debug(`[${requestId}] Utilisateur déconnecté`, {
-                    id: user.sup, 
-                    email: user.email, 
+                    id: user.sup,
+                    email: user.email,
                     role: user.role
                 });
             } catch (cleanupError) {
@@ -368,11 +368,11 @@ export async function logout(req: AuthenticatedRequest, res: Response): Promise<
 // Endpoint pour récupérer le profil de l'utilisateur connecté
 export async function getUserProfil(req: AuthenticatedRequest, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
-    
+
     try {
         // req.user est peuplé par le middleware authGuard
         const user = req.user;
-        
+
         if (!user) {
             logger.warn(`[${requestId}] Tentative d'accès au profile sans utilisateur authentifié`);
             return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
@@ -380,21 +380,21 @@ export async function getUserProfil(req: AuthenticatedRequest, res: Response): P
 
         // Récupérer les informations complètes de l'utilisateur depuis la base
         const userDetails = await Users.findUser(user.sup, 'id') as User[];
-        
+
         if (!userDetails || userDetails.length === 0) {
             logger.warn(`[${requestId}] Utilisateur introuvable en base`, { userId: user.sup });
             return ApiResponder.notFound(res, 'Utilisateur introuvable');
         }
 
-        logger.info(`[${requestId}] Profil utilisateur récupéré`, { 
-            userId: user.sup, 
-            email: user.email 
+        logger.info(`[${requestId}] Profil utilisateur récupéré`, {
+            userId: user.sup,
+            email: user.email
         });
 
         return ApiResponder.success(res, { user: userDetails[0] }, 'Profil utilisateur récupéré');
     } catch (error) {
-        logger.error(`[${requestId}] Erreur lors de la récupération du profil`, { 
-            error: error instanceof Error ? error.message : 'Erreur inconnue' 
+        logger.error(`[${requestId}] Erreur lors de la récupération du profil`, {
+            error: error instanceof Error ? error.message : 'Erreur inconnue'
         });
         return ApiResponder.error(res, error, 'Veuillez vous connecter pour accéder à cette page.');
     }
@@ -403,17 +403,17 @@ export async function getUserProfil(req: AuthenticatedRequest, res: Response): P
 export async function forgotPassword(req: Request<unknown, unknown, RequestPasswordResetDto>, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
     const { email } = req.body;
-    
+
     try {
         logger.info(`[${requestId}] Demande de réinitialisation de mot de passe`, { email });
         console.log('🔐 [DEBUG] forgotPassword - Email reçu:', email);
-        
+
         const ok = isValidEmail(email);
         if (!ok) {
             logger.warn(`[${requestId}] Email invalide pour réinitialisation`, { email });
             return ApiResponder.badRequest(res, "Email invalide");
         }
-    
+
         const user = (await Users.findUser(email, 'email') as User[]);
         console.log('🔐 [DEBUG] forgotPassword - Résultat findUser:', {
             userTrouvé: !!user,
@@ -432,7 +432,7 @@ export async function forgotPassword(req: Request<unknown, unknown, RequestPassw
             email: currentUser.email,
             firstName: currentUser.firstName
         });
-    
+
         const baseLink = process.env.APP_URL || 'http://localhost:5173';
         const token = generateUserToken({
             sup: currentUser.id,
@@ -440,13 +440,13 @@ export async function forgotPassword(req: Request<unknown, unknown, RequestPassw
             email: currentUser.email,
             activity: 'SEND_PASSWORD_RESET_EMAIL'
         });
-        
+
         console.log('🔐 [DEBUG] forgotPassword - Token généré:', {
             tokenDébut: token.substring(0, 20) + '...',
             tokenLongueur: token.length,
             employeeId: currentUser.id
         });
-        
+
         try {
             const insertResult = await database.execute(
                 "INSERT INTO auth_token(token, employee_id) VALUES (?,?)",
@@ -478,34 +478,35 @@ export async function forgotPassword(req: Request<unknown, unknown, RequestPassw
             performed_by: currentUser.id,
             description: `Token de réinitialisation généré pour ${email}`
         });
-        
-        const resetPasswordLink = `${baseLink}/reset-password?token=${token}`;
+
+
+        const resetPasswordLink = `invoice-app://reset-password?token=${token}`;
         console.log('🔐 [DEBUG] forgotPassword - Lien généré:', resetPasswordLink);
-    
+
         const template = NotificationFactory.create('reset', {
             name: currentUser.firstName,
             email: currentUser.email,
             link: resetPasswordLink,
         });
-    
+
         const send = new GmailEmailSender();
         await send.send({
             to: currentUser.email as string,
             name: `${currentUser.firstName} ${currentUser.lastName}`
         }, template);
 
-        logger.info(`[${requestId}] Email de réinitialisation envoyé`, { 
-            userId: currentUser.id, 
-            email: currentUser.email 
+        logger.info(`[${requestId}] Email de réinitialisation envoyé`, {
+            userId: currentUser.id,
+            email: currentUser.email
         });
-        
+
         console.log('🔐 [DEBUG] forgotPassword - Processus terminé avec succès');
         return ApiResponder.success(res, null, 'Si un compte existe, un lien a été envoyé.');
     } catch (error) {
         console.error('🔐 [DEBUG] forgotPassword - ERREUR FINALE:', error);
-        logger.error(`[${requestId}] Erreur lors de la réinitialisation`, { 
-            email, 
-            error: error instanceof Error ? error.message : 'Erreur inconnue' 
+        logger.error(`[${requestId}] Erreur lors de la réinitialisation`, {
+            email,
+            error: error instanceof Error ? error.message : 'Erreur inconnue'
         });
         return ApiResponder.error(res, error);
     }
@@ -517,12 +518,12 @@ export async function resetUserPassword(req: Request<unknown, unknown, ResetPass
     const { password, token, confirmPassword } = req.body;
     const currentToken = token;
 
-    logger.info(`[${requestId}] Réinitialisation du mot de passe`, { 
+    logger.info(`[${requestId}] Réinitialisation du mot de passe`, {
         hasToken: !!currentToken,
         hasPassword: !!password,
         hasConfirmPassword: !!confirmPassword
     });
-    console.log('🔐 resetUserPassword - Données reçues:', { 
+    console.log('🔐 resetUserPassword - Données reçues:', {
         token: currentToken ? `${currentToken.substring(0, 10)}...` : 'none',
         passwordLength: password?.length || 0,
         confirmPasswordLength: confirmPassword?.length || 0
@@ -535,9 +536,9 @@ export async function resetUserPassword(req: Request<unknown, unknown, ResetPass
     }
 
     if (!password || !confirmPassword) {
-        logger.warn(`[${requestId}] Données manquantes`, { 
-            hasPassword: !!password, 
-            hasConfirmPassword: !!confirmPassword 
+        logger.warn(`[${requestId}] Données manquantes`, {
+            hasPassword: !!password,
+            hasConfirmPassword: !!confirmPassword
         });
         return ApiResponder.badRequest(res, 'Les champs mot de passe et confirmation sont requis');
     }
@@ -558,30 +559,30 @@ export async function resetUserPassword(req: Request<unknown, unknown, ResetPass
 
         // Vérification du token
         const payload = verifyUserToken(currentToken);
-        
-        logger.info(`[${requestId}] Token décodé`, { 
+
+        logger.info(`[${requestId}] Token décodé`, {
             userId: payload?.sup,
-            activity: payload?.activity 
+            activity: payload?.activity
         });
         console.log('🔐 resetUserPassword - Payload décodé:', payload);
 
         if (!payload || payload.activity !== "SEND_PASSWORD_RESET_EMAIL") {
-            logger.warn(`[${requestId}] Token invalide ou activité incorrecte`, { 
-                activity: payload?.activity 
+            logger.warn(`[${requestId}] Token invalide ou activité incorrecte`, {
+                activity: payload?.activity
             });
             console.log('❌ Token invalide - activité:', payload?.activity);
             return ApiResponder.badRequest(res, "Token invalide ou expiré");
         }
 
         const userId = payload.sup;
-        
+
         // Vérification de l'existence de l'utilisateur
         const users = await Users.findUser(userId, 'id');
-        
-        logger.info(`[${requestId}] Résultat findUser`, { 
-            userId, 
+
+        logger.info(`[${requestId}] Résultat findUser`, {
+            userId,
             usersCount: users.length,
-            userFound: users.length > 0 
+            userFound: users.length > 0
         });
         console.log('🔐 resetUserPassword - Résultat findUser:', {
             nombreUtilisateurs: users.length,
@@ -603,8 +604,8 @@ export async function resetUserPassword(req: Request<unknown, unknown, ResetPass
             return ApiResponder.unauthorized(res, 'Données utilisateur invalides');
         }
 
-        logger.info(`[${requestId}] Utilisateur trouvé`, { 
-            userId: user.id, 
+        logger.info(`[${requestId}] Utilisateur trouvé`, {
+            userId: user.id,
             email: user.email
         });
         console.log('🔐 Utilisateur trouvé:', user);
@@ -615,7 +616,7 @@ export async function resetUserPassword(req: Request<unknown, unknown, ResetPass
             [currentToken]
         );
 
-        logger.info(`[${requestId}] Vérification du token en base`, { 
+        logger.info(`[${requestId}] Vérification du token en base`, {
             tokenRecordsCount: tokenRecords.length,
             tokenValide: tokenRecords.length > 0
         });
@@ -628,7 +629,7 @@ export async function resetUserPassword(req: Request<unknown, unknown, ResetPass
 
         // Hash du nouveau mot de passe
         const hash = await BcryptHasher.hash(password);
-        
+
         logger.info(`[${requestId}] Mot de passe hashé avec succès`, { userId });
 
         // Mise à jour du mot de passe
@@ -662,7 +663,7 @@ export async function resetUserPassword(req: Request<unknown, unknown, ResetPass
         // Track l'activité
         const trackResult = await activityTracker.track('RESET_PASSWORD', userId);
 
-        logger.info(`[${requestId}] Réinitialisation du mot de passe réussie`, { 
+        logger.info(`[${requestId}] Réinitialisation du mot de passe réussie`, {
             userId,
             email: user.email,
             activityTracked: trackResult
@@ -698,11 +699,11 @@ export async function resetUserPassword(req: Request<unknown, unknown, ResetPass
             stack: error instanceof Error ? error.stack : undefined
         });
         console.error('❌ resetUserPassword - Erreur:', error);
-        
+
         if (error instanceof JsonWebTokenError) {
             return ApiResponder.unauthorized(res, 'Token invalide ou expiré');
         }
-        
+
         return ApiResponder.error(res, error);
     }
 }
@@ -726,17 +727,17 @@ export async function verifyRegistrationToken(req: Request<unknown, unknown, Ver
             return ApiResponder.badRequest(res, "Token expiré ou invalide");
         }
         const userId = payload.sup;
-        
+
         logger.info(`[${requestId}] Token décodé`, { userId, email: payload.email });
         console.log('🔐 verifyRegistrationToken - Payload décodé:', payload);
         console.log('🔐 verifyRegistrationToken - UserID extrait:', userId);
 
         const users = await Users.findUser(userId, 'id');
-        
-        logger.info(`[${requestId}] Résultat findUser`, { 
-            userId, 
+
+        logger.info(`[${requestId}] Résultat findUser`, {
+            userId,
             usersCount: users.length,
-            userFound: users.length > 0 
+            userFound: users.length > 0
         });
 
         console.log('🔐 verifyRegistrationToken - Résultat findUser:', {
@@ -760,11 +761,11 @@ export async function verifyRegistrationToken(req: Request<unknown, unknown, Ver
             return ApiResponder.unauthorized(res, 'Données utilisateur invalides');
         }
 
-        logger.info(`[${requestId}] Utilisateur trouvé`, { 
-            userId: user.id, 
+        logger.info(`[${requestId}] Utilisateur trouvé`, {
+            userId: user.id,
             email: user.email,
-            role: user.role, 
-            isVerified: user.isVerified 
+            role: user.role,
+            isVerified: user.isVerified
         });
         console.log('🔐 Utilisateur trouvé:', user);
 
@@ -836,18 +837,18 @@ export async function verifyRegistrationToken(req: Request<unknown, unknown, Ver
             path: '/'
         })
 
-        logger.info(`[${requestId}] Vérification réussie et utilisateur connecté`, { 
+        logger.info(`[${requestId}] Vérification réussie et utilisateur connecté`, {
             userId,
             sessionType: 'standard',
             silentRefresh: true,
-            rememberMe: false, 
+            rememberMe: false,
         });
         const trackResult = await activityTracker.track('SIGN_UP', user.id);
 
         if (trackResult) {
 
             console.log('✅ Vérification réussie et utilisateur connecté');
-            
+
             return ApiResponder.success(res, {
                 user: {
                     id: user.id,
@@ -893,10 +894,10 @@ export async function silentRefresh(req: AuthenticatedRequest, res: Response): P
         const userExists = await Users.findUser(user.sup, 'id');
 
         if (!userExists || userExists.length === 0 || !userExists[0].isActive) {
-                logger.warn(`[${requestId}] Silent refresh pour utilisateur inexistant/inactif`, {
-                    userId: user.sup
-                });
-                return ApiResponder.unauthorized(res, 'Session expirée');
+            logger.warn(`[${requestId}] Silent refresh pour utilisateur inexistant/inactif`, {
+                userId: user.sup
+            });
+            return ApiResponder.unauthorized(res, 'Session expirée');
         }
 
 
@@ -904,7 +905,7 @@ export async function silentRefresh(req: AuthenticatedRequest, res: Response): P
         const now = Date.now();
         const maxInactivity = rememberMe ? 30 * 60 * 1000 : 5 * 60 * 1000; // 30 min vs 5 min
 
-        if(lastActivity && (now - lastActivity > maxInactivity)) {
+        if (lastActivity && (now - lastActivity > maxInactivity)) {
             await activityTracker.track('LOGOUT', user.sup);
             logger.warn(`[${requestId}] Inactivité détectée`, {
                 id: user.sup,
@@ -921,18 +922,18 @@ export async function silentRefresh(req: AuthenticatedRequest, res: Response): P
             email: user.email,
             role: user.role,
             activity: 'REFRESH_SESSION'
-        }, { expiresIn: tokenDuration});
+        }, { expiresIn: tokenDuration });
 
         let newRefreshToken;
-        if(rememberMe) {
+        if (rememberMe) {
             newRefreshToken = generateRefreshToken({ id: user.sup });
         }
-        
+
         const cookieOptions = {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' as 'none' | 'lax' | 'strict',
-            domain: process.env.COOKIE_DOMAIN, 
+            domain: process.env.COOKIE_DOMAIN,
             path: '/',
         }
         res.cookie('auth_token', newAccessToken, {
@@ -940,7 +941,7 @@ export async function silentRefresh(req: AuthenticatedRequest, res: Response): P
             maxAge: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000, // 2h vs 1h
         });
 
-        if(newRefreshToken) {
+        if (newRefreshToken) {
             res.cookie('refresh_token', newRefreshToken, {
                 ...cookieOptions,
                 maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jrs

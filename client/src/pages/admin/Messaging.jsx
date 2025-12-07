@@ -27,6 +27,7 @@ function Messaging() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false); // Timer/Loading pour actions
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
@@ -42,19 +43,42 @@ function Messaging() {
     rejected: 0
   });
 
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Helper pour mapper les rôles
+  const formatRole = (role) => {
+    switch (role) {
+      case 'invoice_manager': return 'Chargé de facture';
+      case 'dfc_agent': return 'Agent DFC';
+      case 'admin': return 'Administrateur';
+      default: return role || 'Inconnu';
+    }
+  };
+
   // Fetch requests and stats
   useEffect(() => {
     if (user?.role === 'admin') {
       fetchRequests();
       fetchStats();
     }
-  }, [user, filter, search]);
+  }, [user, filter, search, currentPage]); // Ajout de currentPage aux dépendances
+
+  // Reset page quand filtre change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, search]);
 
   const fetchStats = async () => {
     try {
       const response = await api.get('/api/migration/stats');
-      // Backend returns { total, pending, approved, rejected }
-      if (response.data) setStats(response.data);
+      if (response.data && response.data.stats) {
+        setStats(response.data.stats);
+      } else if (response.data) {
+        setStats(response.data);
+      }
     } catch (error) {
       console.error("Failed to fetch stats", error);
     }
@@ -63,26 +87,50 @@ function Messaging() {
   const fetchRequests = async () => {
     setLoading(true);
     try {
+      const offset = (currentPage - 1) * itemsPerPage;
       const response = await api.get('/api/migration/requests', {
-        params: { status: filter, search }
+        params: {
+          status: filter,
+          search,
+          limit: itemsPerPage,
+          offset
+        }
       });
       const rawData = response.data?.requests || [];
       const mappedData = rawData.map(req => ({
         id: req.id,
         name: `${req.firstName || ''} ${req.lastName || ''}`.trim() || req.email,
         email: req.email,
-        from: req.from_role,
-        to: req.to_role,
+        from: formatRole(req.from_role),
+        to: formatRole(req.to_role),
         dept: req.department,
         reason: req.motivation,
         status: req.status,
         date: new Date(req.created_at).toLocaleDateString(),
-        // Extra fields for details view
-        reviewer: req.reviewed_by ? 'Admin' : null, // ID only in backend, might need name lookup or just generic
+        reviewer: req.reviewed_by ? 'Admin' : null,
         reviewDate: req.reviewed_at ? new Date(req.reviewed_at).toLocaleDateString() : null,
         response: req.review_note
       }));
       setRequests(mappedData);
+
+      // Calcul total pages (approximatif basé sur stats globales si filtre actif, 
+      // idéalement le back devrait retourner le count filtré)
+      // Pour l'instant on utilise le count global du statut correspondant
+      let totalCount = 0;
+      if (filter === 'all') totalCount = stats.total;
+      else if (filter === 'pending') totalCount = stats.pending;
+      else if (filter === 'approved') totalCount = stats.approved;
+      else if (filter === 'rejected') totalCount = stats.rejected;
+
+      // Si on a une recherche, le count des stats n'est pas fiable.
+      // Fallback simple: si on a reçu 'itemsPerPage' items, on suppose qu'il y a une page suivante
+      // Sinon c'est la dernière page.
+      if (search) {
+        setTotalPages(mappedData.length === itemsPerPage ? currentPage + 1 : currentPage);
+      } else {
+        setTotalPages(Math.ceil(totalCount / itemsPerPage) || 1);
+      }
+
     } catch (err) {
       console.error("Failed to fetch requests", err);
       error('Erreur chargement demandes');
@@ -92,47 +140,62 @@ function Messaging() {
   };
 
   const approve = async (id) => {
+    if (actionLoading) return;
+    setActionLoading(true);
     try {
       await api.post(`/api/migration/requests/${id}/approve`);
       success('Demande approuvée');
-      fetchRequests(); // Refresh
-      if (selected?.id === id) setSelected(prev => ({ ...prev, status: 'approved' }));
+      await fetchRequests();
+      fetchStats();
+      if (selected?.id === id) {
+        setSelected(prev => ({ ...prev, status: 'approved' }));
+      }
     } catch (err) {
+      console.error(err);
       error('Erreur approbation');
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const reject = async (id) => {
-    const reason = prompt('Raison rejet (optionnel) :');
-    if (reason === null) return;
+  // Ouvre la modale
+  const openRejectModal = (id) => {
+    setRejectId(id);
+    setRejectReason('');
+    setIsRejectModalOpen(true);
+  };
+
+  // Ferme la modale
+  const closeRejectModal = () => {
+    setIsRejectModalOpen(false);
+    setRejectId(null);
+    setRejectReason('');
+  };
+
+  // Confirme le rejet
+  const confirmReject = async () => {
+    if (actionLoading || !rejectId) return;
+
+    setActionLoading(true);
     try {
-      await api.post(`/api/migration/requests/${id}/reject`, { review_note: reason });
+      await api.post(`/api/migration/requests/${rejectId}/reject`, { review_note: rejectReason });
       success('Demande rejetée');
-      fetchRequests(); // Refresh
-      if (selected?.id === id) setSelected(prev => ({ ...prev, status: 'rejected' }));
+      closeRejectModal();
+      await fetchRequests();
+      fetchStats();
+      if (selected?.id === rejectId) {
+        setSelected(prev => ({ ...prev, status: 'rejected' }));
+      }
     } catch (err) {
+      console.error(err);
       error('Erreur rejet');
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  // Filtrage simple (peut être amélioré plus tard)
+  // Filtrage déjà fait par API
   const filtered = requests;
-
-  const remove = (id) => {
-    // Pas d'endpoint delete implémenté, à voir si nécessaire
-    alert("Suppression non implémentée");
-    /*
-  if (window.confirm('Supprimer cette demande ?')) {
-    setRequests(prev => prev.filter(req => req.id !== id));
-    if (selected?.id === id) setSelected(null);
-  }
-  */
-  };
-
-  const archive = (id) => {
-    // A implémenter si besoin
-    alert("Archivage non implémenté");
-  };
 
   // Vérifications d'accès
   if (!user) {
@@ -141,12 +204,7 @@ function Messaging() {
         <div className="text-center">
           <InboxIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h2 className="text-lg font-semibold text-gray-900 mb-2">Connexion requise</h2>
-          <button
-            onClick={() => navigate('/login')}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Se connecter
-          </button>
+          <button onClick={() => navigate('/login')} className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Se connecter</button>
         </div>
       </div>
     );
@@ -158,12 +216,7 @@ function Messaging() {
         <div className="text-center">
           <XCircleIcon className="w-16 h-16 text-red-400 mx-auto mb-4" />
           <h2 className="text-lg font-semibold text-gray-900 mb-2">Accès admin seulement</h2>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Dashboard
-          </button>
+          <button onClick={() => navigate('/dashboard')} className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Dashboard</button>
         </div>
       </div>
     );
@@ -180,7 +233,7 @@ function Messaging() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Messagerie Admin</h1>
-              <p className="text-gray-600 text-sm">Gestion demandes changement rôle</p>
+              <p className="text-gray-900 text-sm">Gestion demandes changement rôle</p>
             </div>
             {stats.pending > 0 && (
               <div className="bg-yellow-50 px-4 py-2 rounded-lg border border-yellow-200">
@@ -201,7 +254,7 @@ function Messaging() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Total</p>
-                <p className="text-xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-xl font-bold text-gray-900">{stats.total || 0}</p>
               </div>
               <InboxIcon className="w-5 h-5 text-blue-500" />
             </div>
@@ -211,7 +264,7 @@ function Messaging() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">En attente</p>
-                <p className="text-xl font-bold text-gray-900">{stats.pending}</p>
+                <p className="text-xl font-bold text-gray-900">{stats.pending || 0}</p>
               </div>
               <ClockIcon className="w-5 h-5 text-yellow-500" />
             </div>
@@ -221,7 +274,7 @@ function Messaging() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Approuvées</p>
-                <p className="text-xl font-bold text-gray-900">{stats.approved}</p>
+                <p className="text-xl font-bold text-gray-900">{stats.approved || 0}</p>
               </div>
               <CheckCircleIcon className="w-5 h-5 text-green-500" />
             </div>
@@ -231,7 +284,7 @@ function Messaging() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Rejetées</p>
-                <p className="text-xl font-bold text-gray-900">{stats.rejected}</p>
+                <p className="text-xl font-bold text-gray-900">{stats.rejected || 0}</p>
               </div>
               <XCircleIcon className="w-5 h-5 text-red-500" />
             </div>
@@ -269,11 +322,11 @@ function Messaging() {
                   </select>
 
                   <button
-                    onClick={() => window.location.reload()}
+                    onClick={() => { fetchRequests(); fetchStats(); }}
                     className="p-2 border border-gray-300 rounded-md hover:bg-gray-50"
                     title="Actualiser"
                   >
-                    <ArrowPathIcon className="w-5 h-5 text-gray-600" />
+                    <ArrowPathIcon className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
               </div>
@@ -290,78 +343,78 @@ function Messaging() {
                     <p className="text-gray-500">Aucune demande</p>
                   </div>
                 ) : (
-                  filtered.map((req) => (
-                    <div
-                      key={req.id}
-                      onClick={() => setSelected(req)}
-                      className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${selected?.id === req.id ? 'bg-blue-50 border-r-2 border-blue-500' : ''
-                        }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          {/* Ligne 1: Nom + Statut */}
-                          <div className="flex items-center justify-between mb-2">
-                            <div>
-                              <h3 className="font-semibold text-gray-900">{req.name}</h3>
-                              <p className="text-xs text-gray-500">{req.email}</p>
+                  <>
+                    {filtered.map((req) => (
+                      <div
+                        key={req.id}
+                        onClick={() => setSelected(req)}
+                        className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${selected?.id === req.id ? 'bg-blue-50 border-r-2 border-blue-500' : ''}`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            {/* Ligne 1: Nom + Statut */}
+                            <div className="flex items-center justify-between mb-2">
+                              <div>
+                                <h3 className="font-semibold text-gray-900">{req.name}</h3>
+                                <p className="text-xs text-gray-500">{req.email}</p>
+                              </div>
+                              <span className={`text-xs px-2 py-1 rounded ${req.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                req.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                {req.status === 'pending' ? 'En attente' :
+                                  req.status === 'approved' ? 'Approuvé' : 'Rejeté'}
+                              </span>
                             </div>
-                            <span className={`text-xs px-2 py-1 rounded ${req.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              req.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                'bg-red-100 text-red-800'
-                              }`}>
-                              {req.status === 'pending' ? 'En attente' :
-                                req.status === 'approved' ? 'Approuvé' : 'Rejeté'}
-                            </span>
-                          </div>
 
-                          {/* Ligne 2: Migration */}
-                          <div className="flex items-center gap-3 bg-gray-100 rounded p-2 mb-2">
-                            <div className="text-center flex-1">
-                              <p className="text-xs text-gray-500">Actuel</p>
-                              <p className="text-sm font-medium">{req.from}</p>
+                            {/* Ligne 2: Migration */}
+                            <div className="flex items-center gap-3 bg-gray-100 rounded p-2 mb-2">
+                              <div className="text-center flex-1">
+                                <p className="text-xs text-gray-500">Actuel</p>
+                                <p className="text-sm font-medium">{req.from}</p>
+                              </div>
+                              <ArrowRightIcon className="w-4 h-4 text-gray-400" />
+                              <div className="text-center flex-1">
+                                <p className="text-xs text-gray-500">Nouveau</p>
+                                <p className="text-sm font-medium text-blue-600">{req.to}</p>
+                              </div>
                             </div>
-                            <ArrowRightIcon className="w-4 h-4 text-gray-400" />
-                            <div className="text-center flex-1">
-                              <p className="text-xs text-gray-500">Nouveau</p>
-                              <p className="text-sm font-medium text-blue-600">{req.to}</p>
+
+                            {/* Ligne 3: Métadonnées */}
+                            <div className="flex items-center justify-between text-xs text-gray-600">
+                              <div className="flex items-center gap-1">
+                                <BuildingOfficeIcon className="w-3 h-3" />
+                                <span>{req.dept}</span>
+                              </div>
+                              <span>{req.date}</span>
                             </div>
                           </div>
-
-                          {/* Ligne 3: Métadonnées */}
-                          <div className="flex items-center justify-between text-xs text-gray-600">
-                            <div className="flex items-center gap-1">
-                              <BuildingOfficeIcon className="w-3 h-3" />
-                              <span>{req.dept}</span>
-                            </div>
-                            <span>{req.date}</span>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="ml-3">
-                          {req.status === 'pending' && (
-                            <div className="flex gap-1">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); approve(req.id); }}
-                                className="p-1 text-green-600 hover:bg-green-50 rounded"
-                                title="Approuver"
-                              >
-                                <CheckCircleIcon className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); reject(req.id); }}
-                                className="p-1 text-red-600 hover:bg-red-50 rounded"
-                                title="Rejeter"
-                              >
-                                <XCircleIcon className="w-4 h-4" />
-                              </button>
-                            </div>
-                          )}
                         </div>
                       </div>
-                    </div>
-                  ))
+                    ))}
+                  </>
                 )}
+              </div>
+
+              {/* Pagination */}
+              <div className="p-3 border-t border-gray-200 flex items-center justify-between bg-gray-50">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1 || loading}
+                  className="px-3 py-1 bg-white border border-gray-300 rounded text-sm disabled:opacity-50 hover:bg-gray-50"
+                >
+                  Précédent
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} {totalPages > 1 ? `/ ${totalPages}` : ''}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(p => p + 1)}
+                  disabled={filtered.length < itemsPerPage || (totalPages > 1 && currentPage >= totalPages) || loading}
+                  className="px-3 py-1 bg-white border border-gray-300 rounded text-sm disabled:opacity-50 hover:bg-gray-50"
+                >
+                  Suivant
+                </button>
               </div>
             </div>
           </div>
@@ -373,22 +426,7 @@ function Messaging() {
                 <div className="p-4 border-b border-gray-200">
                   <div className="flex items-center justify-between">
                     <h2 className="font-bold text-gray-900">Détails demande</h2>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => archive(selected.id)}
-                        className="p-1 text-gray-600 hover:bg-gray-100 rounded"
-                        title="Archiver"
-                      >
-                        <ArchiveBoxIcon className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => remove(selected.id)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded"
-                        title="Supprimer"
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {/* Boutons actions (Supprimer/Archeve) supprimés car non implémentés */}
                   </div>
                 </div>
 
@@ -492,14 +530,18 @@ function Messaging() {
                       <div className="flex gap-3">
                         <button
                           onClick={() => approve(selected.id)}
-                          className="flex-1 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-medium"
+                          disabled={actionLoading}
+                          className="flex-1 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-medium disabled:opacity-50 flex items-center justify-center gap-2"
                         >
+                          {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : null}
                           Approuver
                         </button>
                         <button
-                          onClick={() => reject(selected.id)}
-                          className="flex-1 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-medium"
+                          onClick={() => openRejectModal(selected.id)}
+                          disabled={actionLoading}
+                          className="flex-1 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-medium disabled:opacity-50 flex items-center justify-center gap-2"
                         >
+                          {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : null}
                           Rejeter
                         </button>
                       </div>
@@ -526,6 +568,53 @@ function Messaging() {
           </div>
         </div>
       </div>
+
+      {/* Modal Rejet */}
+      {isRejectModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+              <h3 className="font-semibold text-gray-900">Rejeter la demande</h3>
+              <button
+                onClick={closeRejectModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircleIcon className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-4">
+              <p className="text-sm text-gray-600 mb-2">
+                Veuillez indiquer la raison du rejet pour notifier l'utilisateur:
+              </p>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Ex: Le poste n'est pas vacant actuellement, ou expérience insuffisante..."
+                className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm"
+                autoFocus
+              />
+            </div>
+
+            <div className="p-4 border-t border-gray-100 bg-gray-50 flex gap-3 justify-end">
+              <button
+                onClick={closeRejectModal}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium text-sm"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmReject}
+                disabled={actionLoading}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {actionLoading && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                Confirmer le rejet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
