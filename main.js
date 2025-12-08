@@ -52,7 +52,72 @@ if (!gotTheLock) {
     }
   });
 
+
+  // Server Management
+  const { spawn, exec } = require('child_process');
+
+  let serverProcess;
+
+  function startServer() {
+    const isDev = !app.isPackaged;
+    let serverPath;
+
+    if (isDev) {
+      serverPath = path.join(__dirname, 'server');
+    } else {
+      // In production, server is in resources/server
+      serverPath = path.join(process.resourcesPath, 'server');
+    }
+
+    console.log(`[Electron] Starting server from: ${serverPath}`);
+
+    // 1. Start Docker (Database)
+    // Note: This requires Docker Desktop to be running on the user's machine
+    console.log('[Electron] Starting Docker services...');
+    exec('docker compose up -d', { cwd: serverPath }, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`[Electron] Docker Error: ${error.message}`);
+        return;
+      }
+      if (stderr) console.error(`[Electron] Docker Stderr: ${stderr}`);
+      console.log(`[Electron] Docker Output: ${stdout}`);
+
+      // 2. Start Node Server
+      // In prod we run the compiled JS, in dev we can run tsx or similar, but simplify by assuming dev uses separate terminal
+      if (!isDev) {
+        console.log('[Electron] Spawning Node server...');
+        serverProcess = spawn('node', ['dist/server/server.js'], {
+          cwd: serverPath,
+          // Force NODE_ENV to development to allow cookies without HTTPS
+          env: { ...process.env, NODE_ENV: 'development', PORT: 3000 }
+        });
+
+        serverProcess.stdout.on('data', (data) => {
+          console.log(`[Server] ${data}`);
+        });
+
+        serverProcess.stderr.on('data', (data) => {
+          console.error(`[Server Error] ${data}`);
+        });
+
+        serverProcess.on('close', (code) => {
+          console.log(`[Server] Exited with code ${code}`);
+        });
+      }
+    });
+  }
+
+  function stopServer() {
+    if (serverProcess) {
+      console.log('[Electron] Killing server process...');
+      serverProcess.kill();
+    }
+  }
+
+  app.on('will-quit', stopServer);
+
   app.whenReady().then(() => {
+    startServer();
     createWindow();
 
     // Gérer l'URL de démarrage (cas où l'app est fermée et ouverte via le lien)

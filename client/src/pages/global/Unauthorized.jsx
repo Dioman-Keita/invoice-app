@@ -6,13 +6,12 @@ export default function UnauthorizedPage() {
     const location = useLocation();
     const { user, logout } = useAuth();
     useTitle('CMDT - Accès non autorisé');
-    
+
     const { message, requiredRoles, currentRole } = location.state || {};
 
     const getRedirectPath = () => {
         if (!user?.role) return '/login';
-        
-        switch(user.role) {
+        switch (user.role) {
             case 'invoice_manager':
                 return '/facture';
             case 'dfc_agent':
@@ -26,8 +25,8 @@ export default function UnauthorizedPage() {
 
     const getPageName = () => {
         if (!user?.role) return 'connexion';
-        
-        switch(user.role) {
+
+        switch (user.role) {
             case 'invoice_manager':
                 return 'page de facturation';
             case 'dfc_agent':
@@ -87,17 +86,17 @@ export default function UnauthorizedPage() {
                 {/* ✅ Actions avec styles améliorés */}
                 <div className="space-y-3">
                     {/* Bouton principal */}
-                    <Link 
+                    <Link
                         to={redirectPath}
                         className="block w-full bg-blue-600 text-white text-center py-3 rounded-lg hover:bg-blue-700 focus:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none transition-all duration-200 font-medium cursor-pointer transform hover:scale-105 focus:scale-105 active:scale-95"
                     >
                         {user ? `Aller à ${pageName}` : 'Se connecter'}
                     </Link>
-                    
+
                     {user ? (
                         <>
                             {/* Profil */}
-                            <Link 
+                            <Link
                                 to="/profile"
                                 className="block w-full border border-gray-300 text-gray-700 text-center py-3 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:bg-gray-50 focus:border-gray-400 focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 focus:outline-none transition-all duration-200 font-medium cursor-pointer transform hover:scale-105 focus:scale-105 active:scale-95"
                             >
@@ -106,7 +105,7 @@ export default function UnauthorizedPage() {
 
                             {/* Dashboard admin */}
                             {user.role === 'admin' && (
-                                <Link 
+                                <Link
                                     to="/dashboard"
                                     className="block w-full border border-purple-300 text-purple-600 text-center py-3 rounded-lg hover:bg-purple-50 hover:border-purple-400 focus:bg-purple-50 focus:border-purple-400 focus:ring-2 focus:ring-purple-300 focus:ring-offset-2 focus:outline-none transition-all duration-200 font-medium cursor-pointer transform hover:scale-105 focus:scale-105 active:scale-95"
                                 >
@@ -121,7 +120,7 @@ export default function UnauthorizedPage() {
                             >
                                 Retour
                             </button>
-                            
+
                             {/* Déconnexion */}
                             <button
                                 onClick={handleLogout}
@@ -133,15 +132,15 @@ export default function UnauthorizedPage() {
                     ) : (
                         <>
                             {/* Créer un compte */}
-                            <Link 
+                            <Link
                                 to="/register"
                                 className="block w-full border border-green-300 text-green-600 text-center py-3 rounded-lg hover:bg-green-50 hover:border-green-400 focus:bg-green-50 focus:border-green-400 focus:ring-2 focus:ring-green-300 focus:ring-offset-2 focus:outline-none transition-all duration-200 font-medium cursor-pointer transform hover:scale-105 focus:scale-105 active:scale-95"
                             >
                                 Créer un compte
                             </Link>
-                            
+
                             {/* Accueil */}
-                            <Link 
+                            <Link
                                 to="/"
                                 className="block w-full border border-gray-300 text-gray-700 text-center py-3 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:bg-gray-50 focus:border-gray-400 focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 focus:outline-none transition-all duration-200 font-medium cursor-pointer transform hover:scale-105 focus:scale-105 active:scale-95"
                             >

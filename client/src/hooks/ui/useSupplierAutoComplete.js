@@ -4,7 +4,7 @@ import {
     isValidAccountNumber,
     normalizeAccountNumber,
     formatAccountCanonical
-} from "../../../../common/helpers/formatAccountNumber.js";
+} from "../../utils/formatAccountNumber";
 
 // Constantes pour éviter les magic strings
 const SEARCH_TYPES = {
@@ -47,12 +47,12 @@ export function useSupplierAutocomplete() {
     // Fonction helper pour dédupliquer les fournisseurs
     const getUniqueConflictingSuppliers = (conflictData) => {
         const suppliersMap = new Map();
-        
+
         // Ajouter existingSupplier s'il existe
         if (conflictData.existingSupplier && conflictData.existingSupplier.id) {
             suppliersMap.set(conflictData.existingSupplier.id, conflictData.existingSupplier);
         }
-        
+
         // Ajouter conflictingSuppliers en évitant les doublons
         if (conflictData.conflictingSuppliers && Array.isArray(conflictData.conflictingSuppliers)) {
             conflictData.conflictingSuppliers.forEach(supplier => {
@@ -61,7 +61,7 @@ export function useSupplierAutocomplete() {
                 }
             });
         }
-        
+
         return Array.from(suppliersMap.values());
     };
 
@@ -120,7 +120,7 @@ export function useSupplierAutocomplete() {
 
                 const formattedValue = formatFieldValue(field, value);
                 const serverField = field === 'accountNumber' ? 'account_number' : field;
-                
+
                 const response = await api.get(
                     `api/suppliers/search?field=${encodeURIComponent(serverField)}&value=${encodeURIComponent(formattedValue)}`
                 );
@@ -155,7 +155,7 @@ export function useSupplierAutocomplete() {
 
                 const formattedValue = formatFieldValue(field, value);
                 const serverField = field === 'accountNumber' ? 'account_number' : field;
-                
+
                 if (field === 'name') {
                     const response = await api.get(
                         `api/suppliers/find?name=${encodeURIComponent(formattedValue)}`
@@ -234,7 +234,7 @@ export function useSupplierAutocomplete() {
             } catch (error) {
                 console.log('Conflict error:', error);
                 const conflictData = error?.response?.data?.error || error?.response?.data || {};
-                
+
                 // CORRECTION : Utiliser la fonction de déduplication
                 const conflictingSuppliers = getUniqueConflictingSuppliers(conflictData);
 
@@ -269,7 +269,7 @@ export function useSupplierAutocomplete() {
                 }
             } catch (error) {
                 const conflictData = error?.response?.data?.error || error?.response?.data || {};
-                
+
                 // CORRECTION : Utiliser la fonction de déduplication
                 const conflictingSuppliers = getUniqueConflictingSuppliers(conflictData);
 
@@ -306,7 +306,7 @@ export function useSupplierAutocomplete() {
                 }
             } catch (error) {
                 const conflictData = error?.response?.data?.error || error?.response?.data || {};
-                
+
                 // CORRECTION : Utiliser la fonction de déduplication
                 const conflictingSuppliers = getUniqueConflictingSuppliers(conflictData);
 

@@ -7,7 +7,45 @@
     "dev": "npm run dev --prefix client",
     "build": "npm run build --prefix client",
     "preview": "npm run preview --prefix client",
+    "dist": "npm run build --prefix client && npm run build --prefix server && electron-builder",
     "electron:dev": "concurrently \"npm run dev --prefix client\" \"electron .\""
+  },
+  "build": {
+    "appId": "com.invoice-app.app",
+    "productName": "Invoice App",
+    "icon": "client/public/cmdt_icone.png",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "client/dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "server",
+        "to": "server",
+        "filter": [
+          "**/*",
+          "!node_modules",
+          "!src",
+          "!test",
+          "!tsconfig.json"
+        ]
+      },
+      {
+        "from": "server/node_modules",
+        "to": "server/node_modules"
+      },
+      {
+        "from": "server/dist",
+        "to": "server/dist"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    }
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

@@ -60,3 +60,9 @@ Thumbs.db
 *.sln
 *.sw?
 *.txt
+# ───────────────────────────────
+#  Builds & binaires
+# ───────────────────────────────
+release/
+client/dist/
+server/dist/

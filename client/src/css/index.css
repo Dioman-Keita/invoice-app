@@ -1,58 +1,60 @@
 @import "tailwindcss";
 
 :root {
-    --primary-color: #262b87;
-    --secondary-color: #ffffff;
-    --tertiary-color: rgba(0,0,0,0.1);
+  --primary-color: #262b87;
+  --secondary-color: #ffffff;
+  --tertiary-color: rgba(0, 0, 0, 0.1);
 }
 
 body {
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
-    font-family: 'Montserrat','Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    min-height: 100vh;
-    transition: all 0.2ms ease-in-out;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  font-family: 'Montserrat', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+  transition: all 0.2ms ease-in-out;
 }
 
 .show {
-    opacity: 1;
+  opacity: 1;
 }
+
 .hidden {
-    opacity: 0;
+  opacity: 0;
 }
 
 .gradient-fade {
-    display: inline-block;
-    padding: 1rem 2rem;
-    background: linear-gradient(138deg, #ddc6c6, #33cc8a);
-    -webkit-mask-image: linear-gradient(to right, black 60%, transparent 100%);
-    mask-image: linear-gradient(to right, black 60%, transparent 100%);
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-    -webkit-mask-size: 100% 100%;
-    mask-size: 100% 100%;
-    margin-top: 0.25rem;
-    margin-left: 0.25em;
-}
-  
-.text {
-    color: black;
-    font-size: 2rem;
-    font-weight: bold;
-    font-family: 'Inter', sans-serif;
-}
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-out-spin-button {
-    -webkit-appearance: none;
-    margin: none;
+  display: inline-block;
+  padding: 1rem 2rem;
+  background: linear-gradient(138deg, #ddc6c6, #33cc8a);
+  -webkit-mask-image: linear-gradient(to right, black 60%, transparent 100%);
+  mask-image: linear-gradient(to right, black 60%, transparent 100%);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  margin-top: 0.25rem;
+  margin-left: 0.25em;
 }
 
-.bg-home, 
-.bg-invoice, 
-.bg-export, 
-.bg-joinDFC, 
-.bg-print, 
-.bg-stats, 
+.text {
+  color: black;
+  font-size: 2rem;
+  font-weight: bold;
+  font-family: 'Inter', sans-serif;
+}
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-out-spin-button {
+  -webkit-appearance: none;
+  margin: none;
+}
+
+.bg-home,
+.bg-invoice,
+.bg-export,
+.bg-joinDFC,
+.bg-print,
+.bg-stats,
 .bg-search,
 .bg-dfc-formular,
 .bg-login,
@@ -70,6 +72,7 @@ input[type=number]::-webkit-out-spin-button {
   height: 100%;
   z-index: -1;
 }
+
 .bg-home {
   background-image: url('/image-coton-5.jpg');
 }
@@ -113,34 +116,49 @@ input[type=number]::-webkit-out-spin-button {
 .bg-settings {
   background-image: url('/image-coton-7.jpg');
 }
+
 .bg-verify {
   background-image: url('/image-coton-5.jpg');
 }
+
 .bg-help {
   background-image: url('/image-coton-5.jpg');
 }
+
 .bg-admin {
   background-image: url('/image-coton-5.jpg');
 }
-.bg-unauthorized {
-  background-image: url('/image-coton-9.jpg');
-}
-
-.bg-profile {
-  background-image: url('/image-coton-9.jpg');
-}
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); max-height: 0; }
-  to { opacity: 1; transform: translateY(0); max-height: 300px; }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 300px;
+  }
 }
+
 .animate-fadeIn {
   animation: fadeIn 0.3s ease-out;
 }
+
 .animate-slideDown {
   animation: slideDown 0.3s ease-out;
 }
@@ -158,8 +176,15 @@ input[type=number]::-webkit-out-spin-button {
 
 /* Animation subtile pour le fond */
 @keyframes gradientShift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 .bg-gradient-invoice-to-dfc,

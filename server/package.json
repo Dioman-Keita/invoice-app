@@ -8,8 +8,9 @@
     "test:export": "tsx services/export/validateExportMappings.ts",
     "start": "tsx server.ts",
     "dev": "tsx watch server.ts",
-    "build": "tsc",
-    "start:prod": "tsx server.ts"
+    "clean": "rimraf dist",
+    "build": "npm run clean && tsc",
+    "start:prod": "node dist/server/server.js"
   },
   "keywords": [],
   "author": "",
