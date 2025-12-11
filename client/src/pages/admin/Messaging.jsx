@@ -73,7 +73,7 @@ function Messaging() {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get('/api/migration/stats');
+      const response = await api.get('/migration/stats');
       if (response.data && response.data.stats) {
         setStats(response.data.stats);
       } else if (response.data) {
@@ -88,7 +88,7 @@ function Messaging() {
     setLoading(true);
     try {
       const offset = (currentPage - 1) * itemsPerPage;
-      const response = await api.get('/api/migration/requests', {
+      const response = await api.get('/migration/requests', {
         params: {
           status: filter,
           search,
@@ -143,7 +143,7 @@ function Messaging() {
     if (actionLoading) return;
     setActionLoading(true);
     try {
-      await api.post(`/api/migration/requests/${id}/approve`);
+      await api.post(`/migration/requests/${id}/approve`);
       success('Demande approuvée');
       await fetchRequests();
       fetchStats();
@@ -178,7 +178,7 @@ function Messaging() {
 
     setActionLoading(true);
     try {
-      await api.post(`/api/migration/requests/${rejectId}/reject`, { review_note: rejectReason });
+      await api.post(`/migration/requests/${rejectId}/reject`, { review_note: rejectReason });
       success('Demande rejetée');
       closeRejectModal();
       await fetchRequests();

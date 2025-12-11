@@ -10,7 +10,7 @@ export default function useFiscalSettings() {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get('api/settings/fiscal');
+      const res = await api.get('/settings/fiscal');
       if (res?.success === true) {
         setData(res.data);
       } else {

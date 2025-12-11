@@ -14,7 +14,29 @@ import logger from "../utils/Logger";
 import { auditLog } from "../utils/auditLogger";
 import { BcryptHasher } from "../utils/PasswordHasher";
 import { AuthenticatedRequest } from "../types/express/request";
+import { CookieOptions } from "express";
 
+// --- HELPER DE CONFIGURATION COOKIE POUR ELECTRON ---
+const getCookieOptions = (): CookieOptions => {
+    // Détection: Est-ce qu'on tourne dans Electron ou via le main.js ?
+    const isElectron = !!process.env.CLIENT_DIST_PATH || !!process.env.ELECTRON_RUN_AS_NODE;
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Sécurité: False en Electron (car HTTP), True en Prod Web (HTTPS)
+    const secure = isElectron ? false : isProduction;
+
+    return {
+        httpOnly: true,
+        secure: secure,
+        // 'lax' est le meilleur compromis pour une auth locale stable
+        sameSite: 'lax', 
+        path: '/',
+        // 🛑 IMPORTANT : On ne définit JAMAIS le domaine en mode Electron/Local.
+        // On laisse le navigateur gérer ça (HostOnly Cookie).
+        // On ne met le domaine que si on est en VRAIE prod web (pas electron)
+        ...( (!isElectron && isProduction && process.env.COOKIE_DOMAIN) ? { domain: process.env.COOKIE_DOMAIN } : {})
+    };
+};
 export async function createUser(
     req: Request<unknown, unknown, RegisterDto>,
     res: Response
@@ -227,14 +249,8 @@ export async function login(req: Request<unknown, unknown, LoginDto>, res: Respo
 
         const refreshToken = generateRefreshToken({ id: authUser.id });
 
-        // Configuration des cookies
-        const cookieConfig = {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' as 'none' | 'lax' | 'strict',
-            domain: process.env.COOKIE_DOMAIN,
-            path: '/',
-        }
+        // Configuration des cookies (VERSION CORRIGÉE)
+        const cookieConfig = getCookieOptions();
 
         // Définition des cookies
         res.cookie('auth_token', accessToken, {
@@ -301,30 +317,22 @@ export async function getCurrentToken(req: Request, res: Response): Promise<Resp
 }
 
 function clearAllCookies(res: Response): void {
-    const options = {
-        path: '/',
-        domain: process.env.COOKIE_DOMAIN,
-    };
+    const options = getCookieOptions();
 
     res.clearCookie('auth_token', options);
     res.clearCookie('refresh_token', options);
     res.clearCookie('rememberMe', options);
 }
+
 export async function logout(req: AuthenticatedRequest, res: Response): Promise<Response> {
     const user = req.user || undefined;
     const requestId = req.headers['x-request-id'] as string || 'unknown';
     try {
+        const cookieOptions = getCookieOptions();
 
-        const cookieOptions = {
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax' | 'strict', // or as const
-            domain: process.env.COOKIE_DOMAIN,
-            path: '/',
-        }
-
-        res.clearCookie('auth_token', { ...cookieOptions, httpOnly: true });
-        res.clearCookie('refresh_token', { ...cookieOptions, httpOnly: true });
-        res.clearCookie('rememberMe', { ...cookieOptions, httpOnly: true });
+        res.clearCookie('auth_token', cookieOptions);
+        res.clearCookie('refresh_token', cookieOptions);
+        res.clearCookie('rememberMe', cookieOptions);
 
         if (user && user.sup) {
             try {
@@ -406,7 +414,6 @@ export async function forgotPassword(req: Request<unknown, unknown, RequestPassw
 
     try {
         logger.info(`[${requestId}] Demande de réinitialisation de mot de passe`, { email });
-        console.log('🔐 [DEBUG] forgotPassword - Email reçu:', email);
 
         const ok = isValidEmail(email);
         if (!ok) {
@@ -415,11 +422,6 @@ export async function forgotPassword(req: Request<unknown, unknown, RequestPassw
         }
 
         const user = (await Users.findUser(email, 'email') as User[]);
-        console.log('🔐 [DEBUG] forgotPassword - Résultat findUser:', {
-            userTrouvé: !!user,
-            nombreUsers: user?.length,
-            user: user?.[0] ? { id: user[0].id, email: user[0].email } : null
-        });
 
         if (!user || user.length === 0) {
             logger.info(`[${requestId}] Demande de réinitialisation pour email inexistant`, { email });
@@ -427,12 +429,7 @@ export async function forgotPassword(req: Request<unknown, unknown, RequestPassw
         }
 
         const currentUser = user[0];
-        console.log('🔐 [DEBUG] forgotPassword - Utilisateur trouvé:', {
-            id: currentUser.id,
-            email: currentUser.email,
-            firstName: currentUser.firstName
-        });
-
+        
         const baseLink = process.env.APP_URL || 'http://localhost:5173';
         const token = generateUserToken({
             sup: currentUser.id,
@@ -441,30 +438,11 @@ export async function forgotPassword(req: Request<unknown, unknown, RequestPassw
             activity: 'SEND_PASSWORD_RESET_EMAIL'
         });
 
-        console.log('🔐 [DEBUG] forgotPassword - Token généré:', {
-            tokenDébut: token.substring(0, 20) + '...',
-            tokenLongueur: token.length,
-            employeeId: currentUser.id
-        });
-
         try {
             const insertResult = await database.execute(
                 "INSERT INTO auth_token(token, employee_id) VALUES (?,?)",
                 [token, currentUser.id]
             );
-
-            console.log('🔐 [DEBUG] forgotPassword - Résultat insertion token:', insertResult);
-            console.log('🔐 [DEBUG] forgotPassword - Token inséré avec succès');
-
-            // Vérifiez que le token est bien en base
-            const verifyToken = await database.execute<unknown[]>(
-                "SELECT * FROM auth_token WHERE token = ?",
-                [token]
-            );
-            console.log('🔐 [DEBUG] forgotPassword - Vérification token en base:', {
-                tokensTrouvés: verifyToken.length,
-                tokenExiste: verifyToken.length > 0
-            });
 
         } catch (insertError) {
             console.error('🔐 [DEBUG] forgotPassword - ERREUR insertion token:', insertError);
@@ -481,7 +459,6 @@ export async function forgotPassword(req: Request<unknown, unknown, RequestPassw
 
 
         const resetPasswordLink = `invoice-app://reset-password?token=${token}`;
-        console.log('🔐 [DEBUG] forgotPassword - Lien généré:', resetPasswordLink);
 
         const template = NotificationFactory.create('reset', {
             name: currentUser.firstName,
@@ -500,10 +477,8 @@ export async function forgotPassword(req: Request<unknown, unknown, RequestPassw
             email: currentUser.email
         });
 
-        console.log('🔐 [DEBUG] forgotPassword - Processus terminé avec succès');
         return ApiResponder.success(res, null, 'Si un compte existe, un lien a été envoyé.');
     } catch (error) {
-        console.error('🔐 [DEBUG] forgotPassword - ERREUR FINALE:', error);
         logger.error(`[${requestId}] Erreur lors de la réinitialisation`, {
             email,
             error: error instanceof Error ? error.message : 'Erreur inconnue'
@@ -523,15 +498,9 @@ export async function resetUserPassword(req: Request<unknown, unknown, ResetPass
         hasPassword: !!password,
         hasConfirmPassword: !!confirmPassword
     });
-    console.log('🔐 resetUserPassword - Données reçues:', {
-        token: currentToken ? `${currentToken.substring(0, 10)}...` : 'none',
-        passwordLength: password?.length || 0,
-        confirmPasswordLength: confirmPassword?.length || 0
-    });
 
     if (!currentToken) {
         logger.warn(`[${requestId}] Token manquant dans la requête`);
-        console.log('❌ Token manquant');
         return ApiResponder.badRequest(res, 'Token de réinitialisation manquant');
     }
 
@@ -547,30 +516,21 @@ export async function resetUserPassword(req: Request<unknown, unknown, ResetPass
         // Validation des mots de passe
         if (!isValidPassword(password, confirmPassword)) {
             logger.warn(`[${requestId}] Les mots de passe ne correspondent pas`);
-            console.log('❌ Mots de passe différents');
             return ApiResponder.badRequest(res, 'Les mots de passe ne correspondent pas');
         }
 
         if (!isValidPasswordStrength(password)) {
             logger.warn(`[${requestId}] Format du mot de passe invalide`);
-            console.log('❌ Force du mot de passe insuffisante');
             return ApiResponder.badRequest(res, 'Format du mot de passe invalide');
         }
 
         // Vérification du token
         const payload = verifyUserToken(currentToken);
 
-        logger.info(`[${requestId}] Token décodé`, {
-            userId: payload?.sup,
-            activity: payload?.activity
-        });
-        console.log('🔐 resetUserPassword - Payload décodé:', payload);
-
         if (!payload || payload.activity !== "SEND_PASSWORD_RESET_EMAIL") {
             logger.warn(`[${requestId}] Token invalide ou activité incorrecte`, {
                 activity: payload?.activity
             });
-            console.log('❌ Token invalide - activité:', payload?.activity);
             return ApiResponder.badRequest(res, "Token invalide ou expiré");
         }
 
@@ -579,19 +539,8 @@ export async function resetUserPassword(req: Request<unknown, unknown, ResetPass
         // Vérification de l'existence de l'utilisateur
         const users = await Users.findUser(userId, 'id');
 
-        logger.info(`[${requestId}] Résultat findUser`, {
-            userId,
-            usersCount: users.length,
-            userFound: users.length > 0
-        });
-        console.log('🔐 resetUserPassword - Résultat findUser:', {
-            nombreUtilisateurs: users.length,
-            utilisateurs: users
-        });
-
         if (!Array.isArray(users) || users.length === 0) {
             logger.warn(`[${requestId}] Utilisateur introuvable pour le token`, { userId });
-            console.log('❌ Utilisateur non trouvé pour ID:', userId);
             return ApiResponder.notFound(res, 'Utilisateur non trouvé');
         }
 
@@ -600,7 +549,6 @@ export async function resetUserPassword(req: Request<unknown, unknown, ResetPass
         // Vérification que user existe et a les propriétés nécessaires
         if (!user || typeof user !== 'object') {
             logger.warn(`[${requestId}] Format de données utilisateur invalide`, { userId });
-            console.log('❌ Format utilisateur invalide');
             return ApiResponder.unauthorized(res, 'Données utilisateur invalides');
         }
 
@@ -608,7 +556,6 @@ export async function resetUserPassword(req: Request<unknown, unknown, ResetPass
             userId: user.id,
             email: user.email
         });
-        console.log('🔐 Utilisateur trouvé:', user);
 
         // Vérification du token en base de données
         const tokenRecords: unknown[] = await database.execute(
@@ -616,14 +563,8 @@ export async function resetUserPassword(req: Request<unknown, unknown, ResetPass
             [currentToken]
         );
 
-        logger.info(`[${requestId}] Vérification du token en base`, {
-            tokenRecordsCount: tokenRecords.length,
-            tokenValide: tokenRecords.length > 0
-        });
-
         if (!Array.isArray(tokenRecords) || tokenRecords.length === 0) {
             logger.warn(`[${requestId}] Lien de réinitialisation expiré ou invalide`, { userId });
-            console.log('❌ Token expiré en base de données');
             return ApiResponder.badRequest(res, "Lien de réinitialisation expiré");
         }
 
@@ -668,7 +609,6 @@ export async function resetUserPassword(req: Request<unknown, unknown, ResetPass
             email: user.email,
             activityTracked: trackResult
         });
-        console.log('✅ Réinitialisation du mot de passe réussie pour:', user.email);
 
         if (trackResult) {
             return ApiResponder.success(res, {
@@ -698,7 +638,6 @@ export async function resetUserPassword(req: Request<unknown, unknown, ResetPass
             error: errorMessage,
             stack: error instanceof Error ? error.stack : undefined
         });
-        console.error('❌ resetUserPassword - Erreur:', error);
 
         if (error instanceof JsonWebTokenError) {
             return ApiResponder.unauthorized(res, 'Token invalide ou expiré');
@@ -713,11 +652,9 @@ export async function verifyRegistrationToken(req: Request<unknown, unknown, Ver
     const currentToken = req.body.token;
 
     logger.info(`[${requestId}] Vérification du token d'inscription`, { currentToken });
-    console.log('🔐 verifyRegistrationToken - Token reçu:', currentToken);
 
     if (!currentToken) {
         logger.warn(`[${requestId}] Token manquant dans la requête`);
-        console.log('❌ Token manquant');
         return ApiResponder.badRequest(res, 'Token de vérification manquant');
     }
 
@@ -729,26 +666,12 @@ export async function verifyRegistrationToken(req: Request<unknown, unknown, Ver
         const userId = payload.sup;
 
         logger.info(`[${requestId}] Token décodé`, { userId, email: payload.email });
-        console.log('🔐 verifyRegistrationToken - Payload décodé:', payload);
-        console.log('🔐 verifyRegistrationToken - UserID extrait:', userId);
 
         const users = await Users.findUser(userId, 'id');
-
-        logger.info(`[${requestId}] Résultat findUser`, {
-            userId,
-            usersCount: users.length,
-            userFound: users.length > 0
-        });
-
-        console.log('🔐 verifyRegistrationToken - Résultat findUser:', {
-            nombreUtilisateurs: users.length,
-            utilisateurs: users
-        });
 
         // ✅ CORRECTION ICI : Vérification correcte du tableau
         if (!Array.isArray(users) || users.length === 0) {
             logger.warn(`[${requestId}] Utilisateur introuvable pour le token`, { userId });
-            console.log('❌ Utilisateur non trouvé pour ID:', userId);
             return ApiResponder.notFound(res, 'Utilisateur introuvable');
         }
 
@@ -757,7 +680,6 @@ export async function verifyRegistrationToken(req: Request<unknown, unknown, Ver
         // ✅ Vérification que user existe et a les propriétés nécessaires
         if (!user || typeof user !== 'object') {
             logger.warn(`[${requestId}] Format de données utilisateur invalide`, { userId });
-            console.log('❌ Format utilisateur invalide');
             return ApiResponder.unauthorized(res, 'Données utilisateur invalides');
         }
 
@@ -767,18 +689,15 @@ export async function verifyRegistrationToken(req: Request<unknown, unknown, Ver
             role: user.role,
             isVerified: user.isVerified
         });
-        console.log('🔐 Utilisateur trouvé:', user);
 
         // ✅ Vérification de isVerified
         if (user.isVerified === undefined || user.isVerified === null) {
             logger.warn(`[${requestId}] Propriété isVerified manquante`, { userId });
-            console.log('❌ Propriété isVerified manquante');
             return ApiResponder.unauthorized(res, 'Données utilisateur incomplètes');
         }
 
         if (user.isVerified === 1) {
             logger.info(`[${requestId}] Utilisateur déjà vérifié`, { userId });
-            console.log('✅ Utilisateur déjà vérifié');
             return ApiResponder.success(res, null, 'Compte déjà vérifié');
         }
 
@@ -786,7 +705,6 @@ export async function verifyRegistrationToken(req: Request<unknown, unknown, Ver
 
         if (!updateResult.success) {
             logger.error(`[${requestId}] Échec de la mise à jour du statut de vérification`, { userId });
-            console.log('❌ Échec mise à jour statut vérification');
             return ApiResponder.error(res, null, 'Impossible de vérifier le compte');
         }
 
@@ -810,31 +728,24 @@ export async function verifyRegistrationToken(req: Request<unknown, unknown, Ver
 
         const refreshToken = generateRefreshToken({ id: user.id });
 
+        const cookieConfig = getCookieOptions();
+
         res.cookie('auth_token', accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            domain: process.env.COOKIE_DOMAIN,
+            ...cookieConfig,
             maxAge: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000, // 1h pour l'inscription
-            path: '/',
         });
 
         res.cookie('refresh_token', refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            ...cookieConfig,
             maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000, // 24h pour inscription
-            domain: process.env.COOKIE_DOMAIN,
-            path: '/',
         });
 
         res.cookie('rememberMe', 'false', {
-            httpOnly: false,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            ...cookieConfig,
+            // Exception pour rememberMe: pas de httpOnly car lu par le front parfois ? 
+            // Dans ton code initial c'était httpOnly: false pour ce cookie, je le remets ici
+            httpOnly: false, 
             maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours
-            domain: process.env.COOKIE_DOMAIN,
-            path: '/'
         })
 
         logger.info(`[${requestId}] Vérification réussie et utilisateur connecté`, {
@@ -846,9 +757,6 @@ export async function verifyRegistrationToken(req: Request<unknown, unknown, Ver
         const trackResult = await activityTracker.track('SIGN_UP', user.id);
 
         if (trackResult) {
-
-            console.log('✅ Vérification réussie et utilisateur connecté');
-
             return ApiResponder.success(res, {
                 user: {
                     id: user.id,
@@ -874,7 +782,6 @@ export async function verifyRegistrationToken(req: Request<unknown, unknown, Ver
         logger.error(`[${requestId}] Erreur lors de la vérification du token`, {
             error: errorMessage
         });
-        console.error('❌ verifyRegistrationToken - Erreur:', error);
         return ApiResponder.unauthorized(res, 'Token invalide ou expiré');
     }
 }
@@ -929,13 +836,8 @@ export async function silentRefresh(req: AuthenticatedRequest, res: Response): P
             newRefreshToken = generateRefreshToken({ id: user.sup });
         }
 
-        const cookieOptions = {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' as 'none' | 'lax' | 'strict',
-            domain: process.env.COOKIE_DOMAIN,
-            path: '/',
-        }
+        const cookieOptions = getCookieOptions();
+        
         res.cookie('auth_token', newAccessToken, {
             ...cookieOptions,
             maxAge: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000, // 2h vs 1h

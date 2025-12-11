@@ -66,7 +66,7 @@ function StatsSimple() {
         // Initialiser avec les données de fallback immédiatement
         setStats(getFallbackStats(user?.role));
         
-        const response = await fetch('http://localhost:3000/api/stats/personal', {
+        const response = await fetch('/api/stats/personal', {
           credentials: 'include',
           headers: { 
             'Accept': 'application/json',

@@ -2,6 +2,8 @@
   "name": "invoice-app",
   "private": true,
   "version": "0.0.0",
+  "description": "Application de gestion de factures pour la CMDT - Compagnie Malienne pour le Développement des Textiles",
+  "author": "Dioman Keita",
   "main": "main.js",
   "scripts": {
     "dev": "npm run dev --prefix client",
@@ -41,6 +43,9 @@
       {
         "from": "server/dist",
         "to": "server/dist"
+      }, {
+        "from": "client/dist",
+        "to": "client/dist"
       }
     ],
     "win": {
@@ -69,5 +74,11 @@
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vite": "^7.2.4"
+  },
+  "dependencies": {
+    "electron-log": "^5.4.3",
+    "finalhandler": "^2.1.1",
+    "http-proxy": "^1.18.1",
+    "serve-static": "^2.2.0"
   }
 }

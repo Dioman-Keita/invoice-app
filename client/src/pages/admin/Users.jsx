@@ -209,7 +209,7 @@ function Users({ requireAuth = false }) {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/users');
+      const response = await api.get('/users');
       const list = response?.data?.users || [];
       setUsers(list);
       setLoading(false);
@@ -324,7 +324,7 @@ function Users({ requireAuth = false }) {
 
     try {
       startAction('Désactivation en cours');
-      await api.post(`/api/users/${user.id}/disable`);
+      await api.post(`/users/${user.id}/disable`);
       await fetchUsers();
       await showCustomMessage({
         type: 'success',
@@ -701,7 +701,7 @@ function Users({ requireAuth = false }) {
           terms: data.terms,
         };
         
-        await api.post('/api/users', payload, { timeout: 30000 });
+        await api.post('/users', payload, { timeout: 30000 });
         
         await showCustomMessage({
           type: 'success',

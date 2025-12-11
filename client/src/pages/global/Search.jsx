@@ -84,14 +84,14 @@ function Search() {
   const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [loadingAttachments, setLoadingAttachments] = useState({});
   
-  const invoiceSearch = useSearch('http://localhost:3000/api/search/invoices', 'factures');
-  const supplierSearch = useSearch('http://localhost:3000/api/search/suppliers', 'fournisseurs');
-  const relationalSearch = useSearch('http://localhost:3000/api/search/relational', 'relationnel');
+  const invoiceSearch = useSearch('/search/invoices', 'factures');
+  const supplierSearch = useSearch('/search/suppliers', 'fournisseurs');
+  const relationalSearch = useSearch('/search/relational', 'relationnel');
 
   useEffect(() => {
     const fetchFiscalYears = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/fiscal-years', {
+        const response = await fetch('/api/fiscal-years', {
           credentials: 'include',
           headers: { Accept: 'application/json' }
         });
@@ -428,7 +428,7 @@ function Search() {
       };
       const accept = acceptByFormat[lowerFmt] || '*/*';
 
-      const response = await fetch('http://localhost:3000/api/export', {
+      const response = await fetch('/api/export', {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -648,7 +648,7 @@ function Search() {
     setLoadingAttachments(prev => ({ ...prev, [invoiceId]: true }));
 
     try {
-      const response = await fetch(`http://localhost:3000/api/invoices/${invoiceId}/attachments`, {
+      const response = await fetch(`/api/invoices/${invoiceId}/attachments`, {
         credentials: 'include',
         headers: { 'Accept': 'application/json' }
       });

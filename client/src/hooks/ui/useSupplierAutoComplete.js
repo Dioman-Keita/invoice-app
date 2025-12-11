@@ -122,7 +122,7 @@ export function useSupplierAutocomplete() {
                 const serverField = field === 'accountNumber' ? 'account_number' : field;
 
                 const response = await api.get(
-                    `api/suppliers/search?field=${encodeURIComponent(serverField)}&value=${encodeURIComponent(formattedValue)}`
+                    `/suppliers/search?field=${encodeURIComponent(serverField)}&value=${encodeURIComponent(formattedValue)}`
                 );
 
                 console.log('Search response:', response);
@@ -158,7 +158,7 @@ export function useSupplierAutocomplete() {
 
                 if (field === 'name') {
                     const response = await api.get(
-                        `api/suppliers/find?name=${encodeURIComponent(formattedValue)}`
+                        `/suppliers/find?name=${encodeURIComponent(formattedValue)}`
                     );
 
                     if (response?.success) {
@@ -174,7 +174,7 @@ export function useSupplierAutocomplete() {
                     }
                 } else {
                     const response = await api.get(
-                        `api/suppliers/search?field=${encodeURIComponent(serverField)}&value=${encodeURIComponent(formattedValue)}`
+                        `/suppliers/search?field=${encodeURIComponent(serverField)}&value=${encodeURIComponent(formattedValue)}`
                     );
 
                     if (response?.success) {
@@ -218,7 +218,7 @@ export function useSupplierAutocomplete() {
                 validateField('phone', phone);
 
                 const response = await api.get(
-                    `api/suppliers/verify-conflicts?account_number=${encodeURIComponent(formatAccountCanonical(accountNumber))}&phone=${encodeURIComponent(phone)}`
+                    `/suppliers/verify-conflicts?account_number=${encodeURIComponent(formatAccountCanonical(accountNumber))}&phone=${encodeURIComponent(phone)}`
                 );
 
                 if (response?.success) {
@@ -255,7 +255,7 @@ export function useSupplierAutocomplete() {
             try {
                 validateField('phone', phone);
 
-                const response = await api.get(`api/suppliers/verify-conflicts?phone=${encodeURIComponent(phone)}`);
+                const response = await api.get(`/suppliers/verify-conflicts?phone=${encodeURIComponent(phone)}`);
 
                 if (response?.success) {
                     setConflictData({
@@ -291,7 +291,7 @@ export function useSupplierAutocomplete() {
                 validateField('accountNumber', accountNumber);
 
                 const response = await api.get(
-                    `api/suppliers/verify-conflicts?account_number=${encodeURIComponent(formatAccountCanonical(accountNumber))}`
+                    `/suppliers/verify-conflicts?account_number=${encodeURIComponent(formatAccountCanonical(accountNumber))}`
                 );
 
                 if (response?.success) {

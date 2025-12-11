@@ -62,7 +62,7 @@ function RoleMigration() {
 
     setLoading(true);
     try {
-      await api.post('/api/migration/request', {
+      await api.post('/migration/request', {
         department,
         motivation,
         targetRole: config.targetRole

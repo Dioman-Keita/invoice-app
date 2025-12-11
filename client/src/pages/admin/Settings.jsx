@@ -61,7 +61,7 @@ function Settings() {
     const loadSettingsFromApi = async () => {
         try {
             setLoading(true);
-            const resp = await fetch('http://localhost:3000/api/settings/fiscal', {
+            const resp = await fetch('/api/settings/fiscal', {
                 method: 'GET',
                 credentials: 'include'
             });
@@ -110,7 +110,7 @@ function Settings() {
     const activateAutoSwitch = async () => {
         try {
             setApiLoading(prev => ({ ...prev, autoSwitch: true }));
-            const resp = await fetch('http://localhost:3000/api/settings/auto-year-switch', {
+            const resp = await fetch('/api/settings/auto-year-switch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -132,7 +132,7 @@ function Settings() {
     const deactivateAutoSwitch = async () => {
         try {
             setApiLoading(prev => ({ ...prev, autoSwitch: true }));
-            const resp = await fetch('http://localhost:3000/api/settings/auto-year-switch', {
+            const resp = await fetch('/api/settings/auto-year-switch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -174,7 +174,7 @@ function Settings() {
 
     const fetchCurrentFiscalYearInfo = async (openOnSuccess = false) => {
         try {
-            const resp = await fetch('http://localhost:3000/api/settings/fiscal', {
+            const resp = await fetch('/api/settings/fiscal', {
                 method: 'GET',
                 credentials: 'include'
             });
@@ -222,7 +222,7 @@ function Settings() {
 
         try {
             setApiLoading(prev => ({ ...prev, yearSwitch: true }));
-            const resp = await fetch('http://localhost:3000/api/settings/fiscal-year/switch', {
+            const resp = await fetch('/api/settings/fiscal-year/switch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',

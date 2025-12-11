@@ -31,7 +31,7 @@ function NavbarPanel({ isOpen, onClose }) {
   });
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState('');
-  
+
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : 'unset';
   }, [isOpen]);
@@ -76,10 +76,10 @@ function NavbarPanel({ isOpen, onClose }) {
     { label: 'Statistiques', icon: <ChartBarIcon className="w-6 h-6" />, action: 'stats' },
     { label: 'Nouvelle facture', icon: <DocumentPlusIcon className="w-6 h-6" />, action: 'newInvoice' },
     { label: 'Rechercher', icon: <MagnifyingGlassIcon className="w-6 h-6" />, action: 'search' },
-    { 
-      label: 'Migration de rôle', 
-      icon: <ArrowsRightLeftIcon className="w-6 h-6" />, 
-      action: 'roleMigration' 
+    {
+      label: 'Migration de rôle',
+      icon: <ArrowsRightLeftIcon className="w-6 h-6" />,
+      action: 'roleMigration'
     },
     { label: 'Traitement DFC', icon: <DocumentCheckIcon className="w-6 h-6" />, action: 'dfc_traitment' },
     { label: 'Accueil', icon: <HomeIcon className="w-6 h-6" />, action: 'home' },
@@ -89,89 +89,91 @@ function NavbarPanel({ isOpen, onClose }) {
     { label: 'Gestion des utilisateurs', icon: <UserGroupIcon className="w-6 h-6" />, action: 'users' },
     { label: 'Statistiques avancées', icon: <ChartBarIcon className="w-6 h-6" />, action: 'adminStats' },
     // NOUVEAU: Messagerie admin
-    { 
-      label: 'Messagerie Admin', 
-      icon: <EnvelopeIcon className="w-6 h-6" />, 
-      action: 'adminMessaging' 
+    {
+      label: 'Messagerie Admin',
+      icon: <EnvelopeIcon className="w-6 h-6" />,
+      action: 'adminMessaging'
     },
-    { 
-      label: 'Code Source GitHub', 
+    {
+      label: 'Code Source GitHub',
       icon: (
         <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
         </svg>
-      ), 
+      ),
       action: 'github',
-      external: true 
+      external: true
     }
   ]), []);
 
   // Filtrer les actions disponibles selon le rôle
   const availableActions = useMemo(() => {
     const userRole = user?.role;
-    
+
     // Définir les actions admin (y compris la messagerie)
     const adminActions = ['dashboard', 'users', 'adminStats', 'adminMessaging'];
-    
-    // Pour les non-connectés, montrer le menu de base sans action de migration
+
+    // Pour les non-connectés, montrer seulement les pages publiques
     if (!userRole) {
-      return allMenuItems.filter(item => item.action !== 'roleMigration');
+      return allMenuItems.filter(item =>
+        ['home', 'help', 'github'].includes(item.action)
+      );
     }
-    
+
     // Filtrer selon le rôle
     let filteredItems = [...allMenuItems];
-    
-    switch(userRole) {
+
+    switch (userRole) {
       case 'admin':
         // Admin voit tout SAUF roleMigration
         filteredItems = filteredItems.filter(item => item.action !== 'roleMigration');
         break;
-        
+
       case 'invoice_manager':
         // Invoice manager voit tout SAUF les pages admin, dfc_traitment ET adminMessaging
-        filteredItems = filteredItems.filter(item => 
-          !adminActions.includes(item.action) && 
+        filteredItems = filteredItems.filter(item =>
+          !adminActions.includes(item.action) &&
           item.action !== 'dfc_traitment'
         );
         break;
-        
+
       case 'dfc_agent':
         // DFC agent voit tout SAUF admin, newInvoice, adminMessaging
         // MAIS IL VOIT roleMigration (car il peut migrer vers invoice_manager)
-        filteredItems = filteredItems.filter(item => 
-          !adminActions.includes(item.action) && 
+        filteredItems = filteredItems.filter(item =>
+          !adminActions.includes(item.action) &&
           item.action !== 'newInvoice'
         );
         break;
-        
+
       default:
         // Par défaut, cacher roleMigration et adminMessaging pour les autres rôles
-        filteredItems = filteredItems.filter(item => 
-          item.action !== 'roleMigration' && 
+        filteredItems = filteredItems.filter(item =>
+          item.action !== 'roleMigration' &&
           !adminActions.includes(item.action)
         );
         break;
     }
-    
+
     return filteredItems;
   }, [user, allMenuItems]);
 
   // Séparer les items en catégories
   const { baseItems, adminItems, additionalItems } = useMemo(() => {
     const adminActions = ['dashboard', 'users', 'adminStats', 'adminMessaging'];
-    
-    const baseItems = availableActions.filter(item => 
+
+    const baseItems = availableActions.filter(item =>
       !adminActions.includes(item.action) && item.action !== 'github'
     );
-    
-    const adminItems = availableActions.filter(item => 
+
+    const adminItems = availableActions.filter(item =>
       adminActions.includes(item.action)
     );
-    
-    const additionalItems = availableActions.filter(item => 
+
+    const additionalItems = availableActions.filter(item =>
       item.action === 'github'
     );
-    
+
     return { baseItems, adminItems, additionalItems };
   }, [availableActions]);
 
@@ -207,7 +209,7 @@ function NavbarPanel({ isOpen, onClose }) {
   };
 
   const handleAction = (action) => {
-    switch(action) {
+    switch (action) {
       case 'stats':
         navigate('/stats');
         break;
@@ -290,7 +292,7 @@ function NavbarPanel({ isOpen, onClose }) {
             >
               <Cog6ToothIcon className="w-6 h-6" />
             </button>
-            <button 
+            <button
               onClick={onClose}
               className="p-1 rounded-md hover:bg-gray-100 transition-colors"
               aria-label="Fermer"
@@ -337,46 +339,46 @@ function NavbarPanel({ isOpen, onClose }) {
               <div className="pt-2" />
             </>
           )}
-          
+
           {/* Menu principal - Afficher le titre seulement si la section n'est pas vide */}
           {!isSectionEmpty(baseItems) && (
             <div className="pt-1 pb-1">
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider pl-4">Menu Principal</h3>
             </div>
           )}
-          
+
           {baseItems
             .filter(({ action }) => !favoriteActions.includes(action))
             .map(({ label, icon, action }) => (
-            <button
-              key={action}
-              onClick={() => handleAction(action)}
-              className="w-full max-w-md mx-auto flex items-center space-x-4 p-4 rounded-lg border border-gray-200 
+              <button
+                key={action}
+                onClick={() => handleAction(action)}
+                className="w-full max-w-md mx-auto flex items-center space-x-4 p-4 rounded-lg border border-gray-200 
               bg-white hover:bg-green-50 hover:border-green-200 hover:shadow-md transition-all duration-200 text-left group overflow-hidden"
-            >
-              <div className="text-green-600 flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
-                {icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-800 group-hover:text-green-800 truncate">{label}</p>
-              </div>
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => { e.stopPropagation(); toggleFavorite(action); }}
-                onKeyDown={(e) => handleFavKeyDown(e, action)}
-                className={favoriteActions.includes(action) ? 'text-amber-500 hover:text-amber-600 cursor-pointer' : 'text-gray-300 hover:text-amber-500 cursor-pointer'}
-                aria-label={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                title={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
               >
-                {favoriteActions.includes(action) ? (
-                  <StarIconSolid className="w-5 h-5" />
-                ) : (
-                  <StarIcon className="w-5 h-5" />
-                )}
-              </span>
-            </button>
-          ))}
+                <div className="text-green-600 flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
+                  {icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-800 group-hover:text-green-800 truncate">{label}</p>
+                </div>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); toggleFavorite(action); }}
+                  onKeyDown={(e) => handleFavKeyDown(e, action)}
+                  className={favoriteActions.includes(action) ? 'text-amber-500 hover:text-amber-600 cursor-pointer' : 'text-gray-300 hover:text-amber-500 cursor-pointer'}
+                  aria-label={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                  title={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                >
+                  {favoriteActions.includes(action) ? (
+                    <StarIconSolid className="w-5 h-5" />
+                  ) : (
+                    <StarIcon className="w-5 h-5" />
+                  )}
+                </span>
+              </button>
+            ))}
 
           {/* Menu admin - Afficher le titre seulement si la section n'est pas vide */}
           {!isSectionEmpty(adminItems) && (
@@ -384,39 +386,39 @@ function NavbarPanel({ isOpen, onClose }) {
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider pl-4">Administration</h3>
             </div>
           )}
-          
+
           {adminItems
             .filter(({ action }) => !favoriteActions.includes(action))
             .map(({ label, icon, action }) => (
-            <button
-              key={action}
-              onClick={() => handleAction(action)}
-              className="w-full max-w-md mx-auto flex items-center space-x-4 p-4 rounded-lg border border-gray-200 
+              <button
+                key={action}
+                onClick={() => handleAction(action)}
+                className="w-full max-w-md mx-auto flex items-center space-x-4 p-4 rounded-lg border border-gray-200 
               bg-white hover:bg-blue-50 hover:border-blue-200 hover:shadow-md transition-all duration-200 text-left group overflow-hidden"
-            >
-              <div className="text-blue-600 flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
-                {icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-800 group-hover:text-blue-800 truncate">{label}</p>
-              </div>
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => { e.stopPropagation(); toggleFavorite(action); }}
-                onKeyDown={(e) => handleFavKeyDown(e, action)}
-                className={favoriteActions.includes(action) ? 'text-amber-500 hover:text-amber-600 cursor-pointer' : 'text-gray-300 hover:text-amber-500 cursor-pointer'}
-                aria-label={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                title={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
               >
-                {favoriteActions.includes(action) ? (
-                  <StarIconSolid className="w-5 h-5" />
-                ) : (
-                  <StarIcon className="w-5 h-5" />
-                )}
-              </span>
-            </button>
-          ))}
+                <div className="text-blue-600 flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
+                  {icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-800 group-hover:text-blue-800 truncate">{label}</p>
+                </div>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); toggleFavorite(action); }}
+                  onKeyDown={(e) => handleFavKeyDown(e, action)}
+                  className={favoriteActions.includes(action) ? 'text-amber-500 hover:text-amber-600 cursor-pointer' : 'text-gray-300 hover:text-amber-500 cursor-pointer'}
+                  aria-label={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                  title={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                >
+                  {favoriteActions.includes(action) ? (
+                    <StarIconSolid className="w-5 h-5" />
+                  ) : (
+                    <StarIcon className="w-5 h-5" />
+                  )}
+                </span>
+              </button>
+            ))}
 
           {/* Options supplémentaires (GitHub) - Afficher le titre seulement si la section n'est pas vide */}
           {!isSectionEmpty(additionalItems) && (
@@ -424,39 +426,39 @@ function NavbarPanel({ isOpen, onClose }) {
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider pl-4">Autres</h3>
             </div>
           )}
-          
+
           {additionalItems
             .filter(({ action }) => !favoriteActions.includes(action))
             .map(({ label, icon, action }) => (
-            <button
-              key={action}
-              onClick={() => handleAction(action)}
-              className="w-full max-w-md mx-auto flex items-center space-x-4 p-4 rounded-lg border border-gray-200 
+              <button
+                key={action}
+                onClick={() => handleAction(action)}
+                className="w-full max-w-md mx-auto flex items-center space-x-4 p-4 rounded-lg border border-gray-200 
               bg-white hover:bg-purple-50 hover:border-purple-200 hover:shadow-md transition-all duration-200 text-left group overflow-hidden"
-            >
-              <div className="text-purple-600 flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
-                {icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-800 group-hover:text-purple-800 truncate">{label}</p>
-              </div>
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => { e.stopPropagation(); toggleFavorite(action); }}
-                onKeyDown={(e) => handleFavKeyDown(e, action)}
-                className={favoriteActions.includes(action) ? 'text-amber-500 hover:text-amber-600 cursor-pointer' : 'text-gray-300 hover:text-amber-500 cursor-pointer'}
-                aria-label={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                title={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
               >
-                {favoriteActions.includes(action) ? (
-                  <StarIconSolid className="w-5 h-5" />
-                ) : (
-                  <StarIcon className="w-5 h-5" />
-                )}
-              </span>
-            </button>
-          ))}
+                <div className="text-purple-600 flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
+                  {icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-800 group-hover:text-purple-800 truncate">{label}</p>
+                </div>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); toggleFavorite(action); }}
+                  onKeyDown={(e) => handleFavKeyDown(e, action)}
+                  className={favoriteActions.includes(action) ? 'text-amber-500 hover:text-amber-600 cursor-pointer' : 'text-gray-300 hover:text-amber-500 cursor-pointer'}
+                  aria-label={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                  title={favoriteActions.includes(action) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                >
+                  {favoriteActions.includes(action) ? (
+                    <StarIconSolid className="w-5 h-5" />
+                  ) : (
+                    <StarIcon className="w-5 h-5" />
+                  )}
+                </span>
+              </button>
+            ))}
         </div>
       </div>
       {isPaletteOpen && (
@@ -480,12 +482,12 @@ function NavbarPanel({ isOpen, onClose }) {
                 .map(({ label, icon, action, external }) => (
                   <button
                     key={`palette-${action}`}
-                    onClick={() => { 
-                      setIsPaletteOpen(false); 
+                    onClick={() => {
+                      setIsPaletteOpen(false);
                       if (external) {
                         window.open('https://github.com/Dioman-Keita/invoice-app', '_blank', 'noopener,noreferrer');
                       } else {
-                        handleAction(action); 
+                        handleAction(action);
                       }
                     }}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left"

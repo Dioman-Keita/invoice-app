@@ -165,7 +165,7 @@ function DfcFormular() {
       try {
         setLoading(true);
         setError('');
-        const res = await fetch('http://localhost:3000/api/invoices/dfc/pending', {
+        const res = await fetch('/api/invoices/dfc/pending', {
           credentials: 'include',
           headers: { 'Accept': 'application/json' }
         });
@@ -232,7 +232,7 @@ function DfcFormular() {
   }, [fiscalYear]);
 
   const approveInvoice = async (invoiceId) => {
-    const res = await fetch(`http://localhost:3000/api/invoices/${invoiceId}/dfc/approve`, {
+    const res = await fetch(`/api/invoices/${invoiceId}/dfc/approve`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -245,7 +245,7 @@ function DfcFormular() {
   };
 
   const rejectInvoice = async (invoiceId) => {
-    const res = await fetch(`http://localhost:3000/api/invoices/${invoiceId}/dfc/reject`, {
+    const res = await fetch(`/api/invoices/${invoiceId}/dfc/reject`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },

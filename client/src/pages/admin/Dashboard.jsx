@@ -52,7 +52,7 @@ function Dashboard({ requireAuth = false }) {
         // Petit délai pour montrer le skeleton (optionnel)
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        const response = await fetch('http://localhost:3000/api/stats/dashboard/kpis', {
+        const response = await fetch('/api/stats/dashboard/kpis', {
           credentials: 'include',
           headers: { 
             'Accept': 'application/json',

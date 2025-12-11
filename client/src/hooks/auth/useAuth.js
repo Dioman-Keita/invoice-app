@@ -64,7 +64,7 @@ export function useAuth() {
         lastCheckRef.current = now;
 
         try {
-            const response = await api.get('api/auth/status');
+            const response = await api.get('/auth/status');
             console.log('🔐 checkAuthStatus response:', response);
 
             if (response?.success === true && response.data?.isAuthenticated) {
@@ -131,7 +131,7 @@ export function useAuth() {
     // Renouvellement silencieux intelligent
     const silentRefresh = useCallback(async () => {
         try {
-            const response = await api.post('api/auth/silent-refresh');
+            const response = await api.post('/auth/silent-refresh');
             
             if (response?.success === true && response.data?.renewed) {
                 setAuthState(prev => ({
@@ -255,7 +255,7 @@ export function useAuth() {
     // ✅ register - CONSERVÉ
     const register = useCallback(async (payload) => {
         try {
-            const response = await api.post('api/auth/register', payload, { timeout: 30000 });
+            const response = await api.post('/auth/register', payload, { timeout: 30000 });
     
             if (response.success !== true) {
                 return {
@@ -298,7 +298,7 @@ export function useAuth() {
     // ✅ finalizeRegister - CONSERVÉ
     const finalizeRegister = useCallback(async (token) => {
         try {
-            const response = await api.post('api/auth/verify-registration-token', { token }, { timeout: 30000 });
+            const response = await api.post('/auth/verify-registration-token', { token }, { timeout: 30000 });
 
             if (response?.success === true) {
                 await checkAuthStatus();
@@ -332,7 +332,7 @@ export function useAuth() {
     // Renvoyer l'email de vérification d'inscription
     const resendVerification = useCallback(async (email) => {
         try {
-            const response = await api.post('api/auth/resend-verification', { email });
+            const response = await api.post('/auth/resend-verification', { email });
             if (response?.success === true) {
                 return { success: true, message: response.message || 'Email renvoyé' };
             }
@@ -346,7 +346,7 @@ export function useAuth() {
     // Login amélioré avec gestion rememberMe
     const login = useCallback(async (credentials) => {
         try {
-            const response = await api.post('api/auth/login', credentials);
+            const response = await api.post('/auth/login', credentials);
             
             if (response?.success === true) {
                 await checkAuthStatus(true);
@@ -385,7 +385,7 @@ export function useAuth() {
     const logout = useCallback(async () => {
         stopPeriodicCheck();
         try {
-            const response = await api.post('api/auth/logout');
+            const response = await api.post('/auth/logout');
             if (response.success === true) {
                 success(response.message || 'Déconnexion réussie');
                 return;
@@ -409,7 +409,7 @@ export function useAuth() {
     // Chargement complet du profil (seulement quand nécessaire) - CONSERVÉ
     const fetchUserProfile = useCallback(async () => {
         try {
-            const response = await api.get('api/auth/profile');
+            const response = await api.get('/auth/profile');
             
             if (response?.success === true && response.data?.user) {
                 const user = response.data.user;
@@ -444,7 +444,7 @@ export function useAuth() {
 
     const forgotPassword = useCallback(async (credential) => {
         try {
-            const response = await api.post('api/auth/forgot-password', credential);
+            const response = await api.post('/auth/forgot-password', credential);
             if (response?.success === true) {
                 return {
                     success: true,
@@ -471,7 +471,7 @@ export function useAuth() {
 
     const resetPassword = useCallback(async (credentials) => {
         try {
-            const response = await api.post('api/auth/reset-password', credentials);
+            const response = await api.post('/auth/reset-password', credentials);
             if (response?.success === true) {
                 return {
                     success: true,

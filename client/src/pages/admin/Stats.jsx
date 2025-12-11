@@ -813,7 +813,7 @@ function useFiscalYears() {
     const fetchFiscalYears = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/api/fiscal-years');
+        const response = await api.get('/fiscal-years');
         
         let years = [];
         if (response.data && Array.isArray(response.data.data)) {
@@ -857,20 +857,20 @@ function Stats() {
 
   const endpoints = {
     invoices: {
-      summary: '/api/stats/invoices/summary',
-      byEmployee: '/api/stats/invoices/by-employee',
+      summary: '/stats/invoices/summary',
+      byEmployee: '/stats/invoices/by-employee',
     },
     dfc: {
-      overview: '/api/stats/dfc/overview',
-      agentsRates: '/api/stats/dfc/agents/rates',
+      overview: '/stats/dfc/overview',
+      agentsRates: '/stats/dfc/agents/rates',
     },
     suppliers_created: {
-      summary: '/api/stats/suppliers/created/summary',
-      byEmployee: '/api/stats/suppliers/created/by-employee',
+      summary: '/stats/suppliers/created/summary',
+      byEmployee: '/stats/suppliers/created/by-employee',
     },
     suppliers_activity: {
-      overview: '/api/stats/suppliers/activity',
-      top: '/api/stats/suppliers/top',
+      overview: '/stats/suppliers/activity',
+      top: '/stats/suppliers/top',
     }
   };
 

@@ -12,7 +12,7 @@ export default function useInvoice() {
   const getLastInvoiceNum = useCallback(async (force = false) => {
     try {
       console.log(' Appel API last-form-num', { force });
-      const response = await api.get('api/invoices/last-num');
+      const response = await api.get('/invoices/last-num');
       
       if (response?.success === true) {
         const lastInvoiceNum = response?.data?.lastInvoiceNum || '0000';
@@ -38,7 +38,7 @@ export default function useInvoice() {
   const getNextNumberExpected = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('api/invoices/next-num');
+      const response = await api.get('/invoices/next-num');
       if (response?.success ===  true) {
         const nextNumberExpected = response?.data?.nextInvoiceNum;
         setNextNumberExpected(nextNumberExpected);
@@ -69,7 +69,7 @@ export default function useInvoice() {
   const saveInvoice = useCallback(async (invoiceData) => {
     try {
       setLoading(true);
-      const response = await api.post('api/invoices', invoiceData);
+      const response = await api.post('/invoices', invoiceData);
       if (response.success === true) {
         console.log(' Facture créée, mise à jour du numéro...');
         
