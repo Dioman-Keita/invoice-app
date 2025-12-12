@@ -42,8 +42,7 @@ export class UserModel {
         });
 
 
-        const verifyLinkBase = process.env.APP_URL || "invoice-app://";
-        const verifyLink = `${verifyLinkBase.endsWith('/') ? verifyLinkBase.slice(0, -1) : verifyLinkBase}/verify?token=${encodeURIComponent(token)}`;
+        const verifyLink = `http://localhost:3000/api/open-app?path=verify&token=${encodeURIComponent(token)}`;
 
         const template = NotificationFactory.create('register', {
             name: `${this.firstName} ${this.lastName}`,

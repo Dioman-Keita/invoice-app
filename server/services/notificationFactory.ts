@@ -52,12 +52,25 @@ export class NotificationFactory {
 	// Helper : si token existe, l'ajoute en query param au lien
 	private static attachTokenToLink(link: string, token?: string): string {
 		if (!token) return link;
+
+        // ✅ CORRECTION 1 : Si le lien contient déjà le token (ce qui est ton cas dans User.ts),
+        // on ne touche à rien, on retourne le lien complet directement.
+        if (link.includes('token=')) return link;
+
 		try {
 			const url = new URL(link, 'http://localhost');
 			if (!url.searchParams.has('token')) {
 				url.searchParams.set('token', token);
 			}
-			if (/^https?:\/\//i.test(link)) return url.toString();
+
+            // ✅ CORRECTION 2 : On autorise explicitement le protocole 'invoice-app'
+            // Ancienne regex : /^https?:\/\//i.test(link)
+            // Nouvelle regex : inclut invoice-app
+			if (/^(https?|invoice-app):\/\//i.test(link)) return url.toString();
+            
+            // Si c'est un autre protocole inconnu, on retourne quand même l'URL entière par sécurité
+            if (url.protocol && url.protocol !== 'http:' && url.protocol !== 'https:') return url.toString();
+
 			return url.pathname + url.search + url.hash;
 		} catch {
 			return link + (link.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token);

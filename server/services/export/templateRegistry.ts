@@ -3,8 +3,17 @@ import { ExportFormat, ExportTemplateInfo, ExportType, ExportVariant } from './t
 
 export function getTemplateInfo(type: ExportType, variant: ExportVariant, format: ExportFormat): ExportTemplateInfo {
   const key = `${type}-${variant}_${format === 'pdf' ? 'odt' : format}` as const;
-  // Resolve from current file location to avoid duplicated segments like 'server/server/templates'
-  const baseDir = path.resolve(__dirname, '..', '..', 'templates');
+  
+  // CORRECTION ICI :
+  // 1. Si la variable d'env existe (Mode Electron), on l'utilise.
+  // 2. Sinon (Mode Dev classique), on garde ton ancien calcul relatif.
+  const baseDir = process.env.SERVER_TEMPLATES_PATH 
+    ? process.env.SERVER_TEMPLATES_PATH 
+    : path.resolve(__dirname, '..', '..', 'templates');
+
+  // Log pour le débogage (optionnel, s'affichera dans main.log)
+  console.log(`[EXPORT] Looking for templates in: ${baseDir}`);
+
   const filename = (() => {
     switch (key) {
       case 'invoice-list_odt': return 'odt/invoice/invoice-list.odt';
@@ -22,5 +31,6 @@ export function getTemplateInfo(type: ExportType, variant: ExportVariant, format
       default: return '';
     }
   })();
+  
   return { key, path: path.join(baseDir, filename) };
 }

@@ -15,8 +15,6 @@ import {
   ChatBubbleLeftRightIcon,
   ArrowRightIcon,
   EyeIcon,
-  TrashIcon,
-  ArchiveBoxIcon,
   BellIcon,
   FunnelIcon,
   ArrowPathIcon,
@@ -47,6 +45,9 @@ function Messaging() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [rejectId, setRejectId] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   // Helper pour mapper les rôles
   const formatRole = (role) => {

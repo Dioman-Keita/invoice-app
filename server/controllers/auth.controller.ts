@@ -52,3 +52,50 @@ export async function checkAuthStatus(req: AuthenticatedRequest, res: Response):
         return ApiResponder.error(res, error, 'Erreur lors de la vérification du statut');
     }
 }
+
+export async function openAppRedirect(req: Request, res: Response) {
+    // 1. On récupère les paramètres depuis l'URL HTTP
+    // Ex: http://localhost:3000/api/open-app?path=verify&token=xyz
+    const { token, path } = req.query;
+
+    if (!token || !path) {
+        return res.status(400).send("Lien invalide : paramètres manquants.");
+    }
+    
+    // 2. On construit le Deep Link pour Electron
+    // Résultat : invoice-app://verify?token=xyz
+    // OU : invoice-app://reset-password?token=xyz
+    const deepLink = `invoice-app://${path}?token=${token}`;
+
+    // 3. Page HTML de rebond (Bridge)
+    const html = `
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+            <meta charset="UTF-8">
+            <title>Ouverture de Invoice App...</title>
+            <style>
+                body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f0f2f5; }
+                .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+                .btn { display: inline-block; margin-top: 1rem; padding: 10px 20px; background: #2563eb; color: white; text-decoration: none; border-radius: 5px; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <h2>🚀 Ouverture de l'application...</h2>
+                <p>Votre navigateur va vous demander la permission d'ouvrir <strong>Invoice App</strong>.</p>
+                <p>Si rien ne se passe, cliquez sur le bouton ci-dessous :</p>
+                <a href="${deepLink}" class="btn">Ouvrir l'application</a>
+            </div>
+            <script>
+                // Tentative d'ouverture automatique
+                setTimeout(function() {
+                    window.location.href = "${deepLink}";
+                }, 500);
+            </script>
+        </body>
+        </html>
+    `;
+    
+    res.send(html);
+}

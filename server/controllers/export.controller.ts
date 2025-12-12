@@ -107,7 +107,8 @@ export async function exportData(req: AuthenticatedRequest, res: Response): Prom
     const contentType = format === 'pdf' ? 'application/pdf' : (format === 'xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/vnd.oasis.opendocument.text');
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    return res.status(200).send(buffer);
+    res.setHeader('Content-Length', buffer.length);
+    return res.end(buffer, 'binary');
   } catch (error) {
     logger.error(`[${requestId}] exportData error`, { error });
     return ApiResponder.error(res, error);

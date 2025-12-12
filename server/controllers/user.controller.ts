@@ -132,7 +132,7 @@ export async function resendVerificationEmail(req: Request, res: Response): Prom
         });
 
 
-        const verifyLink = `invoice-app://verify?token=${encodeURIComponent(token)}`;
+        const verifyLink = `http://localhost:3000/api/open-app?path=verify&token=${encodeURIComponent(token)}`;
 
         const template = NotificationFactory.create('register', {
             name: `${(user as any).firstname ?? ''} ${(user as any).lastname ?? ''}`.trim(),
@@ -430,7 +430,6 @@ export async function forgotPassword(req: Request<unknown, unknown, RequestPassw
 
         const currentUser = user[0];
         
-        const baseLink = process.env.APP_URL || 'http://localhost:5173';
         const token = generateUserToken({
             sup: currentUser.id,
             role: currentUser.role,
@@ -458,7 +457,7 @@ export async function forgotPassword(req: Request<unknown, unknown, RequestPassw
         });
 
 
-        const resetPasswordLink = `invoice-app://reset-password?token=${token}`;
+        const resetPasswordLink = `http://localhost:3000/api/open-app?path=reset-password&token=${token}`;
 
         const template = NotificationFactory.create('reset', {
             name: currentUser.firstName,

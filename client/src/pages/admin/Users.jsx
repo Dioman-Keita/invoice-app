@@ -358,7 +358,7 @@ function Users({ requireAuth = false }) {
 
     try {
       startAction('Réactivation en cours');
-      await api.post(`/api/users/${user.id}/enable`);
+      await api.post(`/users/${user.id}/enable`);
       await fetchUsers();
       await showCustomMessage({
         type: 'success',
@@ -392,7 +392,7 @@ function Users({ requireAuth = false }) {
 
     try {
       startAction('Vérification en cours');
-      await api.post(`/api/users/${user.id}/verify`);
+      await api.post(`/users/${user.id}/verify`);
       await fetchUsers();
       await showCustomMessage({
         type: 'success',
@@ -536,7 +536,7 @@ function Users({ requireAuth = false }) {
 
     try {
       startAction('Suppression en cours');
-      await api.delete(`/api/users/${userId}`);
+      await api.delete(`/users/${userId}`);
       setUsers(users.filter(u => u.id !== userId));
       await showCustomMessage({
         type: 'success',
@@ -678,7 +678,7 @@ function Users({ requireAuth = false }) {
           payload.password = data.password; // envoyé au backend, hashé côté serveur
         }
         
-        await api.put(`/api/users/${selectedUser.id}`, payload, { timeout: 30000 });
+        await api.put(`/users/${selectedUser.id}`, payload, { timeout: 30000 });
         
         await showCustomMessage({
           type: 'success',
