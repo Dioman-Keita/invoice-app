@@ -23,7 +23,7 @@ export function startCleanupUnverifiedJob(): void {
         ids
       );
       await database.execute(
-        `DELETE FROM audit_log WHERE employee_id IN (${placeholders})`,
+        `DELETE FROM audit_log WHERE performed_by IN (${placeholders})`,
         ids
       );
       await database.execute(

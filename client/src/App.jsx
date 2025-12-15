@@ -13,27 +13,32 @@ function DeepLinkHandler() {
 
     // Fonction de traitement
     const handleDeepLink = (url) => {
-        console.log("🔗 Deep link reçu:", url);
-        
-        try {
-            // Nettoyage de l'URL brute (ex: "invoice-app://verify?token=xyz")
-            // 1. On retire le protocole
-            let path = url.replace(/^invoice-app:\/*/, '/');
-            
-            // 2. On retire les éventuels guillemets (bug fréquent Windows)
-            path = path.replace(/["']/g, "");
-            
-            // 3. On s'assure que ça commence par un slash
-            if (!path.startsWith('/')) path = '/' + path;
+      console.log("🔗 Deep link reçu (Raw):", url);
 
-            // 4. On retire le slash final s'il existe (optionnel mais propre)
-            path = path.replace(/\/$/, '');
+      try {
+        // Nettoyage de l'URL brute (ex: "invoice-app://verify?token=xyz")
+        // Regex robsute : gère invoice-app: avec 1, 2 ou 3 slashs
+        let path = url.replace(/^invoice-app:\/*/, '/');
 
-            console.log("👉 Navigation vers:", path);
-            navigate(path);
-        } catch (e) {
-            console.error("Erreur parsing deep link:", e);
+        // On retire les éventuels guillemets
+        path = path.replace(/["']/g, "");
+
+        // On s'assure que ça commence par un slash
+        if (!path.startsWith('/')) path = '/' + path;
+
+        // On retire le slash final s'il existe (sauf si c'est juste "/")
+        if (path.length > 1) {
+          path = path.replace(/\/$/, '');
         }
+
+        // CORRECTION CRITIQUE : /verify/?token -> /verify?token
+        path = path.replace(/\/\?/, '?');
+
+        console.log("👉 Navigation React vers:", path);
+        navigate(path);
+      } catch (e) {
+        console.error("❌ Erreur parsing deep link:", e);
+      }
     };
 
     // Abonnement (retourne la fonction de nettoyage grâce au nouveau preload)
@@ -41,7 +46,7 @@ function DeepLinkHandler() {
 
     // Désabonnement automatique quand le composant est démonté
     return () => {
-        if (removeListener) removeListener();
+      if (removeListener) removeListener();
     };
   }, [navigate]);
 

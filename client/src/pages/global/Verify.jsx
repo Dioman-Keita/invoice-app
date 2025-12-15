@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/auth/useAuth.js';
+import useTitle from '../../hooks/ui/useTitle.js';
 
 function Verify() {
+    useTitle('CMDT - Vérification');
     const [params] = useSearchParams();
     const navigate = useNavigate();
     const [status, setStatus] = useState('loading');

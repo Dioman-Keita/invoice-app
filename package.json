@@ -43,14 +43,23 @@
       {
         "from": "server/dist",
         "to": "server/dist"
-      }, {
+      },
+      {
         "from": "client/dist",
         "to": "client/dist"
       }
     ],
     "win": {
       "target": "nsis"
-    }
+    },
+    "protocols": [
+      {
+        "name": "invoice-app",
+        "schemes": [
+          "invoice-app"
+        ]
+      }
+    ]
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

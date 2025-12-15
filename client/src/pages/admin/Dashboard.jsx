@@ -14,6 +14,7 @@ import {
   ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline';
 import Chart from 'chart.js/auto';
+import useTitle from '../../hooks/ui/useTitle.js';
 
 // Données de fallback minimales
 const FALLBACK_DATA = {
@@ -26,6 +27,7 @@ const FALLBACK_DATA = {
 };
 
 function Dashboard({ requireAuth = false }) {
+  useTitle('CMDT - Tableau de bord');
   const { user } = useAuth();
   const navigate = useNavigate();
   const chartRef = useRef(null);
@@ -51,19 +53,19 @@ function Dashboard({ requireAuth = false }) {
 
         // Petit délai pour montrer le skeleton (optionnel)
         await new Promise(resolve => setTimeout(resolve, 100));
-        
+
         const response = await fetch('/api/stats/dashboard/kpis', {
           credentials: 'include',
-          headers: { 
+          headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
           }
         });
-        
+
         if (response.ok && isMounted) {
           const result = await response.json();
           const data = result.data;
-          
+
           const newData = {
             totalUsers: data.total_employee || 0,
             totalInvoices: data.total_invoices || 0,
@@ -72,9 +74,9 @@ function Dashboard({ requireAuth = false }) {
             dateFrom: data.dateFrom || FALLBACK_DATA.dateFrom,
             dateTo: data.dateTo || FALLBACK_DATA.dateTo
           };
-          
+
           setDashboardData(newData);
-          
+
           // Mettre à jour le graphique après un petit délai
           setTimeout(() => {
             if (isMounted && chartRef.current) {
@@ -111,7 +113,7 @@ function Dashboard({ requireAuth = false }) {
     const ctx = chartRef.current.getContext('2d');
 
     const labels = ['Utilisateurs', 'Factures', 'Chiffre d\'affaires', 'En attente DFC'];
-    
+
     const maxValue = Math.max(data.totalUsers, data.totalInvoices, data.pendingInvoices, 1);
     const dataValues = [
       data.totalUsers,
@@ -186,14 +188,14 @@ function Dashboard({ requireAuth = false }) {
               weight: '500'
             },
             callbacks: {
-              title: function(tooltipItems) {
+              title: function (tooltipItems) {
                 return tooltipItems[0].label;
               },
-              label: function(context) {
+              label: function (context) {
                 const index = context.dataIndex;
                 let value;
-                
-                switch(index) {
+
+                switch (index) {
                   case 0: // Utilisateurs
                     value = `${formatNumber(data.totalUsers)} utilisateurs`;
                     break;
@@ -209,10 +211,10 @@ function Dashboard({ requireAuth = false }) {
                   default:
                     value = formatNumber(context.raw);
                 }
-                
+
                 return value;
               },
-              labelColor: function(context) {
+              labelColor: function (context) {
                 return {
                   borderColor: borderColors[context.dataIndex],
                   backgroundColor: borderColors[context.dataIndex],
@@ -234,7 +236,7 @@ function Dashboard({ requireAuth = false }) {
               font: {
                 size: 11
               },
-              callback: function(value) {
+              callback: function (value) {
                 return formatNumber(value);
               }
             }
@@ -295,16 +297,16 @@ function Dashboard({ requireAuth = false }) {
   // Format de date français
   const formatDateFrench = (dateString) => {
     if (!dateString) return '';
-    
+
     if (dateString.includes('/')) {
       return dateString;
     }
-    
+
     if (dateString.includes('-')) {
       const [year, month, day] = dateString.split('-');
       return `${day}/${month}/${year}`;
     }
-    
+
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString('fr-FR', {
@@ -432,8 +434,8 @@ function Dashboard({ requireAuth = false }) {
                 </div>
               </div>
             )}
-            <canvas 
-              ref={chartRef} 
+            <canvas
+              ref={chartRef}
               className={!chartReady ? 'hidden' : ''}
             />
           </div>
@@ -444,7 +446,7 @@ function Dashboard({ requireAuth = false }) {
           <div className="flex items-center">
             <ChartBarIcon className="w-5 h-5 text-blue-600 mr-3" />
             <p className="text-sm text-blue-700">
-              <strong>Info :</strong> Les hauteurs des barres sont normalisées pour une visualisation optimale. 
+              <strong>Info :</strong> Les hauteurs des barres sont normalisées pour une visualisation optimale.
               Passez la souris sur chaque barre pour voir la valeur réelle.
             </p>
           </div>
@@ -462,7 +464,7 @@ function Dashboard({ requireAuth = false }) {
               <h4 className="font-medium text-gray-900">Gérer les utilisateurs</h4>
               <p className="text-sm text-gray-600">Ajouter, modifier ou supprimer des utilisateurs</p>
             </button>
-            
+
             <button
               onClick={() => navigate('/settings')}
               className="p-4 text-left border border-gray-200 rounded-lg hover:bg-white transition-all duration-200 hover:shadow-md hover:border-orange-200"
@@ -471,7 +473,7 @@ function Dashboard({ requireAuth = false }) {
               <h4 className="font-medium text-gray-900">Paramètres système</h4>
               <p className="text-sm text-gray-600">Configurer les paramètres de l'application</p>
             </button>
-            
+
             <button
               onClick={() => navigate('/admin-stats')}
               className="p-4 text-left border border-gray-200 rounded-lg hover:bg-white transition-all duration-200 hover:shadow-md hover:border-green-200"

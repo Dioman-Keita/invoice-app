@@ -28,6 +28,7 @@ if (process.defaultApp) {
 let mainWindow = null;
 let backendProcess = null;
 let deepLinkUrl = null;
+let isAppReady = false; // <-- NOUVEAU : On track si React est prêt
 
 const BACKEND_PORT = 3000;
 const BACKEND_URL = `http://127.0.0.1:${BACKEND_PORT}`;
@@ -43,16 +44,25 @@ if (!gotTheLock) {
             if (mainWindow.isMinimized()) mainWindow.restore();
             mainWindow.focus();
 
-            // CORRECTION ICI : Chercher l'argument qui CONTIENT le protocole
-            // au lieu de "commence par", pour gérer les guillemets éventuels
+            // 1. Récupération robuste du lien (Warm Start)
             const urlArg = commandLine.find(arg => arg.includes('invoice-app://'));
 
             if (urlArg) {
-                // Nettoyage brut côté Main process aussi
+                // Nettoyage brut
                 let deepLink = urlArg.replace(/["']/g, "").trim();
-
                 log.info(`🔗 Deep link détecté (Instance courante): ${deepLink}`);
-                mainWindow.webContents.send('deep-link', deepLink);
+
+                // 2. Mise à jour de la variable globale (Buffer)
+                deepLinkUrl = deepLink;
+
+                // 3. Si l'app est déjà prête, on envoie tout de suite.
+                // Sinon, on ne fait RIEN. Le listener 'did-finish-load' s'en chargera quand React sera prêt.
+                if (isAppReady) {
+                    mainWindow.webContents.send('deep-link', deepLink);
+                    log.info('📤 Deep link envoyé immédiatement (App Ready)');
+                } else {
+                    log.info('⏳ Deep link mis en tampon (App not Ready yet)');
+                }
             }
         }
     });
@@ -62,13 +72,19 @@ app.on('open-url', (event, url) => {
     event.preventDefault();
     deepLinkUrl = url;
     log.info(`🔗 Deep link (Mac): ${url}`);
-    if (mainWindow) {
+    if (mainWindow && isAppReady) {
         mainWindow.webContents.send('deep-link', url);
     }
 });
 
 if (process.platform === 'win32') {
-    deepLinkUrl = process.argv.find(arg => arg.startsWith('invoice-app://'));
+    // Cold Start : On cherche simplement l'argument
+    // On ne fait RIEN d'autre ici, tout se jouera dans le createWindow
+    const startupUrl = process.argv.find(arg => arg.includes('invoice-app://'));
+    if (startupUrl) {
+        deepLinkUrl = startupUrl.replace(/["']/g, "").trim();
+        log.info(`🔗 Deep link au démarrage (Cold Start) : ${deepLinkUrl}`);
+    }
 }
 
 // --- 5. CHEMINS ---
@@ -172,7 +188,7 @@ function createMainWindow() {
         width: 1400,
         height: 900,
         show: false,
-        backgroundColor: '#f0f2f5', // CORRIGÉ : Même couleur que le CSS pour éviter le flash
+        backgroundColor: '#f0f2f5',
         titleBarStyle: 'hiddenInset',
         webPreferences: {
             nodeIntegration: false,
@@ -189,37 +205,19 @@ function createMainWindow() {
       <meta charset="UTF-8">
       <style>
           body { 
-              /* Police système robuste pour Mac et Windows */
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-              display: flex; 
-              flex-direction: column; 
-              justify-content: center; 
-              align-items: center; 
-              height: 100vh; 
-              margin: 0; /* Reset important */
-              background: #f0f2f5; 
-              color: #333; 
-              user-select: none;
+              display: flex; flex-direction: column; justify-content: center; align-items: center; 
+              height: 100vh; margin: 0; background: #f0f2f5; color: #333; user-select: none;
           }
           .container { text-align: center; }
           .spinner {
-              border: 4px solid #e5e7eb;
-              border-top: 4px solid #3498db;
-              border-radius: 50%;
-              width: 40px;
-              height: 40px;
-              animation: spin 1s linear infinite;
-              margin: 0 auto 20px auto;
+              border: 4px solid #e5e7eb; border-top: 4px solid #3498db; border-radius: 50%;
+              width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px auto;
           }
           @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
           h2 { margin-bottom: 10px; color: #2c3e50; font-weight: 600; }
           p { color: #7f8c8d; margin-top: 0; }
-          .timer { 
-              font-size: 12px; 
-              color: #95a5a6; 
-              margin-top: 20px; 
-              font-family: monospace;
-          }
+          .timer { font-size: 12px; color: #95a5a6; margin-top: 20px; font-family: monospace; }
       </style>
     </head>
     <body>
@@ -231,10 +229,7 @@ function createMainWindow() {
       </div>
       <script>
           let seconds = 0;
-          setInterval(() => {
-              seconds++;
-              document.getElementById('timer').innerText = 'Temps écoulé : ' + seconds + 's';
-          }, 1000);
+          setInterval(() => { seconds++; document.getElementById('timer').innerText = 'Temps écoulé : ' + seconds + 's'; }, 1000);
       </script>
     </body>
     </html>
@@ -252,24 +247,30 @@ function createMainWindow() {
         .then(() => {
             log.info('🌍 Serveur prêt, chargement application...');
 
-            // Gestion du Deep Link
-            let targetUrl = BACKEND_URL;
-            if (deepLinkUrl) {
-                // CORRECTION: Adapter pour HashRouter
-                // On retire le protocole et les slashes initiaux
-                const rawPath = deepLinkUrl.replace(/^invoice-app:\/*/, '');
-                // On construit l'URL avec le hash pour que React Router (HashRouter) la comprenne
-                const pathStr = `/#/${rawPath}`;
+            // On charge TOUJOURS l'URL normale
+            mainWindow.loadURL(BACKEND_URL);
 
-                targetUrl = `${BACKEND_URL}${pathStr}`;
-                log.info(`🌍 Redirection vers: ${targetUrl}`);
-            }
+            // On écoute la fin du chargement de la vraie page (PAS du loading screen)
+            mainWindow.webContents.once('did-finish-load', () => {
+                log.info('✅ React Application Loaded (did-finish-load)');
+                isAppReady = true;
 
-            mainWindow.loadURL(targetUrl);
+                // SI on a un deep link en attente (Cold Start OU Warm Start pdt le chargement)
+                if (deepLinkUrl) {
+                    log.info(`� Envoi du Deep Link en attente : ${deepLinkUrl}`);
+
+                    // Petit délai pour laisser React s'hydrater (Router)
+                    setTimeout(() => {
+                        mainWindow.webContents.send('deep-link', deepLinkUrl);
+                        // On ne clear pas forcément deepLinkUrl si on veut pouvoir le rejouer au reload, 
+                        // mais ici c'est bon.
+                        deepLinkUrl = null;
+                    }, 1000);
+                }
+            });
         })
         .catch((err) => {
             log.error(err);
-            // En cas d'erreur fatale, on le dit à l'utilisateur
             dialog.showMessageBox(mainWindow, {
                 type: 'error',
                 title: 'Erreur Fatale',
@@ -281,6 +282,11 @@ function createMainWindow() {
     mainWindow.on('closed', () => mainWindow = null);
 }
 
-app.whenReady().then(createMainWindow);
-app.on('will-quit', () => stopBackend());
-app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+
+// Déplacement de la logique de démarrage À L'INTÉRIEUR du bloc "else" (Primary Instance)
+// pour garantir que la seconde instance ne lance JAMAIS le backend ni la fenêtre.
+if (gotTheLock) {
+    app.whenReady().then(createMainWindow);
+    app.on('will-quit', () => stopBackend());
+    app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+}

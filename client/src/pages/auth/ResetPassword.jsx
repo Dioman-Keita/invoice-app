@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useAuth } from "../../hooks/auth/useAuth.js";
+import useTitle from "../../hooks/ui/useTitle.js";
 
 function useQuery() {
     const { search } = useLocation();
@@ -9,6 +10,7 @@ function useQuery() {
 }
 
 export default function ResetPassword() {
+    useTitle('CMDT - Réinitialisation mot de passe');
     const query = useQuery();
     const navigate = useNavigate();
     const token = query.get('token') || '';
@@ -77,8 +79,8 @@ export default function ResetPassword() {
             if (result.success) {
                 setIsSuccess(true);
                 setBackendError('');
-                window.history.replaceState({}, document.title, window.location.pathname);
-                
+                // window.history.replaceState({}, document.title, window.location.pathname); // Supprimé pour compatibilité Electron HashRouter
+
                 // Timeout pour la redirection
                 setTimeout(() => navigate('/login'), 5000);
             } else {
@@ -92,7 +94,7 @@ export default function ResetPassword() {
     // Indicateur de force du mot de passe
     const getPasswordStrength = () => {
         if (!passwordValue) return { strength: 0, color: 'gray' };
-        
+
         let strength = 0;
         if (passwordValue.length >= 8) strength += 33;
         if (/[A-Z]/.test(passwordValue)) strength += 33;
@@ -110,7 +112,7 @@ export default function ResetPassword() {
     const loading = isSubmitting || authLoading;
 
     // Conditions de désactivation du bouton
-    const isButtonDisabled = 
+    const isButtonDisabled =
         !token || // Token absent
         isSuccess || // Succès
         !passwordValue || // Pas de mot de passe saisi
@@ -124,19 +126,19 @@ export default function ResetPassword() {
             <div className="w-full max-w-md bg-white rounded-md shadow p-6">
                 <h1 className="text-xl font-semibold mb-1">Réinitialisation du mot de passe</h1>
                 <p className="text-sm text-gray-600 mb-6">Saisissez votre nouveau mot de passe.</p>
-                
+
                 {errors.root && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">
                         {errors.root.message}
                     </div>
                 )}
-                
+
                 {backendError && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">
                         {backendError}
                     </div>
                 )}
-                
+
                 {isSuccess && (
                     <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-600">
                         Mot de passe réinitialisé avec succès. Vous allez être redirigé vers la page de connexion...
@@ -187,7 +189,7 @@ export default function ResetPassword() {
                                 )}
                             </button>
                         </div>
-                        
+
                         {errors.password && (
                             <div className="mt-1 text-sm text-red-600">{errors.password.message}</div>
                         )}
@@ -199,12 +201,11 @@ export default function ResetPassword() {
                                     <span>{passwordStrength.strength}%</span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div 
-                                        className={`h-2 rounded-full ${
-                                            passwordStrength.strength < 50 ? 'bg-red-500' :
+                                    <div
+                                        className={`h-2 rounded-full ${passwordStrength.strength < 50 ? 'bg-red-500' :
                                             passwordStrength.color === 'green' ? 'bg-green-500' :
-                                            passwordStrength.color === 'yellow' ? 'bg-yellow-500' : 'bg-orange-500'
-                                        }`}
+                                                passwordStrength.color === 'yellow' ? 'bg-yellow-500' : 'bg-orange-500'
+                                            }`}
                                         style={{ width: `${passwordStrength.strength}%` }}
                                     ></div>
                                 </div>
@@ -223,7 +224,7 @@ export default function ResetPassword() {
                                 type={showConfirmPassword ? "text" : "password"}
                                 {...register('confirmPassword', {
                                     required: 'La confirmation du mot de passe est requise',
-                                    validate: (value) => 
+                                    validate: (value) =>
                                         value === passwordValue || 'Les mots de passe ne correspondent pas',
                                     onChange: (e) => {
                                         const value = e.target.value;
@@ -256,11 +257,11 @@ export default function ResetPassword() {
                                 )}
                             </button>
                         </div>
-                        
+
                         {errors.confirmPassword && (
                             <div className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</div>
                         )}
-                        
+
                         {confirmPasswordValue && !errors.confirmPassword && passwordValue === confirmPasswordValue && passwordValue.length >= 8 && (
                             <div className="mt-1 text-sm text-green-600">Les mots de passe correspondent.</div>
                         )}
@@ -288,8 +289,8 @@ export default function ResetPassword() {
                 </form>
 
                 <div className="mt-6 pt-4 border-t border-gray-200 text-center">
-                    <Link 
-                        to="/login" 
+                    <Link
+                        to="/login"
                         className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                     >
                         ← Retour à la connexion

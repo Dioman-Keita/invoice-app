@@ -132,7 +132,7 @@ export async function resendVerificationEmail(req: Request, res: Response): Prom
         });
 
 
-        const verifyLink = `http://127.0.0.1:3000/api/open-app?path=verify&token=${encodeURIComponent(token)}`;
+        const verifyLink = `http://127.0.0.1:3000/api/open-app?path=/verify&token=${encodeURIComponent(token)}`;
 
         const template = NotificationFactory.create('register', {
             name: `${(user as any).firstname ?? ''} ${(user as any).lastname ?? ''}`.trim(),

@@ -63,9 +63,8 @@ export async function openAppRedirect(req: Request, res: Response) {
     }
 
     // 2. On construit le Deep Link pour Electron
-    // Résultat : invoice-app://verify?token=xyz
-    // OU : invoice-app://reset-password?token=xyz
-    const deepLink = `invoice-app://${path}?token=${token}`;
+    // Résultat : invoice-app:///verify?token=xyz (Triple slash pour forcer le chemin absolu)
+    const deepLink = `invoice-app:///${path}?token=${token}`;
 
     // 3. Page HTML de rebond (Bridge)
     const html = `

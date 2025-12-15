@@ -4,6 +4,7 @@ import useToastFeedback from '../../hooks/ui/useToastFeedBack.js';
 import { useAuth } from '../../hooks/auth/useAuth.js';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/global/Header.jsx';
+import Footer from '../../components/global/Footer.jsx';
 import Navbar from '../../components/navbar/Navbar.jsx';
 import {
   InboxIcon,
@@ -21,17 +22,19 @@ import {
   WifiIcon,
   NoSymbolIcon
 } from '@heroicons/react/24/outline';
+import useTitle from '../../hooks/ui/useTitle.js';
 
 function Messaging() {
+  useTitle('CMDT - Messagerie Admin');
   // 1. Amélioration Auth : Récupération du loading si disponible, sinon on gère manuellement
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  
+
   // États de l'interface
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0); // Timer pour le bouton
-  
+
   // 2. Amélioration Connexion : État pour la détection réseau
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -52,12 +55,12 @@ function Messaging() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
-  
+
   // Modal
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectId, setRejectId] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
-  
+
   // Timer Ref pour le nettoyage
   const timerRef = useRef(null);
 
@@ -199,12 +202,12 @@ function Messaging() {
     try {
       await api.post(`/migration/requests/${id}/approve`);
       success('Demande approuvée avec succès');
-      
+
       // Mise à jour optimiste locale pour réactivité immédiate
       if (selected?.id === id) {
         setSelected(prev => ({ ...prev, status: 'approved' }));
       }
-      
+
       await fetchRequests();
       fetchStats();
     } catch (err) {
@@ -239,16 +242,16 @@ function Messaging() {
     try {
       await api.post(`/migration/requests/${rejectId}/reject`, { review_note: rejectReason });
       success('Demande rejetée');
-      
+
       if (selected?.id === rejectId) {
         setSelected(prev => ({ ...prev, status: 'rejected' }));
       }
-      
+
       // On ferme d'abord la modale
       setIsRejectModalOpen(false);
       setRejectId(null);
       setRejectReason('');
-      
+
       await fetchRequests();
       fetchStats();
     } catch (err) {
@@ -280,8 +283,8 @@ function Messaging() {
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Connexion requise</h2>
           <p className="text-gray-600 mb-6">Vous devez être connecté pour accéder à cette page.</p>
-          <button 
-            onClick={() => navigate('/login')} 
+          <button
+            onClick={() => navigate('/login')}
             className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
           >
             Se connecter
@@ -301,8 +304,8 @@ function Messaging() {
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Accès refusé</h2>
           <p className="text-gray-600 mb-6">Cet espace est réservé aux administrateurs.</p>
-          <button 
-            onClick={() => navigate('/dashboard')} 
+          <button
+            onClick={() => navigate('/dashboard')}
             className="w-full px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 transition-colors font-medium"
           >
             Retour au Dashboard
@@ -318,7 +321,7 @@ function Messaging() {
       <Navbar />
 
       <div className="container mx-auto px-4 py-6">
-        
+
         {/* Alerte Connexion Perdue */}
         {!isOnline && (
           <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r shadow-sm flex items-center justify-between animate-pulse">
@@ -335,9 +338,8 @@ function Messaging() {
         {/* Header compact */}
         <div className="mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
+            <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-gray-900 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-lg inline-block">Messagerie Admin</h1>
-              <p className="text-gray-900 font-medium text-sm mt-1 bg-white/60 px-2 rounded inline-block">Gestion des demandes de changement de rôle</p>
             </div>
             {stats.pending > 0 && (
               <div className="bg-yellow-50 px-4 py-2 rounded-lg border border-yellow-200 shadow-sm">
@@ -468,11 +470,10 @@ function Messaging() {
                       <div
                         key={req.id}
                         onClick={() => setSelected(req)}
-                        className={`p-4 hover:bg-blue-50/50 cursor-pointer transition-all border-l-4 ${
-                          selected?.id === req.id 
-                            ? 'bg-blue-50 border-l-blue-600 shadow-inner' 
-                            : 'border-l-transparent hover:border-l-gray-300'
-                        }`}
+                        className={`p-4 hover:bg-blue-50/50 cursor-pointer transition-all border-l-4 ${selected?.id === req.id
+                          ? 'bg-blue-50 border-l-blue-600 shadow-inner'
+                          : 'border-l-transparent hover:border-l-gray-300'
+                          }`}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -487,11 +488,10 @@ function Messaging() {
                                   <p className="text-xs text-gray-500">{req.email}</p>
                                 </div>
                               </div>
-                              <span className={`text-xs px-2.5 py-1 rounded-full font-medium border ${
-                                req.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                              <span className={`text-xs px-2.5 py-1 rounded-full font-medium border ${req.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
                                 req.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
-                                'bg-red-50 text-red-700 border-red-200'
-                              }`}>
+                                  'bg-red-50 text-red-700 border-red-200'
+                                }`}>
                                 {req.status === 'pending' ? 'En attente' :
                                   req.status === 'approved' ? 'Approuvé' : 'Rejeté'}
                               </span>
@@ -592,16 +592,16 @@ function Messaging() {
                     <div className="flex items-center justify-between relative">
                       {/* Ligne connecteur */}
                       <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-gray-300 -z-10"></div>
-                      
+
                       <div className="bg-white p-2 rounded-lg border border-gray-200 shadow-sm z-10 w-5/12 text-center">
                         <span className="block text-xs text-gray-400 mb-1">Actuel</span>
                         <span className="font-semibold text-gray-700 text-sm block truncate" title={selected.from}>{selected.from}</span>
                       </div>
-                      
+
                       <div className="bg-blue-600 rounded-full p-1.5 z-10 shadow-md">
-                         <ArrowRightIcon className="w-4 h-4 text-white" />
+                        <ArrowRightIcon className="w-4 h-4 text-white" />
                       </div>
-                      
+
                       <div className="bg-white p-2 rounded-lg border-2 border-blue-100 shadow-sm z-10 w-5/12 text-center">
                         <span className="block text-xs text-blue-400 mb-1">Nouveau</span>
                         <span className="font-bold text-blue-700 text-sm block truncate" title={selected.to}>{selected.to}</span>
@@ -628,11 +628,10 @@ function Messaging() {
                     </div>
                     <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
                       <p className="text-xs text-gray-500 mb-1">Statut actuel</p>
-                      <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-sm font-medium ${
-                        selected.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-sm font-medium ${selected.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                         selected.status === 'approved' ? 'bg-green-100 text-green-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
+                          'bg-red-100 text-red-800'
+                        }`}>
                         {selected.status === 'pending' ? 'En attente' :
                           selected.status === 'approved' ? 'Approuvé' : 'Rejeté'}
                       </div>
@@ -646,7 +645,7 @@ function Messaging() {
                       <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
                         <p className="text-sm text-gray-800">{selected.response}</p>
                         <div className="mt-2 text-xs text-gray-500 flex justify-end">
-                           Examiné le {selected.reviewDate} par {selected.reviewer}
+                          Examiné le {selected.reviewDate} par {selected.reviewer}
                         </div>
                       </div>
                     </div>
@@ -673,7 +672,7 @@ function Messaging() {
                             </>
                           )}
                         </button>
-                        
+
                         <button
                           onClick={() => openRejectModal(selected.id)}
                           disabled={actionLoading || !isOnline}
@@ -684,7 +683,7 @@ function Messaging() {
                         </button>
                       </div>
                       {!isOnline && (
-                         <p className="text-xs text-red-500 text-center mt-2">Action indisponible hors ligne</p>
+                        <p className="text-xs text-red-500 text-center mt-2">Action indisponible hors ligne</p>
                       )}
                     </div>
                   )}
@@ -693,19 +692,13 @@ function Messaging() {
             ) : (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center h-[400px] flex flex-col items-center justify-center border-dashed">
                 <div className="bg-gray-50 p-6 rounded-full mb-4">
-                   <EyeIcon className="w-12 h-12 text-gray-300" />
+                  <EyeIcon className="w-12 h-12 text-gray-300" />
                 </div>
                 <h3 className="text-lg font-medium text-gray-900">Aucune sélection</h3>
                 <p className="text-gray-500 max-w-xs mx-auto mt-2">Sélectionnez une demande dans la liste de gauche pour voir les détails et effectuer des actions.</p>
               </div>
             )}
           </div>
-        </div>
-
-        {/* Footer Info */}
-        <div className="mt-8 text-center text-xs text-gray-500 pb-8">
-          <ExclamationTriangleIcon className="w-4 h-4 inline-block mr-1 text-gray-400" />
-          Toutes les actions administratives sont enregistrées et auditables. Les utilisateurs reçoivent une notification par email lors du changement de statut.
         </div>
       </div>
 
@@ -777,6 +770,7 @@ function Messaging() {
           </div>
         </div>
       )}
+      <Footer />
     </div>
   );
 }
