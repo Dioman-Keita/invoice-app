@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/auth/useAuth.js';
 
 function Verify() {
     const [params] = useSearchParams();
+    const navigate = useNavigate();
     const [status, setStatus] = useState('loading');
     const [message, setMessage] = useState('Vérification en cours...');
     const [countdown, setCountdown] = useState(5); // Compte à rebours de 5 secondes
@@ -22,13 +23,13 @@ function Verify() {
             try {
                 console.log('🔐 Verify - Début de vérification');
                 const result = await finalizeRegister(token);
-                
+
                 console.log('🔐 Verify - Résultat finalizeRegister:', result);
-                
+
                 if (result?.success) {
                     setStatus('success');
                     setMessage('Votre inscription est vérifiée.');
-                    window.history.replaceState({}, document.title, window.location.pathname);
+                    // On ne touche plus à window.history manuellement pour éviter les conflits HashRouter
                 } else {
                     setStatus('error');
                     setMessage(result.message || 'Échec de la vérification.');
@@ -63,30 +64,29 @@ function Verify() {
     // ✅ REDIRECTION AVEC TIMEOUT DE 5 SECONDES
     useEffect(() => {
         if (isAuthenticated && user) {
-            console.log('🔍 Tentative de redirection avec window.location...');
+            console.log('🔍 Tentative de redirection...');
             console.log('🔍 User role:', user.role);
-            
+
             // Nettoyer tout timeout précédent
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
             }
-            
+
             timeoutRef.current = setTimeout(() => {
                 let targetPath = '/dashboard';
-                
+
                 if (user.role === 'invoice_manager') {
                     targetPath = '/facture';
                 } else if (user.role === 'dfc_agent') {
                     targetPath = '/dfc_traitment';
                 }
-                
+
                 console.log('📍 Redirection après 5s vers:', targetPath);
-                console.log('📍 URL complète:', window.location.origin + targetPath);
-                
-                // ✅ FORCER la redirection avec window.location.href
-                window.location.href = targetPath;
+
+                // ✅ Utilisation de navigate pour HashRouter
+                navigate(targetPath, { replace: true });
             }, 5000); // 5 secondes
-            
+
             // Nettoyage à la destruction du composant
             return () => {
                 if (timeoutRef.current) {
@@ -94,23 +94,16 @@ function Verify() {
                 }
             };
         }
-    }, [isAuthenticated, user]);
-
-    console.log('=== ÉTAT ACTUEL ===');
-    console.log('Status:', status);
-    console.log('Authentifié:', isAuthenticated);
-    console.log('User role:', user?.role);
-    console.log('Countdown:', countdown);
-    console.log('===================');
+    }, [isAuthenticated, user, navigate]);
 
     // ✅ Fonction de redirection manuelle
     const handleManualRedirect = () => {
         let targetPath = '/dashboard';
         if (user?.role === 'invoice_manager') targetPath = '/facture';
         if (user?.role === 'dfc_agent') targetPath = '/dfc_traitment';
-        
+
         console.log('🖱️ Redirection manuelle vers:', targetPath);
-        window.location.href = targetPath;
+        navigate(targetPath, { replace: true });
     };
 
     return (
@@ -133,7 +126,7 @@ function Verify() {
                         </div>
                         <h1 className="text-xl font-semibold text-green-800 mb-2">Inscription réussie !</h1>
                         <p className="text-gray-600 mb-4">{message}</p>
-                        
+
                         {/* ✅ Affichage du compte à rebours */}
                         <div className="mb-6 p-4 bg-green-50 rounded-lg">
                             <p className="text-sm text-green-700 mb-2">
@@ -143,37 +136,37 @@ function Verify() {
                                 {countdown} seconde{countdown > 1 ? 's' : ''}
                             </div>
                         </div>
-                        
+
                         <p className="text-sm text-gray-500 mb-4">
-                            Vers {user?.role === 'dfc_agent' ? 'la page DFC' : 
-                                 user?.role === 'invoice_manager' ? 'la page de facturation' : 
-                                 'le tableau de bord'}
+                            Vers {user?.role === 'dfc_agent' ? 'la page DFC' :
+                                user?.role === 'invoice_manager' ? 'la page de facturation' :
+                                    'le tableau de bord'}
                         </p>
-                        
+
                         {/* ✅ Bouton de redirection manuelle */}
-                        <button 
+                        <button
                             onClick={handleManualRedirect}
                             className="w-full px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
                         >
                             Rediriger maintenant
                         </button>
-                        
+
                         {/* ✅ Lien manuel de secours */}
                         <div className="mt-4 pt-4 border-t border-gray-200">
                             <p className="text-xs text-gray-500 mb-2">Si la redirection ne fonctionne pas :</p>
                             <div className="flex gap-4 justify-center">
                                 {user?.role === 'dfc_agent' ? (
-                                    <a href="/dfc_traitment" className="text-sm text-blue-500 hover:underline">
+                                    <Link to="/dfc_traitment" className="text-sm text-blue-500 hover:underline">
                                         Aller à la page DFC
-                                    </a>
+                                    </Link>
                                 ) : user?.role === 'invoice_manager' ? (
-                                    <a href="/facture" className="text-sm text-blue-500 hover:underline">
+                                    <Link to="/facture" className="text-sm text-blue-500 hover:underline">
                                         Aller à la facturation
-                                    </a>
+                                    </Link>
                                 ) : (
-                                    <a href="/admin/Dashboard" className="text-sm text-blue-500 hover:underline">
+                                    <Link to="/dashboard" className="text-sm text-blue-500 hover:underline">
                                         Aller au tableau de bord
-                                    </a>
+                                    </Link>
                                 )}
                             </div>
                         </div>
@@ -189,12 +182,12 @@ function Verify() {
                         </div>
                         <h1 className="text-xl font-semibold text-red-800 mb-2">Erreur de vérification</h1>
                         <p className="text-gray-600 mb-6">{message}</p>
-                        <a 
-                            href="/globale/Register"
+                        <Link
+                            to="/register"
                             className="inline-block px-6 py-3 rounded-lg bg-gray-800 text-white hover:bg-black transition-colors font-medium"
                         >
                             Créer un compte
-                        </a>
+                        </Link>
                     </>
                 )}
             </div>

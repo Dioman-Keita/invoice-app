@@ -29,12 +29,12 @@ const getCookieOptions = (): CookieOptions => {
         httpOnly: true,
         secure: secure,
         // 'lax' est le meilleur compromis pour une auth locale stable
-        sameSite: 'lax', 
+        sameSite: 'lax',
         path: '/',
         // 🛑 IMPORTANT : On ne définit JAMAIS le domaine en mode Electron/Local.
         // On laisse le navigateur gérer ça (HostOnly Cookie).
         // On ne met le domaine que si on est en VRAIE prod web (pas electron)
-        ...( (!isElectron && isProduction && process.env.COOKIE_DOMAIN) ? { domain: process.env.COOKIE_DOMAIN } : {})
+        ...((!isElectron && isProduction && process.env.COOKIE_DOMAIN) ? { domain: process.env.COOKIE_DOMAIN } : {})
     };
 };
 export async function createUser(
@@ -132,7 +132,7 @@ export async function resendVerificationEmail(req: Request, res: Response): Prom
         });
 
 
-        const verifyLink = `http://localhost:3000/api/open-app?path=verify&token=${encodeURIComponent(token)}`;
+        const verifyLink = `http://127.0.0.1:3000/api/open-app?path=verify&token=${encodeURIComponent(token)}`;
 
         const template = NotificationFactory.create('register', {
             name: `${(user as any).firstname ?? ''} ${(user as any).lastname ?? ''}`.trim(),
@@ -429,7 +429,7 @@ export async function forgotPassword(req: Request<unknown, unknown, RequestPassw
         }
 
         const currentUser = user[0];
-        
+
         const token = generateUserToken({
             sup: currentUser.id,
             role: currentUser.role,
@@ -457,7 +457,7 @@ export async function forgotPassword(req: Request<unknown, unknown, RequestPassw
         });
 
 
-        const resetPasswordLink = `http://localhost:3000/api/open-app?path=reset-password&token=${token}`;
+        const resetPasswordLink = `http://127.0.0.1:3000/api/open-app?path=reset-password&token=${token}`;
 
         const template = NotificationFactory.create('reset', {
             name: currentUser.firstName,
@@ -743,7 +743,7 @@ export async function verifyRegistrationToken(req: Request<unknown, unknown, Ver
             ...cookieConfig,
             // Exception pour rememberMe: pas de httpOnly car lu par le front parfois ? 
             // Dans ton code initial c'était httpOnly: false pour ce cookie, je le remets ici
-            httpOnly: false, 
+            httpOnly: false,
             maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours
         })
 
@@ -836,7 +836,7 @@ export async function silentRefresh(req: AuthenticatedRequest, res: Response): P
         }
 
         const cookieOptions = getCookieOptions();
-        
+
         res.cookie('auth_token', newAccessToken, {
             ...cookieOptions,
             maxAge: rememberMe ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000, // 2h vs 1h

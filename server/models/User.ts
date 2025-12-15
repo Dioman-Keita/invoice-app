@@ -42,7 +42,7 @@ export class UserModel {
         });
 
 
-        const verifyLink = `http://localhost:3000/api/open-app?path=verify&token=${encodeURIComponent(token)}`;
+        const verifyLink = `http://127.0.0.1:3000/api/open-app?path=verify&token=${encodeURIComponent(token)}`;
 
         const template = NotificationFactory.create('register', {
             name: `${this.firstName} ${this.lastName}`,

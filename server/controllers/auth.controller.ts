@@ -9,11 +9,11 @@ export async function checkAuthStatus(req: AuthenticatedRequest, res: Response):
         const rememberMe = req.cookies.rememberMe === 'true'
         const activityTracker = new ActivityTracker(undefined, rememberMe);
         console.log('🔐 checkAuthStatus - user object:', user); // Debug
-        
+
         if (!user) {
-            return ApiResponder.success(res, { 
+            return ApiResponder.success(res, {
                 isAuthenticated: false,
-                user: null 
+                user: null
             }, 'Utilisateur non authentifié');
         }
 
@@ -25,9 +25,9 @@ export async function checkAuthStatus(req: AuthenticatedRequest, res: Response):
 
         if (!userId || !userEmail || !userRole || !activity) {
             console.error('❌ User object missing required fields:', user);
-            return ApiResponder.success(res, { 
+            return ApiResponder.success(res, {
                 isAuthenticated: false,
-                user: null 
+                user: null
             }, 'Données utilisateur incomplètes');
         }
 
@@ -55,13 +55,13 @@ export async function checkAuthStatus(req: AuthenticatedRequest, res: Response):
 
 export async function openAppRedirect(req: Request, res: Response) {
     // 1. On récupère les paramètres depuis l'URL HTTP
-    // Ex: http://localhost:3000/api/open-app?path=verify&token=xyz
+    // Ex: http://127.0.0.1:3000/api/open-app?path=verify&token=xyz
     const { token, path } = req.query;
 
     if (!token || !path) {
         return res.status(400).send("Lien invalide : paramètres manquants.");
     }
-    
+
     // 2. On construit le Deep Link pour Electron
     // Résultat : invoice-app://verify?token=xyz
     // OU : invoice-app://reset-password?token=xyz
@@ -96,6 +96,6 @@ export async function openAppRedirect(req: Request, res: Response) {
         </body>
         </html>
     `;
-    
+
     res.send(html);
 }

@@ -225,26 +225,28 @@ export async function deleteUser(req: Request, res: Response): Promise<Response>
   const requestId = (req.headers['x-request-id'] as string) || 'unknown';
   const { id } = req.params;
   try {
-    // Vérifier les dépendances bloquantes
+    // Vérifier les dépendances bloquantes CRITIQUES (Données métier)
     const [inv] = await database.execute<Array<{ cnt: number }>>('SELECT COUNT(*) AS cnt FROM invoice WHERE created_by = ?', [id]);
     const [sup] = await database.execute<Array<{ cnt: number }>>('SELECT COUNT(*) AS cnt FROM supplier WHERE created_by = ?', [id]);
     const [dec] = await database.execute<Array<{ cnt: number }>>('SELECT COUNT(*) AS cnt FROM dfc_decision WHERE decided_by = ?', [id]);
-    const [aud] = await database.execute<Array<{ cnt: number }>>('SELECT COUNT(*) AS cnt FROM audit_log WHERE performed_by = ?', [id]);
-    const [act] = await database.execute<Array<{ cnt: number }>>('SELECT COUNT(*) AS cnt FROM user_activity WHERE user_id = ?', [id]);
 
     const invCount = Array.isArray(inv) ? inv[0]?.cnt ?? 0 : (inv as any)?.cnt ?? 0;
     const supCount = Array.isArray(sup) ? sup[0]?.cnt ?? 0 : (sup as any)?.cnt ?? 0;
     const decCount = Array.isArray(dec) ? dec[0]?.cnt ?? 0 : (dec as any)?.cnt ?? 0;
-    const audCount = Array.isArray(aud) ? aud[0]?.cnt ?? 0 : (aud as any)?.cnt ?? 0;
-    const actCount = Array.isArray(act) ? act[0]?.cnt ?? 0 : (act as any)?.cnt ?? 0;
 
-    if (invCount > 0 || supCount > 0 || decCount > 0 || audCount > 0 || actCount > 0) {
-      const details = { invoices: invCount, suppliers: supCount, dfc_decisions: decCount, audit_logs: audCount, activities: actCount };
-      return ApiResponder.error(res, details, "Impossible de supprimer cet utilisateur: des ressources associées existent (factures, fournisseurs, décisions, journaux d'audit ou activités utilisateur).", 409);
+    if (invCount > 0 || supCount > 0 || decCount > 0) {
+      const details = { invoices: invCount, suppliers: supCount, dfc_decisions: decCount };
+      return ApiResponder.error(res, details, "Impossible de supprimer cet utilisateur : il a créé des factures, fournisseurs ou pris des décisions DFC.", 409);
     }
 
+    // Nettoyage des données "accessoires" (logs, activités, tokens) avant suppression
+    // On suppose que si l'utilisateur n'a pas données métier, on peut supprimer ses traces techniques
+    await database.execute('DELETE FROM audit_log WHERE performed_by = ?', [id]);
+    await database.execute('DELETE FROM user_activity WHERE user_id = ?', [id]);
+    await database.execute('DELETE FROM auth_token WHERE employee_id = ?', [id]);
     await database.execute('DELETE FROM employee WHERE id = ?', [id]);
-    logger.info(`[${requestId}] Utilisateur supprimé`, { id });
+
+    logger.info(`[${requestId}] Utilisateur supprimé (avec nettoyage logs/activités)`, { id });
     return ApiResponder.success(res, null, 'Utilisateur supprimé avec succès.');
   } catch (error) {
     logger.error(`[${requestId}] Erreur deleteUser`, { error, id });

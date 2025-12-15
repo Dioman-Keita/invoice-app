@@ -17,13 +17,32 @@ function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  
+  // --- NOUVEAU : État pour le timer ---
+  const [resendTimer, setResendTimer] = useState(0);
+
+  // --- NOUVEAU : Gestion du décompte ---
+  useEffect(() => {
+    let interval;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  const { error, success } = useToastFeedback();
+  const { register: registerUser, resendVerification } = useAuth();
 
   const handleResendEmail = async () => {
-    if (!userEmail) return;
+    if (!userEmail || resendTimer > 0) return; // Empêcher le clic si timer actif
+    
     try {
       const res = await resendVerification(userEmail);
       if (res?.success) {
-        success(res.message || "Email renvoyé");
+        success(res.message || "Email renvoyé avec succès");
+        setResendTimer(60); // Démarrer le timer de 60 secondes
       } else {
         error(res?.message || "Échec du renvoi");
       }
@@ -42,9 +61,6 @@ function Register() {
     filterPhone
   } = useInputFilters();
   
-  const { error, success } = useToastFeedback();
-
-  const { register: registerUser, resendVerification } = useAuth();
   const { 
     register, 
     handleSubmit, 
@@ -119,7 +135,6 @@ function Register() {
     setValue('role', role, { shouldValidate: true, shouldDirty: true });
   }, [role, setValue]);
 
-  // Icônes pour chaque rôle
   const getRoleIcon = (roleType) => {
     switch(roleType) {
       case 'dfc_agent':
@@ -142,7 +157,7 @@ function Register() {
   // Composant Vestiaire d'attente
   const WaitingRoom = () => (
     <div className="min-h-screen flex flex-col md:flex-row bg-register">
-      {/* Section illustration */}
+      {/* Section illustration (inchangée) */}
       <div className="md:w-1/2 flex items-center justify-center p-8 bg-gradient-to-br from-blue-600 to-green-700 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative z-10 max-w-md text-center">
@@ -164,7 +179,6 @@ function Register() {
           </div>
         </div>
         
-        {/* Éléments décoratifs */}
         <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
         <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/5 rounded-full blur-xl"></div>
       </div>
@@ -183,12 +197,10 @@ function Register() {
           </div>
 
           <div className="space-y-6">
-            {/* Animation de chargement */}
             <div className="flex justify-center">
               <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
             </div>
 
-            {/* Message principal */}
             <div className="text-center">
               <h3 className="text-lg font-semibold text-gray-800 mb-2">
                 Consultez votre boîte email
@@ -204,32 +216,26 @@ function Register() {
               </p>
             </div>
 
-            {/* Étapes */}
+            {/* Étapes (inchangées) */}
             <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
               <h4 className="font-semibold text-gray-800 mb-4">Prochaines étapes :</h4>
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold mt-0.5">
-                    1
-                  </div>
+                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold mt-0.5">1</div>
                   <div>
                     <p className="font-medium text-gray-700">Ouvrez votre email</p>
                     <p className="text-sm text-gray-500">Vérifiez votre boîte de réception et vos spams</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold mt-0.5">
-                    2
-                  </div>
+                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold mt-0.5">2</div>
                   <div>
                     <p className="font-medium text-gray-700">Cliquez sur le lien</p>
                     <p className="text-sm text-gray-500">Le lien vous redirigera vers la page de vérification</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold mt-0.5">
-                    3
-                  </div>
+                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold mt-0.5">3</div>
                   <div>
                     <p className="font-medium text-gray-700">Finalisez l'inscription</p>
                     <p className="text-sm text-gray-500">Votre compte sera activé automatiquement</p>
@@ -238,27 +244,46 @@ function Register() {
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="space-y-4">
+            {/* --- NOUVELLE SECTION BOUTONS --- */}
+            <div className="space-y-3 pt-2">
               <button
                 onClick={() => setRegistrationSuccess(false)}
-                className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+                className="w-full py-3 px-4 bg-gray-100 text-gray-700 border border-gray-200 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
               >
                 Retour au formulaire
               </button>
               
-              <div className="text-center">
-                <p className="text-sm text-gray-600">
-                  Vous n'avez pas reçu l'email ?{' '}
-                  <button 
-                    onClick={handleResendEmail}
-                    className="font-semibold text-blue-600 hover:text-blue-800 transition-colors"
-                  >
-                    Renvoyer l'email
-                  </button>
-                </p>
+              <div className="text-center space-y-2">
+                <p className="text-sm text-gray-500">Vous n'avez pas reçu l'email ?</p>
+                <button 
+                  onClick={handleResendEmail}
+                  disabled={resendTimer > 0}
+                  className={`w-full py-3 px-4 rounded-xl font-semibold transition-all duration-200 border-2 flex items-center justify-center gap-2
+                    ${resendTimer > 0 
+                      ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed' 
+                      : 'bg-white border-blue-600 text-blue-600 hover:bg-blue-50 hover:shadow-sm'
+                    }`}
+                >
+                  {resendTimer > 0 ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Renvoyer dans {resendTimer}s</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>Renvoyer l'email</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
+
           </div>
         </div>
       </div>
@@ -270,11 +295,12 @@ function Register() {
     return <WaitingRoom />;
   }
 
-  // Retourner le formulaire d'inscription normal
+  // Retourner le formulaire d'inscription normal (reste du code inchangé)
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-register">
-      {/* Section illustration */}
-      <div className="md:w-1/2 flex items-center justify-center p-8 bg-gradient-to-br from-blue-600 to-green-700 text-white relative overflow-hidden">
+       {/* ... Contenu du formulaire d'inscription (inchangé) ... */}
+       {/* Section illustration */}
+       <div className="md:w-1/2 flex items-center justify-center p-8 bg-gradient-to-br from-blue-600 to-green-700 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative z-10 max-w-md text-center">
           <div className="mb-8">

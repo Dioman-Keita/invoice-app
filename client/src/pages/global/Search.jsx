@@ -371,13 +371,10 @@ function Search() {
     }
     setShowInvoiceOverview(false);
     setShowSupplierOverview(false);
-    setShowGroupedOverview(false);  // ✅ AJOUT
+    setShowGroupedOverview(false);
     setSelectedInvoice(null);
     setSelectedSupplier(null);
-    setSelectedGroupedResult(null);  // ✅ AJOUT
-    // Reset export states when closing overview to prevent auto-export
-    setIsExportingPdf(false);
-    setIsExportingExcel(false);
+    setSelectedGroupedResult(null);
   };
 
   const handleExport = async (format, data = null) => {

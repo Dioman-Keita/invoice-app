@@ -9,13 +9,13 @@ async function startServer() {
     try {
 
         // Démarrer le serveur
-        app.listen(PORT, () => {
+        app.listen(Number(PORT), '127.0.0.1', () => {
             logger.info(`🚀 Serveur démarré sur le port ${PORT}`);
-            logger.info(`📡 API disponible sur http://localhost:${PORT}/api`);
-            logger.info(`🔍 Health check: http://localhost:${PORT}/api/health`);
+            logger.info(`📡 API disponible sur http://127.0.0.1:${PORT}/api`);
+            logger.info(`🔍 Health check: http://127.0.0.1:${PORT}/api/health`);
             console.log(`🚀 Serveur démarré sur le port ${PORT}`);
-            console.log(`📡 API disponible sur http://localhost:${PORT}/api`);
-            console.log(`🔍 Health check: http://localhost:${PORT}/api/health`);
+            console.log(`📡 API disponible sur http://127.0.0.1:${PORT}/api`);
+            console.log(`🔍 Health check: http://127.0.0.1:${PORT}/api/health`);
             startCleanupUnverifiedJob();
         });
     } catch (error) {
