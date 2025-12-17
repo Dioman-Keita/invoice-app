@@ -37,13 +37,13 @@ export async function getInvoicesByEmployee(
     const g = parseGranularity(req.query.type);
 
     const { dateFrom, dateTo } = await getEntityDateRange('invoice', fy);
-    
+
     if (!dateFrom || !dateTo) {
-      return ApiResponder.success(res, [], 'Aucune facture pour cette année fiscale', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, [], 'Aucune facture pour cette année fiscale', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -63,11 +63,11 @@ export async function getInvoicesByEmployee(
         [fy]
       );
       const data = asArray<EmployeeInvoiceRow>(rows);
-      return ApiResponder.success(res, data, 'Factures par employé', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, data, 'Factures par employé', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -88,15 +88,15 @@ export async function getInvoicesByEmployee(
       [fy]
     );
     const dataSeries = asArray<EmployeeInvoiceRow & { bucket: string }>(rows);
-    return ApiResponder.success(res, dataSeries, 'Série temporelle factures par employé', { 
-      fiscalYear: fy, 
-      dateFrom, 
-      dateTo, 
-      type: g 
+    return ApiResponder.success(res, dataSeries, 'Série temporelle factures par employé', {
+      fiscalYear: fy,
+      dateFrom,
+      dateTo,
+      type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getInvoicesByEmployee`, { 
-      error: error instanceof Error ? error.message : 'unknown' 
+    logger.error(`[${requestId}] Erreur getInvoicesByEmployee`, {
+      error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
@@ -113,13 +113,13 @@ export async function getDfcAgentsRates(
     const g = parseGranularity(req.query.type);
 
     const { dateFrom, dateTo } = await getEntityDateRange('dfc_decision', fy);
-    
+
     if (!dateFrom || !dateTo) {
-      return ApiResponder.success(res, [], 'Aucune décision DFC pour cette année fiscale', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, [], 'Aucune décision DFC pour cette année fiscale', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -148,12 +148,12 @@ export async function getDfcAgentsRates(
         rejected_rate: r.total ? Number((100 * r.rejected / r.total).toFixed(2)) : 0,
         approved_rate: r.total ? Number((100 * r.approved / r.total).toFixed(2)) : 0,
       }));
-      
-      return ApiResponder.success(res, data, 'Taux de décision par agent DFC', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+
+      return ApiResponder.success(res, data, 'Taux de décision par agent DFC', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -184,16 +184,16 @@ export async function getDfcAgentsRates(
       rejected_rate: r.total ? Number((100 * r.rejected / r.total).toFixed(2)) : 0,
       approved_rate: r.total ? Number((100 * r.approved / r.total).toFixed(2)) : 0,
     }));
-    
-    return ApiResponder.success(res, data, 'Série temporelle décisions par agent', { 
-      fiscalYear: fy, 
-      dateFrom, 
-      dateTo, 
-      type: g 
+
+    return ApiResponder.success(res, data, 'Série temporelle décisions par agent', {
+      fiscalYear: fy,
+      dateFrom,
+      dateTo,
+      type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getDfcAgentsRates`, { 
-      error: error instanceof Error ? error.message : 'unknown' 
+    logger.error(`[${requestId}] Erreur getDfcAgentsRates`, {
+      error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
@@ -210,13 +210,13 @@ export async function getSuppliersCreatedByEmployee(
     const g = parseGranularity(req.query.type);
 
     const { dateFrom, dateTo } = await getEntityDateRange('supplier', fy);
-    
+
     if (!dateFrom || !dateTo) {
-      return ApiResponder.success(res, [], 'Aucun fournisseur créé pour cette année fiscale', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, [], 'Aucun fournisseur créé pour cette année fiscale', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -234,11 +234,11 @@ export async function getSuppliersCreatedByEmployee(
         [fy]
       );
       const data = asArray<SupplierCreatedRow>(rows);
-      return ApiResponder.success(res, data, 'Fournisseurs créés par employé', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, data, 'Fournisseurs créés par employé', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -257,15 +257,15 @@ export async function getSuppliersCreatedByEmployee(
       [fy]
     );
     const data = asArray<SupplierCreatedRow & { bucket: string }>(rows);
-    return ApiResponder.success(res, data, 'Série temporelle fournisseurs créés', { 
-      fiscalYear: fy, 
-      dateFrom, 
-      dateTo, 
-      type: g 
+    return ApiResponder.success(res, data, 'Série temporelle fournisseurs créés', {
+      fiscalYear: fy,
+      dateFrom,
+      dateTo,
+      type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getSuppliersCreatedByEmployee`, { 
-      error: error instanceof Error ? error.message : 'unknown' 
+    logger.error(`[${requestId}] Erreur getSuppliersCreatedByEmployee`, {
+      error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
@@ -282,13 +282,13 @@ export async function getSuppliersActivity(
     const g = parseGranularity(req.query.type);
 
     const { dateFrom, dateTo } = await getEntityDateRange('invoice', fy);
-    
+
     if (!dateFrom || !dateTo) {
-      return ApiResponder.success(res, [], 'Aucune activité fournisseur pour cette année fiscale', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, [], 'Aucune activité fournisseur pour cette année fiscale', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -312,13 +312,13 @@ export async function getSuppliersActivity(
         ORDER BY total_invoices DESC`,
         [fy]
       );
-      
+
       const data = asArray<SupplierActivityRow>(rows);
-      return ApiResponder.success(res, data, 'Activité des fournisseurs', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, data, 'Activité des fournisseurs', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -338,17 +338,17 @@ export async function getSuppliersActivity(
        ORDER BY bucket, total_invoices DESC`,
       [fy]
     );
-    
+
     const dataSeries = asArray<SupplierActivityRow & { bucket: string }>(rows);
-    return ApiResponder.success(res, dataSeries, 'Série temporelle activité fournisseurs', { 
-      fiscalYear: fy, 
-      dateFrom, 
-      dateTo, 
-      type: g 
+    return ApiResponder.success(res, dataSeries, 'Série temporelle activité fournisseurs', {
+      fiscalYear: fy,
+      dateFrom,
+      dateTo,
+      type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getSuppliersActivity`, { 
-      error: error instanceof Error ? error.message : 'unknown' 
+    logger.error(`[${requestId}] Erreur getSuppliersActivity`, {
+      error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
@@ -356,7 +356,7 @@ export async function getSuppliersActivity(
 
 // ========================= Statistiques globales =========================
 export async function getInvoicesSummary(
-  req: Request<unknown, unknown, unknown, { fiscalYear?: string; type?: string }>, 
+  req: Request<unknown, unknown, unknown, { fiscalYear?: string; type?: string }>,
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
@@ -365,17 +365,17 @@ export async function getInvoicesSummary(
     const g = parseGranularity(req.query.type);
 
     const { dateFrom, dateTo } = await getEntityDateRange('invoice', fy);
-    
+
     if (!dateFrom || !dateTo) {
-      return ApiResponder.success(res, { 
-        series: [], 
-        total: 0, 
-        total_amount: 0 
-      }, 'Aucune facture pour cette année fiscale', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, {
+        series: [],
+        total: 0,
+        total_amount: 0
+      }, 'Aucune facture pour cette année fiscale', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -391,11 +391,11 @@ export async function getInvoicesSummary(
       );
       const arr = asArray<{ total: number; total_amount: number }>(row);
       const data = arr[0] || { total: 0, total_amount: 0 };
-      return ApiResponder.success(res, data, 'Résumé des factures', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, data, 'Résumé des factures', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -417,23 +417,23 @@ export async function getInvoicesSummary(
       total: acc.total + (r.total || 0),
       total_amount: acc.total_amount + (r.total_amount || 0),
     }), { total: 0, total_amount: 0 });
-    
-    return ApiResponder.success(res, { series, ...totals }, 'Série temporelle factures', { 
-      fiscalYear: fy, 
-      dateFrom, 
-      dateTo, 
-        type: g 
+
+    return ApiResponder.success(res, { series, ...totals }, 'Série temporelle factures', {
+      fiscalYear: fy,
+      dateFrom,
+      dateTo,
+      type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getInvoicesSummary`, { 
-      error: error instanceof Error ? error.message : 'unknown' 
+    logger.error(`[${requestId}] Erreur getInvoicesSummary`, {
+      error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
 }
 
 export async function getDfcOverview(
-  req: Request<unknown, unknown, unknown, { fiscalYear?: string; type?: string }>, 
+  req: Request<unknown, unknown, unknown, { fiscalYear?: string; type?: string }>,
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
@@ -442,18 +442,18 @@ export async function getDfcOverview(
     const g = parseGranularity(req.query.type);
 
     const { dateFrom, dateTo } = await getEntityDateRange('dfc_decision', fy);
-    
+
     if (!dateFrom || !dateTo) {
-      return ApiResponder.success(res, { 
-        series: [], 
-        approved: 0, 
-        rejected: 0, 
-        total: 0 
-      }, 'Aucune décision DFC pour cette année fiscale', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, {
+        series: [],
+        approved: 0,
+        rejected: 0,
+        total: 0
+      }, 'Aucune décision DFC pour cette année fiscale', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -473,12 +473,12 @@ export async function getDfcOverview(
         approved_rate: data.total ? Number((100 * data.approved / data.total).toFixed(2)) : 0,
         rejected_rate: data.total ? Number((100 * data.rejected / data.total).toFixed(2)) : 0,
       };
-      
-      return ApiResponder.success(res, { ...data, ...rates }, 'Vue globale DFC', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+
+      return ApiResponder.success(res, { ...data, ...rates }, 'Vue globale DFC', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -503,22 +503,22 @@ export async function getDfcOverview(
       approved_rate: r.total ? Number((100 * r.approved / r.total).toFixed(2)) : 0,
       rejected_rate: r.total ? Number((100 * r.rejected / r.total).toFixed(2)) : 0,
     }));
-    
+
     const totals = series.reduce<{ approved: number; rejected: number; total: number }>((acc, r) => ({
       approved: acc.approved + (r.approved || 0),
       rejected: acc.rejected + (r.rejected || 0),
       total: acc.total + (r.total || 0),
     }), { approved: 0, rejected: 0, total: 0 });
-    
-    return ApiResponder.success(res, { series, ...totals }, 'Série temporelle DFC', { 
-      fiscalYear: fy, 
-      dateFrom, 
-      dateTo, 
-      type: g 
+
+    return ApiResponder.success(res, { series, ...totals }, 'Série temporelle DFC', {
+      fiscalYear: fy,
+      dateFrom,
+      dateTo,
+      type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getDfcOverview`, { 
-      error: error instanceof Error ? error.message : 'unknown' 
+    logger.error(`[${requestId}] Erreur getDfcOverview`, {
+      error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
@@ -557,32 +557,32 @@ export async function getInvoicesByEmployeeTimeseries(
     const { id } = req.params;
     const fy = req.query.fiscalYear || await getSetting('fiscal_year');
     const g = parseGranularity(req.query.type);
-    
+
     if (!id) return ApiResponder.badRequest(res, 'Paramètre employé manquant');
 
     const { dateFrom, dateTo } = await getEntityDateRange('invoice', fy);
-    
+
     if (!dateFrom || !dateTo) {
-      return ApiResponder.success(res, { series: [], total: 0 }, 'Aucune facture pour cette année fiscale', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, { series: [], total: 0 }, 'Aucune facture pour cette année fiscale', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
     if (g === 'fiscal_year') {
       const row = await database.execute<{ total: number }[] | { total: number }>(
-        `SELECT COUNT(*) AS total FROM invoice WHERE fiscal_year = ? AND created_by = ? AND status = 'Non'`, 
+        `SELECT COUNT(*) AS total FROM invoice WHERE fiscal_year = ? AND created_by = ? AND status = 'Non'`,
         [fy, id]
       );
       const arr = asArray<{ total: number }>(row);
       const total = arr[0]?.total || 0;
-      return ApiResponder.success(res, { total }, 'Factures employé', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, { total }, 'Factures employé', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -598,16 +598,16 @@ export async function getInvoicesByEmployeeTimeseries(
     );
     const series = asArray<{ bucket: string; total: number }>(rows);
     const total = series.reduce((sum, r) => sum + (r.total || 0), 0);
-    
-    return ApiResponder.success(res, { series, total }, 'Série temporelle factures employé', { 
-      fiscalYear: fy, 
-      dateFrom, 
-      dateTo, 
-      type: g 
+
+    return ApiResponder.success(res, { series, total }, 'Série temporelle factures employé', {
+      fiscalYear: fy,
+      dateFrom,
+      dateTo,
+      type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getInvoicesByEmployeeTimeseries`, { 
-      error: error instanceof Error ? error.message : 'unknown' 
+    logger.error(`[${requestId}] Erreur getInvoicesByEmployeeTimeseries`, {
+      error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
@@ -622,17 +622,17 @@ export async function getDfcAgentTimeseries(
     const { id } = req.params;
     const fy = req.query.fiscalYear || await getSetting('fiscal_year');
     const g = parseGranularity(req.query.type);
-    
+
     if (!id) return ApiResponder.badRequest(res, 'Paramètre agent manquant');
 
     const { dateFrom, dateTo } = await getEntityDateRange('dfc_decision', fy);
-    
+
     if (!dateFrom || !dateTo) {
-      return ApiResponder.success(res, { series: [], approved: 0, rejected: 0, total: 0 }, 'Aucune décision pour cette année fiscale', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, { series: [], approved: 0, rejected: 0, total: 0 }, 'Aucune décision pour cette année fiscale', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -643,7 +643,7 @@ export async function getDfcAgentTimeseries(
            SUM(decision = 'rejected') AS rejected, 
            COUNT(*) AS total 
          FROM dfc_decision 
-         WHERE fiscal_year = ? AND decided_by = ?`, 
+         WHERE fiscal_year = ? AND decided_by = ?`,
         [fy, id]
       );
       const arr = asArray<DfcTotals>(row);
@@ -652,12 +652,12 @@ export async function getDfcAgentTimeseries(
         approved_rate: data.total ? Number((100 * data.approved / data.total).toFixed(2)) : 0,
         rejected_rate: data.total ? Number((100 * data.rejected / data.total).toFixed(2)) : 0,
       };
-      
-      return ApiResponder.success(res, { ...data, ...rates }, 'Décisions agent', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+
+      return ApiResponder.success(res, { ...data, ...rates }, 'Décisions agent', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -682,22 +682,22 @@ export async function getDfcAgentTimeseries(
       approved_rate: r.total ? Number((100 * r.approved / r.total).toFixed(2)) : 0,
       rejected_rate: r.total ? Number((100 * r.rejected / r.total).toFixed(2)) : 0,
     }));
-    
+
     const totals = series.reduce<{ approved: number; rejected: number; total: number }>((acc, r) => ({
       approved: acc.approved + (r.approved || 0),
       rejected: acc.rejected + (r.rejected || 0),
       total: acc.total + (r.total || 0),
     }), { approved: 0, rejected: 0, total: 0 });
-    
-    return ApiResponder.success(res, { series, ...totals }, 'Série temporelle décisions agent', { 
-      fiscalYear: fy, 
-      dateFrom, 
-      dateTo, 
-      type: g 
+
+    return ApiResponder.success(res, { series, ...totals }, 'Série temporelle décisions agent', {
+      fiscalYear: fy,
+      dateFrom,
+      dateTo,
+      type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getDfcAgentTimeseries`, { 
-      error: error instanceof Error ? error.message : 'unknown' 
+    logger.error(`[${requestId}] Erreur getDfcAgentTimeseries`, {
+      error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
@@ -715,28 +715,28 @@ export async function getSuppliersCreatedSummary(
     const g = parseGranularity(req.query.type);
 
     const { dateFrom, dateTo } = await getEntityDateRange('supplier', fy);
-    
+
     if (!dateFrom || !dateTo) {
-      return ApiResponder.success(res, { series: [], total: 0 }, 'Aucun fournisseur pour cette année fiscale', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, { series: [], total: 0 }, 'Aucun fournisseur pour cette année fiscale', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
     if (g === 'fiscal_year') {
       const row = await database.execute<{ total: number }[] | { total: number }>(
-        `SELECT COUNT(*) AS total FROM supplier WHERE fiscal_year = ?`, 
+        `SELECT COUNT(*) AS total FROM supplier WHERE fiscal_year = ?`,
         [fy]
       );
       const arr = asArray<{ total: number }>(row);
       const total = arr[0]?.total || 0;
-      return ApiResponder.success(res, { total }, 'Fournisseurs créés', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, { total }, 'Fournisseurs créés', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -751,16 +751,16 @@ export async function getSuppliersCreatedSummary(
     );
     const series = asArray<{ bucket: string; total: number }>(rows);
     const total = series.reduce((sum, r) => sum + (r.total || 0), 0);
-    
-    return ApiResponder.success(res, { series, total }, 'Série temporelle fournisseurs créés', { 
-      fiscalYear: fy, 
-      dateFrom, 
-      dateTo, 
-      type: g 
+
+    return ApiResponder.success(res, { series, total }, 'Série temporelle fournisseurs créés', {
+      fiscalYear: fy,
+      dateFrom,
+      dateTo,
+      type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getSuppliersCreatedSummary`, { 
-      error: error instanceof Error ? error.message : 'unknown' 
+    logger.error(`[${requestId}] Erreur getSuppliersCreatedSummary`, {
+      error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
@@ -775,32 +775,32 @@ export async function getSuppliersCreatedByEmployeeTimeseries(
     const { id } = req.params;
     const fy = req.query.fiscalYear || await getSetting('fiscal_year');
     const g = parseGranularity(req.query.type);
-    
+
     if (!id) return ApiResponder.badRequest(res, 'Paramètre employé manquant');
 
     const { dateFrom, dateTo } = await getEntityDateRange('supplier', fy);
-    
+
     if (!dateFrom || !dateTo) {
-      return ApiResponder.success(res, { series: [], total: 0 }, 'Aucun fournisseur pour cette année fiscale', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, { series: [], total: 0 }, 'Aucun fournisseur pour cette année fiscale', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
     if (g === 'fiscal_year') {
       const row = await database.execute<{ total: number }[] | { total: number }>(
-        `SELECT COUNT(*) AS total FROM supplier WHERE fiscal_year = ? AND created_by = ?`, 
+        `SELECT COUNT(*) AS total FROM supplier WHERE fiscal_year = ? AND created_by = ?`,
         [fy, id]
       );
       const arr = asArray<{ total: number }>(row);
       const total = arr[0]?.total || 0;
-      return ApiResponder.success(res, { total }, 'Fournisseurs créés par employé', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, { total }, 'Fournisseurs créés par employé', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -815,16 +815,16 @@ export async function getSuppliersCreatedByEmployeeTimeseries(
     );
     const series = asArray<{ bucket: string; total: number }>(rows);
     const total = series.reduce((sum, r) => sum + (r.total || 0), 0);
-    
-    return ApiResponder.success(res, { series, total }, 'Série temporelle fournisseurs créés par employé', { 
-      fiscalYear: fy, 
-      dateFrom, 
-      dateTo, 
-      type: g 
+
+    return ApiResponder.success(res, { series, total }, 'Série temporelle fournisseurs créés par employé', {
+      fiscalYear: fy,
+      dateFrom,
+      dateTo,
+      type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getSuppliersCreatedByEmployeeTimeseries`, { 
-      error: error instanceof Error ? error.message : 'unknown' 
+    logger.error(`[${requestId}] Erreur getSuppliersCreatedByEmployeeTimeseries`, {
+      error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
@@ -842,17 +842,17 @@ export async function getSupplierSummary(
     const { id } = req.params;
     const fy = req.query.fiscalYear || await getSetting('fiscal_year');
     const g = parseGranularity(req.query.type);
-    
+
     if (!id) return ApiResponder.badRequest(res, 'Paramètre fournisseur manquant');
 
     const { dateFrom, dateTo } = await getEntityDateRange('invoice', fy);
-    
+
     if (!dateFrom || !dateTo) {
-      return ApiResponder.success(res, { total_invoices: 0, total_amount: 0 }, 'Aucune facture pour cette année fiscale', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
-        type: g 
+      return ApiResponder.success(res, { total_invoices: 0, total_amount: 0 }, 'Aucune facture pour cette année fiscale', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
+        type: g
       });
     }
 
@@ -867,16 +867,16 @@ export async function getSupplierSummary(
     );
     const arr = asArray<{ total_invoices: number; total_amount: number }>(row);
     const data = arr[0] || { total_invoices: 0, total_amount: 0 };
-    
-    return ApiResponder.success(res, data, 'Résumé fournisseur', { 
-      fiscalYear: fy, 
-      dateFrom, 
-      dateTo, 
-      type: g 
+
+    return ApiResponder.success(res, data, 'Résumé fournisseur', {
+      fiscalYear: fy,
+      dateFrom,
+      dateTo,
+      type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getSupplierSummary`, { 
-      error: error instanceof Error ? error.message : 'unknown' 
+    logger.error(`[${requestId}] Erreur getSupplierSummary`, {
+      error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
@@ -893,12 +893,12 @@ export async function getSuppliersTop(
     const metric = (req.query.metric || 'volume').toLowerCase();
 
     const { dateFrom, dateTo } = await getEntityDateRange('invoice', fy);
-    
+
     if (!dateFrom || !dateTo) {
-      return ApiResponder.success(res, [], 'Aucune facture pour cette année fiscale', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
+      return ApiResponder.success(res, [], 'Aucune facture pour cette année fiscale', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
         type: g,
         metric
       });
@@ -923,10 +923,10 @@ export async function getSuppliersTop(
         [fy]
       );
       const data = asArray<SupplierActivityRow>(rows);
-      return ApiResponder.success(res, data, 'Top fournisseurs', { 
-        fiscalYear: fy, 
-        dateFrom, 
-        dateTo, 
+      return ApiResponder.success(res, data, 'Top fournisseurs', {
+        fiscalYear: fy,
+        dateFrom,
+        dateTo,
         type: g,
         metric
       });
@@ -949,16 +949,16 @@ export async function getSuppliersTop(
       [fy]
     );
     const data = asArray<SupplierActivityRow & { bucket: string }>(rows);
-    return ApiResponder.success(res, data, 'Top fournisseurs par période', { 
-      fiscalYear: fy, 
-      dateFrom, 
-      dateTo, 
+    return ApiResponder.success(res, data, 'Top fournisseurs par période', {
+      fiscalYear: fy,
+      dateFrom,
+      dateTo,
       type: g,
       metric
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getSuppliersTop`, { 
-      error: error instanceof Error ? error.message : 'unknown' 
+    logger.error(`[${requestId}] Erreur getSuppliersTop`, {
+      error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
@@ -972,7 +972,7 @@ export async function getGlobalDashboardKpis(
   const requestId = req.headers['x-request-id'] || 'unknown';
   try {
     const g = parseGranularity(req.query.type);
-    
+
     // Période étendue : création DB à maintenant
     const dateFrom = req.query.dateFrom || await getDatabaseCreationDate();
     const dateTo = req.query.dateTo || new Date().toISOString().split('T')[0];
@@ -993,9 +993,8 @@ export async function getGlobalDashboardKpis(
       `SELECT COUNT(*) AS total_invoice_pending
        FROM invoice 
        WHERE status = 'Non' 
-         AND dfc_status = 'pending'
-         AND DATE(IFNULL(update_at, create_at)) BETWEEN ? AND ?`,
-      [dateFrom, dateTo]
+         AND dfc_status = 'pending'`,
+      []
     );
 
     const businessAmount = await database.execute<{ business_amount: number }[] | { business_amount: number }>(
@@ -1016,8 +1015,8 @@ export async function getGlobalDashboardKpis(
       dateFrom
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getGlobalDashboardKpis`, { 
-      error: error instanceof Error ? error.message : 'unknown' 
+    logger.error(`[${requestId}] Erreur getGlobalDashboardKpis`, {
+      error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
@@ -1030,12 +1029,12 @@ type PersonalStats = {
   totalInvoices?: number;
   totalSuppliers?: number;
   invoiceCreationRate?: number;
-  
+
   // Pour dfc_agent
   approvalRate?: number;
   rejectionRate?: number;
   processingRate?: number;
-  
+
   // Pour admin (combinaison des deux)
   role: string;
 };
@@ -1054,17 +1053,17 @@ export async function getPersonalStats(
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
-  
+
   try {
     const userId = (req.user as any).sup;
     const userRole = req.user?.role;
-    
+
     if (!userId) {
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     }
 
     const fy = await getSetting('fiscal_year');
-    
+
     // Récupérer les stats selon le rôle
     let personalStats: PersonalStats = { role: userRole as string };
 
@@ -1085,9 +1084,9 @@ export async function getPersonalStats(
     });
 
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getPersonalStats`, { 
+    logger.error(`[${requestId}] Erreur getPersonalStats`, {
       error: error instanceof Error ? error.message : 'unknown',
-      userId: req.user?.id 
+      userId: req.user?.id
     });
     return ApiResponder.error(res, error);
   }
@@ -1096,7 +1095,7 @@ export async function getPersonalStats(
 // ========================= Stats pour Invoice Manager =========================
 async function getInvoiceManagerStats(userId: string, fiscalYear: string): Promise<Partial<PersonalStats>> {
   const { dateFrom, dateTo } = await getEntityDateRange('invoice', fiscalYear);
-  
+
   if (!dateFrom || !dateTo) {
     return {
       totalInvoices: 0,
@@ -1135,10 +1134,10 @@ async function getInvoiceManagerStats(userId: string, fiscalYear: string): Promi
      HAVING COUNT(*) > 0`,
     [fiscalYear, userId]
   );
-  
+
   const avgDailyResult = asArray<{ avg_daily_invoices: any }>(creationRateResult)[0];
   let invoiceCreationRate = 0;
-  
+
   if (avgDailyResult?.avg_daily_invoices) {
     // Convertir en number et formater
     const rate = parseFloat(avgDailyResult.avg_daily_invoices);
@@ -1155,7 +1154,7 @@ async function getInvoiceManagerStats(userId: string, fiscalYear: string): Promi
 // ========================= Stats pour Agent DFC =========================
 async function getDfcAgentStats(userId: string, fiscalYear: string): Promise<Partial<PersonalStats>> {
   const { dateFrom, dateTo } = await getEntityDateRange('dfc_decision', fiscalYear);
-  
+
   if (!dateFrom || !dateTo) {
     return {
       approvalRate: 0,
@@ -1165,14 +1164,14 @@ async function getDfcAgentStats(userId: string, fiscalYear: string): Promise<Par
   }
 
   // 1. Décisions totales et taux
-  const decisionsResult = await database.execute<{ 
-    approved: number; 
-    rejected: number; 
-    total: number 
-  }[] | { 
-    approved: number; 
-    rejected: number; 
-    total: number 
+  const decisionsResult = await database.execute<{
+    approved: number;
+    rejected: number;
+    total: number
+  }[] | {
+    approved: number;
+    rejected: number;
+    total: number
   }>(
     `SELECT 
        SUM(decision = 'approved') as approved,
@@ -1190,10 +1189,10 @@ async function getDfcAgentStats(userId: string, fiscalYear: string): Promise<Par
     total: 0
   };
 
-  const approvalRate = decisions.total > 0 ? 
+  const approvalRate = decisions.total > 0 ?
     parseFloat(((decisions.approved / decisions.total) * 100).toFixed(1)) : 0;
-  
-  const rejectionRate = decisions.total > 0 ? 
+
+  const rejectionRate = decisions.total > 0 ?
     parseFloat(((decisions.rejected / decisions.total) * 100).toFixed(1)) : 0;
 
   // 2. Taux de traitement moyen (décisions/jour) - CORRIGÉ
@@ -1206,10 +1205,10 @@ async function getDfcAgentStats(userId: string, fiscalYear: string): Promise<Par
      HAVING COUNT(*) > 0`,
     [fiscalYear, userId]
   );
-  
+
   const avgDailyDecisions = asArray<{ avg_daily_decisions: any }>(processingRateResult)[0];
   let processingRate = 0;
-  
+
   if (avgDailyDecisions?.avg_daily_decisions) {
     // Convertir en number et formater
     const rate = parseFloat(avgDailyDecisions.avg_daily_decisions);
@@ -1228,10 +1227,10 @@ export async function getAllAgentsStats(
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
-  
+
   try {
     const userRole = req.user?.role;
-    
+
     if (userRole !== 'admin') {
       return ApiResponder.forbidden(res, 'Accès réservé aux administrateurs');
     }
@@ -1294,8 +1293,8 @@ export async function getAllAgentsStats(
     });
 
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getAllAgentsStats`, { 
-      error: error instanceof Error ? error.message : 'unknown' 
+    logger.error(`[${requestId}] Erreur getAllAgentsStats`, {
+      error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
