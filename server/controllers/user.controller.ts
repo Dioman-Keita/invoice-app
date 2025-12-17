@@ -460,7 +460,7 @@ export async function forgotPassword(req: Request<unknown, unknown, RequestPassw
         const resetPasswordLink = `http://127.0.0.1:3000/api/open-app?path=reset-password&token=${token}`;
 
         const template = NotificationFactory.create('reset', {
-            name: currentUser.firstName,
+            name: `${(currentUser as any).firstname ?? ''} ${(currentUser as any).lastname ?? ''}`.trim() || currentUser.firstName,
             email: currentUser.email,
             link: resetPasswordLink,
         });

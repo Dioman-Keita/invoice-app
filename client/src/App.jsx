@@ -34,8 +34,15 @@ function DeepLinkHandler() {
         // CORRECTION CRITIQUE : /verify/?token -> /verify?token
         path = path.replace(/\/\?/, '?');
 
+        // DEBUG: Alert pour confirmer la réception
+        // alert(`Deep Link Recu: ${url}\nVers: ${path}`);
         console.log("👉 Navigation React vers:", path);
+
+        // Tentative de navigation
         navigate(path);
+
+        // Fallback si navigate échoue (pour HashRouter)
+        // window.location.hash = path;
       } catch (e) {
         console.error("❌ Erreur parsing deep link:", e);
       }
