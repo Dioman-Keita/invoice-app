@@ -9,22 +9,20 @@
 
 ## 🎯 Table of Contents
 
-* [Overview](#overview)
+* [Overview](#-overview)
 * [🎥 Demo & Visuals](#-demo--visuals)
-* [🏗️ Architecture](#architecture)
-* [Key Features](#key-features)
-* [Tech Stack](#tech-stack)
-* [Installation & Setup](#installation--setup)
+* [🏗️ Architecture](#️-architecture)
+* [Key Features](#-key-features)
+* [Tech Stack](#-tech-stack)
+* [Installation & Setup](#-installation--setup)
 * [Deep Linking](#-deep-linking)
-* [API Documentation](#api-documentation)
-* [Roadmap](#roadmap)
-* [Contributing](#contributing)
+* [API Documentation](#-api-documentation)
+* [Roadmap](#-roadmap)
+* [Contributing](#-contributing)
 
 ---
 
 ## 📋 Overview
-
-<a id="overview"></a>
 
 **Invoice App** `v0.0.0` is a robust, offline-first desktop application that brings the power of a full-stack web server to the desktop. Use it to manage invoices, suppliers, and fiscal workflows with enterprise-grade security.
 
@@ -33,8 +31,6 @@
 ---
 
 ## 🎥 Demo & Visuals
-
-<a id="demo-visuals"></a>
 
 ### Video Demonstration
 
@@ -53,8 +49,6 @@ To understand the core business logic, refer to our detailed flow diagrams:
 
 ## 🏗️ Architecture
 
-<a id="architecture"></a>
-
 > **[Read the detailed Technical Architecture Document (ARCHITECTURE.md)](ARCHITECTURE.md)**
 
 This project solves the "Client-Server on Desktop" challenge through a hybrid design:
@@ -72,8 +66,6 @@ This project solves the "Client-Server on Desktop" challenge through a hybrid de
 ---
 
 ## ✨ Key Features
-
-<a id="key-features"></a>
 
 ### 🚀 High-Volume Capacity
 
@@ -95,8 +87,6 @@ This project solves the "Client-Server on Desktop" challenge through a hybrid de
 
 ## 🛠 Tech Stack
 
-<a id="tech-stack"></a>
-
 **Dual-Stack Monorepo:**
 
 | Frontend (Client) | Backend (Server) | Infrastructure |
@@ -109,8 +99,6 @@ This project solves the "Client-Server on Desktop" challenge through a hybrid de
 ---
 
 ## ⚡ Installation & Setup
-
-<a id="installation--setup"></a>
 
 ### Prerequisites
 
@@ -149,8 +137,6 @@ npm run dist
 
 ## 🔗 Deep Linking
 
-<a id="deep-linking"></a>
-
 The app registers `invoice-app://` in the Windows Registry.
 
 * **Warm Start**: If the app is open, the renderer receives the link instantly via `IPC`.
@@ -159,8 +145,6 @@ The app registers `invoice-app://` in the Windows Registry.
 ---
 
 ## 📡 API Documentation
-
-<a id="api-documentation"></a>
 
 The embedded server exposes a full REST API at `http://localhost:3000/api`.
 
@@ -171,8 +155,6 @@ The embedded server exposes a full REST API at `http://localhost:3000/api`.
 ---
 
 ## 🗺 Roadmap
-
-<a id="roadmap"></a>
 
 * [x] **Phase 1**: Hybrid Architecture & Docker Integration
 * [x] **Phase 2**: Deep Linking & Asset Protection
