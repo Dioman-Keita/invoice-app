@@ -6,6 +6,7 @@ import database from '../config/database';
 import { getSetting } from '../helpers/settings';
 import { getEntityDateRange } from '../helpers/statsDateRange';
 import { getDatabaseCreationDate } from '../helpers/databaseCreationDate';
+import { AuthenticatedRequest } from '../types/express/request';
 
 type Granularity = 'day' | 'week' | 'month' | 'fiscal_year';
 
@@ -1039,15 +1040,6 @@ type PersonalStats = {
   role: string;
 };
 
-// Interface pour la requête authentifiée
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    role: string;
-    email: string;
-  };
-}
-
 export async function getPersonalStats(
   req: AuthenticatedRequest,
   res: Response
@@ -1086,7 +1078,7 @@ export async function getPersonalStats(
   } catch (error) {
     logger.error(`[${requestId}] Erreur getPersonalStats`, {
       error: error instanceof Error ? error.message : 'unknown',
-      userId: req.user?.id
+      userId: req.user?.sup
     });
     return ApiResponder.error(res, error);
   }
@@ -1299,3 +1291,21 @@ export async function getAllAgentsStats(
     return ApiResponder.error(res, error);
   }
 }
+
+export async function getAvailableInvoiceDays(req: AuthenticatedRequest, res: Response): Promise<Response> { 
+  const requestId = req.headers['x-request-id'] || 'unknown'; 
+  try { 
+    const user = req.user 
+    if (!user || !user.sup) { 
+      return ApiResponder.unauthorized(res, 'Utilisateur non authentifié'); 
+    } 
+    const fy = await getSetting('fiscal_year'); 
+    const rows = await database.execute<{ day: string }[] | { day: string }>( 
+      "SELECT DISTINCT DATE(create_at) AS day FROM invoice WHERE fiscal_year = ? AND created_by = ? ORDER BY day DESC", [fy, user.sup] ); 
+      const list = (Array.isArray(rows) ? rows : (rows ? [rows] : [])).map(r => r.day); 
+      return ApiResponder.success(res, list, 'Jours disponibles', { fiscalYear: fy }); 
+  } catch (error) { 
+    logger.error(`[${requestId}] Erreur getAvailableInvoiceDays`, { error: error instanceof Error ? error.message : 'unknown' }); 
+    return ApiResponder.error(res, error); 
+  }
+} 

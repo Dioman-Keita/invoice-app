@@ -10,7 +10,7 @@ function fmtDate(value: any): string | undefined {
   try {
     const d = new Date(value);
     if (!isNaN(d.getTime())) return d.toLocaleDateString('fr-FR');
-  } catch {}
+  } catch { }
   return String(value);
 }
 function fmtAmount(value: any): string | undefined {
@@ -19,7 +19,7 @@ function fmtAmount(value: any): string | undefined {
   if (!isNaN(n)) {
     try {
       return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n);
-    } catch {}
+    } catch { }
   }
   return String(value);
 }
@@ -37,9 +37,7 @@ export function mapInvoiceListOdt(rows: any[], dateRange: DateRange) {
     dateTo: fmtDate(dateRange.dateTo),
     day: `Bamako, le ${nowDay()}`,
     generate_at: nowTime(),
-    page: 1,
     total_inv: rows.length,
-    total_page: 1,
     invoice: rows.map((r) => ({
       num_cmdt: r.num_cmdt ?? '',
       num_inv: r.num_invoice ?? '',
@@ -58,8 +56,6 @@ export function mapSupplierListOdt(rows: any[], dateRange: DateRange) {
     dateTo: fmtDate(dateRange.dateTo),
     dateFrom: fmtDate(dateRange.dateFrom),
     total_supp: rows.length,
-    page: 1,
-    total_page: 1,
     generate_at: nowDay(),
     generate_time: nowTime(),
     supplier: rows.map((r) => ({
@@ -78,8 +74,6 @@ export function mapRelationalListOdt(rows: any[], dateRange: DateRange) {
     day: `Bamako, le ${nowDay()}`,
     generate_time: nowTime(),
     total_supplier: rows.length,
-    page: 1,
-    total_page: 1,
     supplier: rows.map((r: any) => ({
       name: r.supplier_name ?? r.name ?? '',
       total_amount: r.total_amount ?? '',
@@ -258,8 +252,6 @@ export function mapRelationalOverviewOdt(detail: any, rootFiscalYear?: string) {
     generate_time: nowTime(),
     fiscal_year: rootFiscalYear,
     total_supplier: 1,
-    page: 1,
-    total_page: 1,
     supplier: {
       id: detail?.supplier?.id ?? '',
       name: detail?.supplier?.name ?? '',
@@ -289,4 +281,24 @@ export function mapRelationalOverviewXlsx(detail: any, dateRange: DateRange, roo
       total_amount: detail?.supplier?.total_amount ?? '',
     }
   };
+}
+
+export function mapInvoiceStatsOdt(rows: any[], dayStr?: string) {
+  function nowDay(): string {
+    return new Date().toLocaleDateString('fr-FR');
+  }
+  function nowTime(): string {
+    return new Date().toLocaleTimeString('fr-FR');
+  }
+  function fmtDate(value: any): string | undefined {
+    if (value === null || value === undefined) return undefined;
+    if (value instanceof Date) return value.toLocaleDateString('fr-FR');
+    try {
+      const d = new Date(value);
+      if (!isNaN(d.getTime())) return d.toLocaleDateString('fr-FR');
+    } catch { }
+    return String(value);
+  }
+
+  return { timeserie_day: dayStr ? fmtDate(dayStr) : nowDay(), generate_at: nowDay(), generate_time: nowTime(), total_invoice: Array.isArray(rows) ? rows.length : 0, invoice: (rows || []).map((r: any) => ({ num_cmdt: r.num_cmdt ?? '', num_inv: r.num_invoice ?? '', object: r.invoice_object ?? '', supplier: r.supplier_name ?? '', amount: typeof r.amount === 'number' ? String(r.amount) : (r.amount ?? ''), inv_date: fmtDate(r.invoice_date), inv_arr_date: fmtDate(r.invoice_arr_date), type: r.invoice_type ?? '', })), };
 }

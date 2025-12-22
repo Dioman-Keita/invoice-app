@@ -22,6 +22,7 @@ export function getTemplateInfo(type: ExportType, variant: ExportVariant, format
       case 'supplier-overview_odt': return 'odt/supplier/supplier-overview.odt';
       case 'relational-list_odt': return 'odt/relational/relational-list.odt';
       case 'relational-overview_odt': return 'odt/relational/relational-overview.odt';
+      case 'invoice-stats_odt': return 'odt/stats/invoice-stats.odt';
       case 'invoice-list_xlsx': return 'excel/invoice/invoice-list.xlsx';
       case 'invoice-overview_xlsx': return 'excel/invoice/invoice-overview.xlsx';
       case 'supplier-list_xlsx': return 'excel/supplier/supplier-list.xlsx';

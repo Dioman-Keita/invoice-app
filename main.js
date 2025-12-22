@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, Menu } = require('electron');
 const path = require('path');
 const { fork, exec } = require('child_process');
 const fs = require('fs');
@@ -32,6 +32,7 @@ let isAppReady = false; // <-- NOUVEAU : On track si React est prêt
 
 const BACKEND_PORT = 3000;
 const BACKEND_URL = `http://127.0.0.1:${BACKEND_PORT}`;
+const VITE_DEV_URL = 'http://localhost:5173';
 
 // --- 4. INSTANCE UNIQUE ---
 const gotTheLock = app.requestSingleInstanceLock();
@@ -185,8 +186,9 @@ function waitForServer() {
 function createMainWindow() {
     // 1. Création de la fenêtre
     mainWindow = new BrowserWindow({
-        width: 1400,
-        height: 900,
+        width: 1024,
+        height: 700,
+        center: true,
         show: false,
         backgroundColor: '#f0f2f5',
         titleBarStyle: 'hiddenInset',
@@ -204,33 +206,39 @@ function createMainWindow() {
     <head>
       <meta charset="UTF-8">
       <style>
+          :root {
+              --green-50: #f0fdf4;
+              --green-100: #dcfce7;
+              --green-600: #16a34a;
+              --amber-50: #fffbeb;
+              --gray-700: #374151;
+              --gray-600: #4b5563;
+          }
           body { 
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
               display: flex; flex-direction: column; justify-content: center; align-items: center; 
-              height: 100vh; margin: 0; background: #f0f2f5; color: #333; user-select: none;
+              height: 100vh; margin: 0; 
+              background: linear-gradient(to bottom right, var(--green-50), #ffffff, var(--amber-50));
+              color: #111827; user-select: none;
           }
-          .container { text-align: center; }
+          .container { text-align: center; padding: 24px; backdrop-filter: blur(2px); }
           .spinner {
-              border: 4px solid #e5e7eb; border-top: 4px solid #3498db; border-radius: 50%;
-              width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px auto;
+              width: 48px; height: 48px; border-radius: 9999px; 
+              border: 2px solid transparent; border-bottom-color: var(--green-600);
+              animation: spin 1s linear infinite; margin: 0 auto 16px auto;
           }
           @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-          h2 { margin-bottom: 10px; color: #2c3e50; font-weight: 600; }
-          p { color: #7f8c8d; margin-top: 0; }
-          .timer { font-size: 12px; color: #95a5a6; margin-top: 20px; font-family: monospace; }
+          h2 { margin: 0 0 8px 0; color: #065f46; font-weight: 700; font-size: 18px; }
+          p { color: #111827; margin: 0 0 6px 0; font-size: 14px; }
+          .chip { display: inline-block; font-size: 11px; font-weight: 600; color: #065f46; background: var(--green-100); padding: 4px 8px; border-radius: 9999px; margin-bottom: 10px; }
+          .timer { font-size: 12px; color: var(--gray-600); margin-top: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
       </style>
     </head>
     <body>
       <div class="container">
           <div class="spinner"></div>
-          <h2>Démarrage de l'application, veuillez patienter un instant 😎</h2>
-          <p>Initialisation de la base de données et du serveur...</p>
-          <div class="timer" id="timer">Temps écoulé : 0s</div>
+          <p>Chargement...</p>
       </div>
-      <script>
-          let seconds = 0;
-          setInterval(() => { seconds++; document.getElementById('timer').innerText = 'Temps écoulé : ' + seconds + 's'; }, 1000);
-      </script>
     </body>
     </html>
     `;
@@ -247,8 +255,8 @@ function createMainWindow() {
         .then(() => {
             log.info('🌍 Serveur prêt, chargement application...');
 
-            // On charge TOUJOURS l'URL normale
-            mainWindow.loadURL(BACKEND_URL);
+            const targetUrl = app.isPackaged ? BACKEND_URL : VITE_DEV_URL;
+            mainWindow.loadURL(targetUrl);
 
             // On écoute la fin du chargement de la vraie page (PAS du loading screen)
             mainWindow.webContents.once('did-finish-load', () => {
@@ -286,7 +294,29 @@ function createMainWindow() {
 // Déplacement de la logique de démarrage À L'INTÉRIEUR du bloc "else" (Primary Instance)
 // pour garantir que la seconde instance ne lance JAMAIS le backend ni la fenêtre.
 if (gotTheLock) {
-    app.whenReady().then(createMainWindow);
+    function setupMenu() {
+        // Conserver uniquement View, Help et Window; retirer File et Edit
+        const template = [
+            { role: 'viewMenu' },
+            {
+                role: 'help',
+                submenu: [
+                    {
+                        label: 'Documentation',
+                        click: async () => {
+                            const { shell } = require('electron');
+                            await shell.openExternal('https://www.cmdt-mali.net/');
+                        }
+                    }
+                ]
+            },
+            { role: 'windowMenu' }
+        ];
+        const menu = Menu.buildFromTemplate(template);
+        Menu.setApplicationMenu(menu);
+    }
+
+    app.whenReady().then(() => { setupMenu(); createMainWindow(); });
     app.on('will-quit', () => stopBackend());
     app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 }

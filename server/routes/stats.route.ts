@@ -5,6 +5,7 @@ import {
   getInvoicesSummary,
   getDfcOverview,
   getInvoicesByEmployee,
+  getAvailableInvoiceDays,
   getInvoicesByEmployeeTimeseries,
   getDfcAgentsRates,
   getDfcAgentTimeseries,
@@ -29,6 +30,7 @@ router.get('/stats/dashboard/kpis', requireAgentOrManager, getGlobalDashboardKpi
 router.get('/stats/invoices/summary', requireAgentOrManager, getInvoicesSummary);
 router.get('/stats/invoices/by-employee', requireAgentOrManager, getInvoicesByEmployee);
 router.get('/stats/invoices/by-employee/:id/timeseries', requireAgentOrManager, getInvoicesByEmployeeTimeseries);
+router.get('/stats/invoices/available-dates', requireAgentOrManager, getAvailableInvoiceDays);
 
 // DFC (dfc_agent / invoice_manager / admin)
 router.get('/stats/dfc/overview', requireAgentOrManager, getDfcOverview);

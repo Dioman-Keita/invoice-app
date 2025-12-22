@@ -1,15 +1,12 @@
 {
   "comment": "Ce fichier JSON contient des données d'exemple pour différents modèles de documents ODT et feuilles de calcul xlsx",
-  
   "invoice-list_odt": {
     "comment": "Données pour la liste des factures en format ODT",
     "dateFrom": "12/09/2023",
     "dateTo": "12/30/2023",
     "day": "Bamako, le 02/01/2024",
     "generate_at": "09:30:00",
-    "page": 1,
     "total_inv": 2,
-    "total_page": 1,
     "invoice": [
       {
         "num_cmdt": "12344569",
@@ -33,7 +30,6 @@
       }
     ]
   },
-
   "invoice-overview_odt": {
     "comment": "Données pour la vue détaillée d'une facture en format ODT",
     "day": "12/11/2026",
@@ -49,7 +45,7 @@
       "type": "Transitaire",
       "nature": "Paiement",
       "folio": "Orig + 1 copie",
-      "amount":"30 000 0033",
+      "amount": "30 000 0033",
       "status": "en attente",
       "general_status": "Annulée",
       "object": "Achat de pexticides",
@@ -62,16 +58,13 @@
       "phone": "+223 45 68 89 49"
     }
   },
-
   "supplier-list_odt": {
     "comment": "Données pour la liste des fournisseurs en format ODT",
     "dateTo": "12/12/2027",
     "dateFrom": "12/11/2025",
     "total_supp": 3,
-    "page": 1,
-    "total_page": 1,
     "generate_at": "13/12/2034",
-    "generate_time": "12/20/2025",
+    "generate_time": "12:33:55",
     "supplier": [
       {
         "name": "TWINS SA",
@@ -99,7 +92,6 @@
       }
     ]
   },
-
   "supplier-overview_odt": {
     "comment": "Données pour la vue détaillée d'un fournisseur en format ODT",
     "day": "12/02/2021",
@@ -118,7 +110,6 @@
       }
     }
   },
-
   "relational-list_odt": {
     "comment": "Données pour la liste relationnelle des fournisseurs en format ODT",
     "dateFrom": "12/12/2023",
@@ -126,8 +117,6 @@
     "day": "Bamako, le 17/11/2025",
     "generate_time": "12:30:38",
     "total_supplier": 4,
-    "page": 1,
-    "total_page": 1,
     "supplier": [
       {
         "name": "FAFA DRAMATIQUE",
@@ -163,15 +152,12 @@
       }
     ]
   },
-
   "relational-overview_odt": {
     "comment": "Données pour la vue détaillée relationnelle d'un fournisseur en format ODT",
     "day": "17/11/2025",
     "generate_time": "12:30:38",
     "fiscal_year": "2025",
     "total_supplier": 4,
-    "page": 1,
-    "total_page": 1,
     "supplier": {
       "id": 30,
       "name": "FAFA DRAMATIQUE",
@@ -182,7 +168,65 @@
       "total_inv": 2
     }
   },
-
+  "invoice-stats_odt": {
+    "comment": "Donnees pour la vue des stats journalier des factures",
+    "timeserie_day": "12/02/2025",
+    "generate_at": "12/02/2026",
+    "generate_time": "12:30:38",
+    "total_invoice": 3,
+    "invoice": [
+      {
+        "num_cmdt": 939393,
+        "num_inv": 9303939,
+        "object": "Achetez des pexticides",
+        "supplier": "Dioman SARL",
+        "amount": "200 0000",
+        "inv_date": "12/07/19998",
+        "inv_arr_date": "12/08/1999",
+        "type": "Transporteur"
+      },
+      {
+        "num_cmdt": 939392,
+        "num_inv": 9303931,
+        "object": "Achetez de tracteurs",
+        "supplier": "TRACTEUR CORPORATION",
+        "amount": "1 000 200 0000",
+        "inv_date": "13/06/1000",
+        "inv_arr_date": "12/08/1999",
+        "type": "Ordinaire"
+      },
+      {
+        "num_cmdt": 939393,
+        "num_inv": 9303939,
+        "object": "Achetez des pexticides",
+        "supplier": "Dioman SARL",
+        "amount": "10000",
+        "inv_date": "12/05/1999",
+        "inv_arr_date": "12/08/1999",
+        "type": "Transitaire"
+      },
+      {
+        "num_cmdt": 939393,
+        "num_inv": 9303939,
+        "object": "Achetez des pexticides",
+        "supplier": "Dioman SARL",
+        "amount": "10000",
+        "inv_date": "12/05/1999",
+        "inv_arr_date": "12/08/1999",
+        "type": "Transitaire"
+      },
+      {
+        "num_cmdt": 939393,
+        "num_inv": 9303939,
+        "object": "Achetez des pexticides",
+        "supplier": "Dioman SARL",
+        "amount": "10000",
+        "inv_date": "12/05/1999",
+        "inv_arr_date": "12/08/1999",
+        "type": "Transitaire"
+      }
+    ]
+  },
   "invoice-list_xlsx": {
     "comment": "Données pour la liste des factures en format xlsx",
     "fiscal_year": "2025",
@@ -229,7 +273,6 @@
       }
     ]
   },
-
   "invoice-overview_xlsx": {
     "comment": "Données pour la vue détaillée d'une facture en format xlsx",
     "fiscal_year": "2025",
@@ -259,7 +302,6 @@
       }
     }
   },
-
   "supplier-list_xlsx": {
     "comment": "Données pour la liste des fournisseurs en format xlsx",
     "fiscal_year": "2025",
@@ -300,7 +342,6 @@
       }
     ]
   },
-
   "supplier-overview_xlsx": {
     "comment": "Données pour la vue détaillée d'un fournisseur en format xlsx",
     "fiscal_year": "2025",
@@ -321,7 +362,6 @@
       }
     }
   },
-
   "relational-list_xlsx": {
     "comment": "Données pour la liste relationnelle des fournisseurs en format xlsx",
     "fiscal_year": "2025",
@@ -371,7 +411,6 @@
       }
     ]
   },
-
   "relational-overview_xlsx": {
     "comment": "Données pour la vue détaillée relationnelle d'un fournisseur en format xlsx",
     "fiscal_year": "2025",

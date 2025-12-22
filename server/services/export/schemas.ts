@@ -29,6 +29,25 @@ export const InvoiceListOdtSchema = z.object({
   }))
 });
 
+// STATS - ODT
+export const InvoiceStatsOdtSchema = z.object({
+  timeserie_day: z.string().optional(), 
+  generate_at: z.string().optional(), 
+  generate_time: z.string().optional(), 
+  total_invoice: z.number().int().optional(), 
+  invoice: z.array(
+  z.object({ 
+    num_cmdt: z.union([z.string(), z.number()]).optional(), 
+    num_inv: z.union([z.string(), z.number()]).optional(), 
+    object: z.string().optional(), 
+    supplier: z.string().optional(), 
+    amount: z.string().optional(), 
+    inv_date: z.string().optional(), 
+    inv_arr_date: z.string().optional(), 
+    type: z.string().optional(), 
+  })) 
+});
+
 export const SupplierListOdtSchema = z.object({
   dateTo: DateStr,
   dateFrom: DateStr,
@@ -250,6 +269,7 @@ export const ExportSchemas = {
   'invoice-overview_odt': InvoiceOverviewOdtSchema,
   'supplier-overview_odt': SupplierOverviewOdtSchema,
   'relational-overview_odt': RelationalOverviewOdtSchema,
+  'invoice-stats_odt': InvoiceStatsOdtSchema,
   'invoice-overview_xlsx': InvoiceOverviewXlsxSchema,
   'supplier-overview_xlsx': SupplierOverviewXlsxSchema,
   'relational-overview_xlsx': RelationalOverviewXlsxSchema,

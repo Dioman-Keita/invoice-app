@@ -22,6 +22,9 @@ function StatsSimple() {
   
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [availableDates, setAvailableDates] = useState([]); 
+  const [selectedDate, setSelectedDate] = useState(''); 
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(null);
   const [fiscalYear, setFiscalYear] = useState('2024');
   const [chartData, setChartData] = useState(null);
@@ -103,6 +106,63 @@ function StatsSimple() {
       setLoading(false);
     }
   }, [user]);
+
+  useEffect(() => { 
+    const loadAvailableDates = async () => {
+       try { 
+        if (!user || user.role !== 'invoice_manager') return; 
+        const res = await fetch('/api/stats/invoices/available-dates', { credentials: 'include', headers: { 'Accept': 'application/json' } }); 
+        if (res.ok) { 
+          const json = await res.json(); 
+          const dates = Array.isArray(json.data) ? json.data : []; 
+          setAvailableDates(dates); 
+          if (dates.length > 0) { 
+            setSelectedDate(dates[0]); 
+          } else { 
+              const today = new Date(); 
+              const y = today.getFullYear(); 
+              const m = String(today.getMonth() + 1).padStart(2, '0'); 
+              const d = String(today.getDate()).padStart(2, '0'); 
+              setSelectedDate(`${y}-${m}-${d}`); 
+            } 
+          } 
+        } catch (e) {
+          console.log(e);
+        } 
+      }; 
+      loadAvailableDates(); 
+    }, [user]
+  );
+
+  const handleExport = async () => { 
+    if (exporting) return; 
+    setExporting(true); 
+    try { 
+      const body = { 
+        type: 'invoice', 
+        variant: 'stats', 
+        format: 'pdf', 
+        search: { date: selectedDate } 
+      }; 
+      const res = await fetch('/api/export', { method: 'POST', credentials: 'include', headers: { 'Accept': 'application/octet-stream', 'Content-Type': 'application/json' }, body: JSON.stringify(body) 
+    });
+
+    if (!res.ok) throw new Error('Export échoué'); 
+    const blob = await res.blob(); 
+    const url = URL.createObjectURL(blob); 
+    const a = document.createElement('a'); 
+    a.href = url; 
+    a.download = `invoice-stats_${selectedDate}.pdf`; 
+    document.body.appendChild(a); 
+    a.click(); 
+    a.remove(); 
+    URL.revokeObjectURL(url); 
+  } catch (e) { 
+    console.error('Erreur export:', e); 
+  } finally { 
+    setExporting(false);
+  } 
+};
 
   // Créer des données graphiques significatives selon le rôle
   const prepareChartData = (statsData) => {
@@ -471,6 +531,43 @@ function StatsSimple() {
                     </span>
                   </div>
                 </div>
+                {stats?.role === 'invoice_manager' && (
+                  <div className="mt-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <label className="text-sm text-gray-700 font-medium">Date d'export</label>
+                        <select
+                          value={selectedDate}
+                          onChange={(e) => setSelectedDate(e.target.value)}
+                          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                        >
+                          {availableDates.length > 0 ? (
+                            availableDates.map((d) => (
+                              <option key={d} value={d}>{d}</option>
+                            ))
+                          ) : (
+                            <option value={selectedDate}>{selectedDate || "Aujourd'hui"}</option>
+                          )}
+                        </select>
+                      </div>
+                      <div>
+                        <button
+                          onClick={handleExport}
+                          disabled={exporting}
+                          className={`inline-flex items-center px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors ${exporting ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                        >
+                          {exporting && (
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                            </svg>
+                          )}
+                          Exporter l'état
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
