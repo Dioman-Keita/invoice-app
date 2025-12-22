@@ -11,7 +11,7 @@
 
 * [Overview](#-overview)
 * [🎥 Demo & Visuals](#-demo--visuals)
-* [🏗️ Architecture](#️-architecture)
+* [Architecture](#️-architecture)
 * [Key Features](#-key-features)
 * [Tech Stack](#-tech-stack)
 * [Installation & Setup](#-installation--setup)
