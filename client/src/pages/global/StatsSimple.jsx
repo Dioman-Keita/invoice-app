@@ -3,6 +3,7 @@ import useTitle from '../../hooks/ui/useTitle.js';
 import Navbar from '../../components/navbar/Navbar.jsx';
 import Header from '../../components/global/Header.jsx';
 import { useAuth } from '../../hooks/auth/useAuth.js';
+import api from '../../services/api.js';
 import Chart from 'chart.js/auto';
 
 import {
@@ -69,16 +70,10 @@ function StatsSimple() {
         // Initialiser avec les données de fallback immédiatement
         setStats(getFallbackStats(user?.role));
 
-        const response = await fetch('/api/stats/personal', {
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        });
+        const response = await api.get('/stats/personal');
 
-        if (response.ok) {
-          const result = await response.json();
+        if (response.success) {
+          const result = response;
           setStats(result.data);
           // Utiliser l'année fiscale de l'API si disponible
           if (result.meta?.fiscalYear) {
@@ -111,9 +106,8 @@ function StatsSimple() {
     const loadAvailableDates = async () => {
       try {
         if (!user || user.role !== 'invoice_manager') return;
-        const res = await fetch('/api/stats/invoices/available-dates', { credentials: 'include', headers: { 'Accept': 'application/json' } });
-        if (res.ok) {
-          const json = await res.json();
+        const json = await api.get('/stats/invoices/available-dates');
+        if (json.success) {
           const dates = Array.isArray(json.data) ? json.data : [];
           setAvailableDates(dates);
           if (dates.length > 0) {
@@ -144,12 +138,12 @@ function StatsSimple() {
         format: 'pdf',
         search: { date: selectedDate }
       };
-      const res = await fetch('/api/export', {
-        method: 'POST', credentials: 'include', headers: { 'Accept': 'application/octet-stream', 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      const response = await api.post('/export', body, {
+        responseType: 'blob',
+        headers: { 'Accept': 'application/octet-stream' }
       });
 
-      if (!res.ok) throw new Error('Export échoué');
-      const blob = await res.blob();
+      const blob = new Blob([response], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -589,7 +583,7 @@ function StatsSimple() {
           </div>
 
           {!loading && isStatsEmpty() ? (
-            <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl shadow-sm border border-gray-200 text-center">
+            <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl shadow-sm border border-gray-200 text-center mb-8">
               <div className="bg-gray-100 p-4 rounded-full mb-4">
                 <ChartBarIcon className="w-12 h-12 text-gray-400" />
               </div>
@@ -603,8 +597,8 @@ function StatsSimple() {
             <>
               {/* Cartes de statistiques personnelles */}
               <div className={`grid gap-6 mb-8 ${stats?.role === 'admin'
-                  ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6'
-                  : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6'
+                : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
                 }`}>
                 {currentStats.map((stat, index) => {
                   const Icon = stat.icon;

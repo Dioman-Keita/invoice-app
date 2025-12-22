@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import api from '../../services/api.js';
 import Navbar from '../../components/navbar/Navbar.jsx';
 import useTitle from '../../hooks/ui/useTitle.js';
 import {
@@ -61,12 +62,7 @@ function Settings() {
     const loadSettingsFromApi = async () => {
         try {
             setLoading(true);
-            const resp = await fetch('/api/settings/fiscal', {
-                method: 'GET',
-                credentials: 'include'
-            });
-            if (!resp.ok) throw new Error('Failed to load fiscal settings');
-            const data = await resp.json();
+            const data = await api.get('/settings/fiscal');
             if (data?.success) {
                 setPrefs((p) => ({ ...p, autoYearSwitch: Boolean(data.data?.auto_year_switch) }));
                 setServerSettings(data.data);
@@ -110,14 +106,9 @@ function Settings() {
     const activateAutoSwitch = async () => {
         try {
             setApiLoading(prev => ({ ...prev, autoSwitch: true }));
-            const resp = await fetch('/api/settings/auto-year-switch', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ enable: true })
-            });
-            const data = await resp.json();
-            if (!resp.ok || !data?.success) throw new Error(data?.message || 'Echec activation auto switch');
+            const data = await api.post('/settings/auto-year-switch', { enable: true });
+
+            if (!data?.success) throw new Error(data?.message || 'Echec activation auto switch');
 
             setPrefs((p) => ({ ...p, autoYearSwitch: true }));
             await loadSettingsFromApi();
@@ -132,14 +123,9 @@ function Settings() {
     const deactivateAutoSwitch = async () => {
         try {
             setApiLoading(prev => ({ ...prev, autoSwitch: true }));
-            const resp = await fetch('/api/settings/auto-year-switch', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ enable: false })
-            });
-            const data = await resp.json();
-            if (!resp.ok || !data?.success) throw new Error(data?.message || 'Echec désactivation auto switch');
+            const data = await api.post('/settings/auto-year-switch', { enable: false });
+
+            if (!data?.success) throw new Error(data?.message || 'Echec désactivation auto switch');
 
             setPrefs((p) => ({ ...p, autoYearSwitch: false }));
             await loadSettingsFromApi();
@@ -174,12 +160,7 @@ function Settings() {
 
     const fetchCurrentFiscalYearInfo = async (openOnSuccess = false) => {
         try {
-            const resp = await fetch('/api/settings/fiscal', {
-                method: 'GET',
-                credentials: 'include'
-            });
-            if (!resp.ok) throw new Error('Failed to fetch fiscal info');
-            const payload = await resp.json();
+            const payload = await api.get('/settings/fiscal');
             const d = payload?.data;
             if (!d) throw new Error('Invalid payload');
 
@@ -222,14 +203,9 @@ function Settings() {
 
         try {
             setApiLoading(prev => ({ ...prev, yearSwitch: true }));
-            const resp = await fetch('/api/settings/fiscal-year/switch', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ newYear: selectedYear })
-            });
-            const data = await resp.json();
-            if (!resp.ok || !data?.success) {
+            const data = await api.post('/settings/fiscal-year/switch', { newYear: selectedYear });
+
+            if (!data?.success) {
                 console.error('Echec bascule année fiscale:', data?.message);
                 setErroMsg(data?.message);
                 setActiveModal('error');
@@ -404,8 +380,8 @@ function Settings() {
                                 disabled={!selectedYear || prefs.autoYearSwitch || apiLoading.yearSwitch}
                                 className={`w-full px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 
                   ${(!selectedYear || prefs.autoYearSwitch || apiLoading.yearSwitch)
-                                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md'}`}
+                                        ? 'bg-gray-400 text-white cursor-not-allowed'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md'}`}
                             >
                                 {apiLoading.yearSwitch ? (
                                     <>
@@ -600,16 +576,14 @@ function Settings() {
                                 </div>
 
                                 <div className="space-y-4">
-                                    <div className={`p-4 rounded-xl border-2 transition-all duration-200 ${
-                                        prefs.autoYearSwitch
+                                    <div className={`p-4 rounded-xl border-2 transition-all duration-200 ${prefs.autoYearSwitch
                                             ? 'border-green-200 bg-green-50'
                                             : 'border-red-200 bg-red-50'
-                                    }`}>
+                                        }`}>
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className={`p-2 rounded-lg ${
-                                                    prefs.autoYearSwitch ? 'bg-green-100' : 'bg-red-100'
-                                                }`}>
+                                                <div className={`p-2 rounded-lg ${prefs.autoYearSwitch ? 'bg-green-100' : 'bg-red-100'
+                                                    }`}>
                                                     {prefs.autoYearSwitch ? (
                                                         <CheckCircleIcon className="w-5 h-5 text-green-600" />
                                                     ) : (
@@ -618,15 +592,13 @@ function Settings() {
                                                 </div>
                                                 <div>
                                                     <div className="flex items-center gap-2">
-                                                        <p className={`font-semibold ${
-                                                            prefs.autoYearSwitch ? 'text-green-900' : 'text-red-900'
-                                                        }`}>
+                                                        <p className={`font-semibold ${prefs.autoYearSwitch ? 'text-green-900' : 'text-red-900'
+                                                            }`}>
                                                             Changement automatique d'année
                                                         </p>
                                                         <div className="relative group">
-                                                            <InformationCircleIcon className={`w-4 h-4 ${
-                                                                prefs.autoYearSwitch ? 'text-green-600' : 'text-red-600'
-                                                            } cursor-help`} />
+                                                            <InformationCircleIcon className={`w-4 h-4 ${prefs.autoYearSwitch ? 'text-green-600' : 'text-red-600'
+                                                                } cursor-help`} />
                                                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 w-64 text-left pointer-events-none">
                                                                 {prefs.autoYearSwitch
                                                                     ? "Sécurité : Transition automatique au 1er janvier - Garantit une continuité sans intervention manuelle"
@@ -636,9 +608,8 @@ function Settings() {
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <p className={`text-sm ${
-                                                        prefs.autoYearSwitch ? 'text-green-700' : 'text-red-700'
-                                                    }`}>
+                                                    <p className={`text-sm ${prefs.autoYearSwitch ? 'text-green-700' : 'text-red-700'
+                                                        }`}>
                                                         {prefs.autoYearSwitch
                                                             ? "Garantit une transition fluide sans intervention manuelle."
                                                             : "Nécessite une intervention manuelle au 1er janvier."
@@ -660,7 +631,7 @@ function Settings() {
                                                               ${prefs.autoYearSwitch ? 'bg-green-500' : 'bg-red-500'}
                                                               ${apiLoading.autoSwitch ? 'opacity-50' : ''}
                                                             `}>
-                                                                                        <div className={`
+                                                    <div className={`
                                                                 bg-white rounded-full shadow-lg transform transition-transform duration-200
                                                                 w-5 h-5 m-0.5
                                                                 ${prefs.autoYearSwitch ? 'translate-x-6' : 'translate-x-0'}
@@ -701,11 +672,10 @@ function Settings() {
                                                 <button
                                                     onClick={() => openModal('yearSwitch')}
                                                     disabled={prefs.autoYearSwitch}
-                                                    className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
-                                                        prefs.autoYearSwitch
+                                                    className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${prefs.autoYearSwitch
                                                             ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                                             : 'bg-orange-500 text-white hover:bg-orange-600 shadow-sm'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <CalendarDaysIcon className="w-4 h-4" />
                                                     Programmer
@@ -737,11 +707,10 @@ function Settings() {
                                 <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-4">
-                                            <div className={`p-3 rounded-xl transition-all duration-300 ${
-                                                prefs.prefersDark
+                                            <div className={`p-3 rounded-xl transition-all duration-300 ${prefs.prefersDark
                                                     ? 'bg-gray-800 text-gray-200'
                                                     : 'bg-amber-100 text-amber-600'
-                                            }`}>
+                                                }`}>
                                                 {prefs.prefersDark ? (
                                                     <MoonIcon className="w-6 h-6" />
                                                 ) : (
@@ -758,11 +727,10 @@ function Settings() {
 
                                         <button
                                             onClick={() => setPrefs(p => ({ ...p, prefersDark: !p.prefersDark }))}
-                                            className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
-                                                prefs.prefersDark
+                                            className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${prefs.prefersDark
                                                     ? 'bg-gray-700 text-white hover:bg-gray-800'
                                                     : 'bg-amber-500 text-white hover:bg-amber-600'
-                                            }`}
+                                                }`}
                                         >
                                             {prefs.prefersDark ? 'Mode sombre' : 'Mode clair'}
                                         </button>
@@ -789,9 +757,9 @@ function Settings() {
                                     <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                                         <span className="text-sm font-medium text-blue-900">Version</span>
                                         <div className="relative group">
-                                        <span className="font-mono text-sm bg-white px-2 py-1 rounded border">
-                                            v{serverSettings?.app_version ?? immutableSettings.systemVersion}
-                                        </span>
+                                            <span className="font-mono text-sm bg-white px-2 py-1 rounded border">
+                                                v{serverSettings?.app_version ?? immutableSettings.systemVersion}
+                                            </span>
                                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 pointer-events-none whitespace-nowrap shadow-lg">
                                                 Version: v{serverSettings?.app_version ?? immutableSettings.systemVersion}
                                                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
@@ -802,9 +770,9 @@ function Settings() {
                                     <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                                         <span className="text-sm font-medium text-green-900">Format CMDT</span>
                                         <div className="relative group">
-                                        <span className="font-mono text-sm bg-white px-2 py-1 rounded border">
-                                            {serverSettings?.cmdt_format?.padding ?? 4} digits
-                                        </span>
+                                            <span className="font-mono text-sm bg-white px-2 py-1 rounded border">
+                                                {serverSettings?.cmdt_format?.padding ?? 4} digits
+                                            </span>
                                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 pointer-events-none whitespace-nowrap shadow-lg">
                                                 Format CMDT: {serverSettings?.cmdt_format?.padding ?? 4} chiffres
                                                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
@@ -815,9 +783,9 @@ function Settings() {
                                     <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
                                         <span className="text-sm font-medium text-purple-900">Année fiscale</span>
                                         <div className="relative group">
-                                        <span className="font-mono text-sm bg-white px-2 py-1 rounded border">
-                                            {serverSettings?.fiscalYear ?? '2025'}
-                                        </span>
+                                            <span className="font-mono text-sm bg-white px-2 py-1 rounded border">
+                                                {serverSettings?.fiscalYear ?? '2025'}
+                                            </span>
                                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 pointer-events-none whitespace-nowrap shadow-lg">
                                                 Année fiscale: {serverSettings?.fiscalYear ?? '2025'}
                                                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
@@ -833,10 +801,9 @@ function Settings() {
                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                                         // CORRECTION: Vérifiez directement la condition
                                         warningInfo?.remaining <= warningInfo?.threshold ? 'bg-red-100' : 'bg-green-100'
-                                    }`}>
-                                        <ExclamationTriangleIcon className={`w-5 h-5 ${
-                                            warningInfo?.remaining <= warningInfo?.threshold ? 'text-red-600' : 'text-green-600'
-                                        }`} />
+                                        }`}>
+                                        <ExclamationTriangleIcon className={`w-5 h-5 ${warningInfo?.remaining <= warningInfo?.threshold ? 'text-red-600' : 'text-green-600'
+                                            }`} />
                                     </div>
                                     <div>
                                         <h2 className="text-xl font-semibold text-gray-900">État du Compteur CMDT</h2>
@@ -859,9 +826,8 @@ function Settings() {
                                     <div className="relative group">
                                         <div className="w-full bg-gray-200 rounded-full h-3">
                                             <div
-                                                className={`h-3 rounded-full transition-all duration-500 ${
-                                                    warningInfo?.warning ? 'bg-red-500' : 'bg-green-500'
-                                                }`}
+                                                className={`h-3 rounded-full transition-all duration-500 ${warningInfo?.warning ? 'bg-red-500' : 'bg-green-500'
+                                                    }`}
                                                 style={{
                                                     width: `${Math.max((warningInfo?.lastNumber / warningInfo?.max) * 100 || 0, 1)}%`,
                                                     minWidth: '4px'
@@ -879,9 +845,8 @@ function Settings() {
                                                 <span className="font-mono">{formatNumber(warningInfo?.max || 0)}</span>
 
                                                 <span className="text-gray-300">Restants:</span>
-                                                <span className={`font-mono ${
-                                                    warningInfo?.warning ? 'text-red-300' : 'text-green-300'
-                                                }`}>
+                                                <span className={`font-mono ${warningInfo?.warning ? 'text-red-300' : 'text-green-300'
+                                                    }`}>
                                                     {formatNumber(warningInfo?.remaining || 0)}
                                                 </span>
 
@@ -894,9 +859,8 @@ function Settings() {
                                                 </span>
 
                                                 <span className="text-gray-300">Statut:</span>
-                                                <span className={`font-mono ${
-                                                    warningInfo?.warning ? 'text-red-300' : 'text-green-300'
-                                                }`}>
+                                                <span className={`font-mono ${warningInfo?.warning ? 'text-red-300' : 'text-green-300'
+                                                    }`}>
                                                     {warningInfo?.warning ? 'ALERTE' : 'NORMAL'}
                                                 </span>
                                             </div>
@@ -906,9 +870,8 @@ function Settings() {
 
                                     <div className="flex justify-between text-xs text-gray-500">
                                         <span>Numéro {formatNumber(warningInfo?.lastNumber || 0)}</span>
-                                        <span className={`font-medium ${
-                                            warningInfo?.warning ? 'text-red-600' : 'text-green-600'
-                                        }`}>
+                                        <span className={`font-medium ${warningInfo?.warning ? 'text-red-600' : 'text-green-600'
+                                            }`}>
                                             {formatNumber(warningInfo?.remaining || 0)} restants
                                         </span>
                                     </div>
@@ -937,7 +900,7 @@ function Settings() {
             {activeModal === 'yearSwitch' && <FiscalYearSwitchModal />}
             {activeModal === 'yearSwitchUnavailable' && <YearSwitchUnavailableModal />}
             {activeModal === 'yearSwitchSuccess' && <YearSwitchSuccessModal />}
-            {activeModal === 'error' && <ErrorModal msg={errorMsg}/>}
+            {activeModal === 'error' && <ErrorModal msg={errorMsg} />}
         </>
     );
 }

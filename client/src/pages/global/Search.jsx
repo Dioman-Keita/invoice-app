@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import useTitle from '../../hooks/ui/useTitle.js';
 import useBackground from '../../hooks/ui/useBackground.js';
 import { useSearch } from '../../hooks/api/useSearch.js';
+import api from '../../services/api.js';
 import Navbar from '../../components/navbar/Navbar.jsx';
 import Footer from '../../components/global/Footer.jsx';
-import { 
+import {
   MagnifyingGlassIcon,
   BuildingStorefrontIcon,
   DocumentTextIcon,
@@ -30,9 +31,9 @@ import Header from '../../components/global/Header.jsx';
 function Search() {
   useTitle('CMDT - Recherche avancée');
   useBackground('bg-search');
-  
+
   const [activeTab, setActiveTab] = useState('invoices');
-  
+
   const [filters, setFilters] = useState({
     fiscal_year: '',
     dateFrom: '',
@@ -67,23 +68,23 @@ function Search() {
   const [fiscalYears, setFiscalYears] = useState([]);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [showRelationalOptions, setShowRelationalOptions] = useState(false);
-  
+
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [selectedGroupedResult, setSelectedGroupedResult] = useState(null);  // AJOUT : Pour l'overview des résultats groupés
   const [showInvoiceOverview, setShowInvoiceOverview] = useState(false);
   const [showSupplierOverview, setShowSupplierOverview] = useState(false);
   const [showGroupedOverview, setShowGroupedOverview] = useState(false);  // AJOUT : Pour l'overview des résultats groupés
-  
+
   const [filtersModified, setFiltersModified] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentLimit, setCurrentLimit] = useState(10);
-  
+
   const [invoiceAttachments, setInvoiceAttachments] = useState({});
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [loadingAttachments, setLoadingAttachments] = useState({});
-  
+
   const invoiceSearch = useSearch('/search/invoices', 'factures');
   const supplierSearch = useSearch('/search/suppliers', 'fournisseurs');
   const relationalSearch = useSearch('/search/relational', 'relationnel');
@@ -91,13 +92,9 @@ function Search() {
   useEffect(() => {
     const fetchFiscalYears = async () => {
       try {
-        const response = await fetch('/api/fiscal-years', {
-          credentials: 'include',
-          headers: { Accept: 'application/json' }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setFiscalYears(data.data || []);
+        const response = await api.get('/fiscal-years');
+        if (response.success) {
+          setFiscalYears(response.data || []);
         }
       } catch (err) {
         console.error('Erreur chargement années fiscales:', err);
@@ -146,23 +143,23 @@ function Search() {
   }, [activeTab]);
 
   useEffect(() => {
-    const hasModifications = 
-      Object.values(filters).some(value => 
+    const hasModifications =
+      Object.values(filters).some(value =>
         value !== '' && value !== null && value !== undefined
       ) ||
       (advancedOptions.order_by !== '' && advancedOptions.order_by !== null);
-    
+
     setFiltersModified(hasModifications);
   }, [filters, advancedOptions]);
 
   const buildOptionsForTab = (tab) => {
     const base = {};
-    
+
     if (advancedOptions.order_by) {
       base.order_by = advancedOptions.order_by;
       base.order_direction = advancedOptions.order_direction || 'desc';
     }
-    
+
     if (tab === 'invoices') {
       base.include_supplier = true;
       base.include_attachments = true;
@@ -177,7 +174,7 @@ function Search() {
       base.include_supplier = true;
       base.include_supplier_details = true;
     }
-    
+
     return base;
   };
 
@@ -194,7 +191,7 @@ function Search() {
         supplier_total_amount_max: _totalMax,
         ...rest
       } = filters;
-      
+
       return {
         ...rest,
         invoice_with_attachments: true,
@@ -219,7 +216,7 @@ function Search() {
         supplier_total_amount_max: _totalMax,
         ...suppFilters
       } = filters;
-      
+
       // ✅ CORRECTION : Ne pas forcer supplier_with_invoices et has_active_invoices
       // Ces filtres doivent être optionnels et seulement appliqués si l'utilisateur les spécifie
       return suppFilters;
@@ -281,13 +278,13 @@ function Search() {
     const filtersForTab = buildFiltersForTab(activeTab);
 
     const cleanFilters = Object.fromEntries(
-      Object.entries(filtersForTab).filter(([_, value]) => 
+      Object.entries(filtersForTab).filter(([_, value]) =>
         value !== '' && value !== null && value !== undefined && value !== false
       )
     );
 
     const cleanOptions = Object.fromEntries(
-      Object.entries(options).filter(([_, value]) => 
+      Object.entries(options).filter(([_, value]) =>
         value !== '' && value !== null && value !== undefined
       )
     );
@@ -300,7 +297,7 @@ function Search() {
       } else if (activeTab === 'relational') {
         await relationalSearch.search('', cleanFilters, cleanOptions, page, limit);
       }
-      
+
       setCurrentPage(page);
       setCurrentLimit(limit);
     } catch (error) {
@@ -339,7 +336,7 @@ function Search() {
       order_direction: 'desc',
       group_by_supplier: activeTab === 'relational'  // Activé uniquement pour relational
     });
-    
+
     invoiceSearch.reset();
     supplierSearch.reset();
     relationalSearch.reset();
@@ -425,25 +422,19 @@ function Search() {
       };
       const accept = acceptByFormat[lowerFmt] || '*/*';
 
-      const response = await fetch('/api/export', {
-        method: 'POST',
-        credentials: 'include',
+      const response = await api.post('/export', { type, variant, format: lowerFmt, search: searchPayload }, {
+        responseType: 'arraybuffer',
         headers: {
-          Accept: accept,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ type, variant, format: lowerFmt, search: searchPayload })
+          Accept: accept
+        }
       });
 
-      if (!response.ok) throw new Error('Erreur lors de l\'export');
-
       // Forcer le type MIME pour éviter les mauvaises associations (WPS, etc.)
-      const arrayBuf = await response.arrayBuffer();
-      const blob = new Blob([arrayBuf], { type: accept });
+      const blob = new Blob([response], { type: accept });
       const urlObj = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = urlObj;
-      
+
       // Générer le nom de fichier selon le contexte
       if (data) {
         if (showInvoiceOverview && selectedInvoice) {
@@ -459,7 +450,7 @@ function Search() {
       } else {
         a.download = `export-${activeTab}-${new Date().toISOString().split('T')[0]}.${format.toLowerCase()}`;
       }
-      
+
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(urlObj);
@@ -490,7 +481,7 @@ function Search() {
     try {
       const num = typeof amount === 'string' ? parseFloat(amount.replace(/\s/g, '')) : Number(amount);
       if (isNaN(num)) return 'Montant invalide';
-      
+
       return new Intl.NumberFormat('fr-FR', {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
@@ -530,7 +521,7 @@ function Search() {
 
   const getStatusBadge = (status) => {
     const baseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
-    
+
     switch (status) {
       case 'approved': return `${baseClasses} bg-green-100 text-green-800`;
       case 'rejected': return `${baseClasses} bg-red-100 text-red-800`;
@@ -552,7 +543,7 @@ function Search() {
     const totalPages = Math.ceil((meta?.total || 0) / (meta?.limit || 10));
     const currentPage = meta?.page || 1;
     const currentLimit = meta?.limit || 10;
-    
+
     if (totalPages <= 1 && currentLimit === 10) return null;
 
     return (
@@ -563,7 +554,7 @@ function Search() {
             <span className="font-medium">{Math.min(currentPage * currentLimit, meta?.total || 0)}</span> sur{' '}
             <span className="font-medium">{meta?.total || 0}</span> résultats
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <label className="text-sm text-gray-600 whitespace-nowrap">
               Résultats par page:
@@ -580,7 +571,7 @@ function Search() {
             </select>
           </div>
         </div>
-        
+
         {totalPages > 1 && (
           <div className="flex items-center space-x-2">
             <button
@@ -590,7 +581,7 @@ function Search() {
             >
               <ChevronLeftIcon className="w-4 h-4" />
             </button>
-            
+
             <div className="flex space-x-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 let pageNumber;
@@ -603,23 +594,22 @@ function Search() {
                 } else {
                   pageNumber = currentPage - 2 + i;
                 }
-                
+
                 return (
                   <button
                     key={pageNumber}
                     onClick={() => onPageChange(pageNumber)}
-                    className={`min-w-[2rem] px-2 py-1 text-sm rounded border transition-colors ${
-                      currentPage === pageNumber
+                    className={`min-w-[2rem] px-2 py-1 text-sm rounded border transition-colors ${currentPage === pageNumber
                         ? 'bg-blue-500 text-white border-blue-500'
                         : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     {pageNumber}
                   </button>
                 );
               })}
             </div>
-            
+
             <button
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
@@ -645,14 +635,10 @@ function Search() {
     setLoadingAttachments(prev => ({ ...prev, [invoiceId]: true }));
 
     try {
-      const response = await fetch(`/api/invoices/${invoiceId}/attachments`, {
-        credentials: 'include',
-        headers: { 'Accept': 'application/json' }
-      });
+      const response = await api.get(`/invoices/${invoiceId}/attachments`);
 
-      if (response.ok) {
-        const data = await response.json();
-        const documents = data.data?.documents || [];
+      if (response.success) {
+        const documents = response.data?.documents || [];
         setInvoiceAttachments(prev => ({ ...prev, [invoiceId]: documents }));
         return documents;
       }
@@ -673,7 +659,7 @@ function Search() {
     setSelectedInvoice(invoice);
     setShowInvoiceOverview(true);
     setShowSupplierOverview(false);
-    
+
     if (invoice.id) {
       await fetchInvoiceAttachments(invoice.id);
     }
@@ -707,7 +693,7 @@ function Search() {
       <div className="min-h-screen">
         <Header />
         <Navbar />
-        
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8 text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
@@ -758,7 +744,7 @@ function Search() {
                     <input
                       type="text"
                       value={filters.supplier_name}
-                      onChange={(e) => setFilters({...filters, supplier_name: e.target.value})}
+                      onChange={(e) => setFilters({ ...filters, supplier_name: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Ex: Société ABC"
                     />
@@ -773,7 +759,7 @@ function Search() {
                         <input
                           type="text"
                           value={filters.num_invoice}
-                          onChange={(e) => setFilters({...filters, num_invoice: e.target.value})}
+                          onChange={(e) => setFilters({ ...filters, num_invoice: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="Ex: 0001, 0399348, 0399349, 0399350, etc."
                           maxLength={50}
@@ -787,7 +773,7 @@ function Search() {
                         <input
                           type="text"
                           value={filters.num_cmdt}
-                          onChange={(e) => setFilters({...filters, num_cmdt: e.target.value})}
+                          onChange={(e) => setFilters({ ...filters, num_cmdt: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="Ex: 0001"
                           maxLength={4}
@@ -799,7 +785,7 @@ function Search() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Année fiscale
                         </label>
-                        <select value={filters.fiscal_year} onChange={(e) => setFilters({...filters, fiscal_year: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select value={filters.fiscal_year} onChange={(e) => setFilters({ ...filters, fiscal_year: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                           <option value="">Toutes</option>
                           {fiscalYears.map(year => (
                             <option key={year} value={year}>{year}</option>
@@ -811,7 +797,7 @@ function Search() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Type de facture
                         </label>
-                        <select value={filters.invoice_type} onChange={(e) => setFilters({...filters, invoice_type: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select value={filters.invoice_type} onChange={(e) => setFilters({ ...filters, invoice_type: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                           <option value="">Tous</option>
                           <option value="Ordinaire">Ordinaire</option>
                           <option value="Transporteur">Transporteur</option>
@@ -823,7 +809,7 @@ function Search() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Statut DFC
                         </label>
-                        <select value={filters.dfc_status} onChange={(e) => setFilters({...filters, dfc_status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select value={filters.dfc_status} onChange={(e) => setFilters({ ...filters, dfc_status: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                           <option value="">Tous</option>
                           <option value="pending">En attente</option>
                           <option value="approved">Approuvé</option>
@@ -835,7 +821,7 @@ function Search() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Facture annulée
                         </label>
-                        <select value={filters.status} onChange={(e) => setFilters({...filters, status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                           <option value="">Toutes</option>
                           <option value="Oui">Oui</option>
                           <option value="Non">Non</option>
@@ -853,7 +839,7 @@ function Search() {
                         <input
                           type="text"
                           value={filters.account_number}
-                          onChange={(e) => setFilters({...filters, account_number: e.target.value})}
+                          onChange={(e) => setFilters({ ...filters, account_number: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="Ex: FR763000100794..."
                           maxLength={34}
@@ -867,7 +853,7 @@ function Search() {
                         <input
                           type="text"
                           value={filters.phone}
-                          onChange={(e) => setFilters({...filters, phone: e.target.value})}
+                          onChange={(e) => setFilters({ ...filters, phone: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="Ex: +33 1 23 45 67 89"
                           maxLength={20}
@@ -881,7 +867,7 @@ function Search() {
                         <input
                           type="date"
                           value={filters.supplier_created_from}
-                          onChange={(e) => setFilters({...filters, supplier_created_from: e.target.value})}
+                          onChange={(e) => setFilters({ ...filters, supplier_created_from: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
@@ -893,7 +879,7 @@ function Search() {
                         <input
                           type="date"
                           value={filters.supplier_created_to}
-                          onChange={(e) => setFilters({...filters, supplier_created_to: e.target.value})}
+                          onChange={(e) => setFilters({ ...filters, supplier_created_to: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
@@ -906,7 +892,7 @@ function Search() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Année fiscale
                         </label>
-                        <select value={filters.fiscal_year} onChange={(e) => setFilters({...filters, fiscal_year: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select value={filters.fiscal_year} onChange={(e) => setFilters({ ...filters, fiscal_year: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                           <option value="">Toutes</option>
                           {fiscalYears.map(year => (
                             <option key={year} value={year}>{year}</option>
@@ -918,7 +904,7 @@ function Search() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Type de facture
                         </label>
-                        <select value={filters.invoice_type} onChange={(e) => setFilters({...filters, invoice_type: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select value={filters.invoice_type} onChange={(e) => setFilters({ ...filters, invoice_type: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                           <option value="">Tous</option>
                           <option value="Ordinaire">Ordinaire</option>
                           <option value="Transporteur">Transporteur</option>
@@ -945,7 +931,7 @@ function Search() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 bg-blue-50 rounded-lg">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Trier par</label>
-                        <select value={advancedOptions.order_by || ''} onChange={(e) => setAdvancedOptions({...advancedOptions, order_by: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select value={advancedOptions.order_by || ''} onChange={(e) => setAdvancedOptions({ ...advancedOptions, order_by: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                           <option value="">Aucun tri</option>
                           {orderOptions[activeTab]?.map(option => (
                             <option key={option.value} value={option.value}>{option.label}</option>
@@ -955,7 +941,7 @@ function Search() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Ordre</label>
-                        <select value={advancedOptions.order_direction} onChange={(e) => setAdvancedOptions({...advancedOptions, order_direction: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select value={advancedOptions.order_direction} onChange={(e) => setAdvancedOptions({ ...advancedOptions, order_direction: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                           <option value="desc">Décroissant</option>
                           <option value="asc">Croissant</option>
                         </select>
@@ -979,106 +965,106 @@ function Search() {
                         </div>
                       ) : (
                         <>
-                      {(activeTab === 'invoices' || activeTab === 'relational') && (
-                        <>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                              <CalendarDaysIcon className="w-4 h-4 mr-2 text-gray-500" />
-                              Date d'arrivée (du)
-                            </label>
-                            <input 
-                              type="date" 
-                              value={filters.dateFrom} 
-                              onChange={(e) => setFilters({...filters, dateFrom: e.target.value})} 
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                            />
-                          </div>
+                          {(activeTab === 'invoices' || activeTab === 'relational') && (
+                            <>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                  <CalendarDaysIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                  Date d'arrivée (du)
+                                </label>
+                                <input
+                                  type="date"
+                                  value={filters.dateFrom}
+                                  onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                              <CalendarDaysIcon className="w-4 h-4 mr-2 text-gray-500" />
-                              Date d'arrivée (au)
-                            </label>
-                            <input 
-                              type="date" 
-                              value={filters.dateTo} 
-                              onChange={(e) => setFilters({...filters, dateTo: e.target.value})} 
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                            />
-                          </div>
-                        </>
-                      )}
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                  <CalendarDaysIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                  Date d'arrivée (au)
+                                </label>
+                                <input
+                                  type="date"
+                                  value={filters.dateTo}
+                                  onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+                            </>
+                          )}
 
-                      {activeTab === 'invoices' && (
-                        <>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                              <BanknotesIcon className="w-4 h-4 mr-2 text-gray-500" />
-                              Montant minimum
-                            </label>
-                            <input type="number" value={filters.amountMin} onChange={(e) => setFilters({...filters, amountMin: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0" min="0" />
-                          </div>
+                          {activeTab === 'invoices' && (
+                            <>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                  <BanknotesIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                  Montant minimum
+                                </label>
+                                <input type="number" value={filters.amountMin} onChange={(e) => setFilters({ ...filters, amountMin: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0" min="0" />
+                              </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                              <BanknotesIcon className="w-4 h-4 mr-2 text-gray-500" />
-                              Montant maximum
-                            </label>
-                            <input type="number" value={filters.amountMax} onChange={(e) => setFilters({...filters, amountMax: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="50000" min="0" />
-                          </div>
-                        </>
-                      )}
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                  <BanknotesIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                  Montant maximum
+                                </label>
+                                <input type="number" value={filters.amountMax} onChange={(e) => setFilters({ ...filters, amountMax: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="50000" min="0" />
+                              </div>
+                            </>
+                          )}
 
-                      {(activeTab === 'invoices' || activeTab === 'relational') && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                              <DocumentCheckIcon className="w-4 h-4 mr-2 text-gray-500" />
-                              Nature
-                            </label>
-                            <select value={filters.invoice_nature} onChange={(e) => setFilters({...filters, invoice_nature: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                              <option value="">Toutes</option>
-                              <option value="Paiement">Paiement</option>
-                              <option value="Acompte">Acompte</option>
-                              <option value="Avoir">Avoir</option>
-                            </select>
-                          </div>
-                      )}
+                          {(activeTab === 'invoices' || activeTab === 'relational') && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                <DocumentCheckIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                Nature
+                              </label>
+                              <select value={filters.invoice_nature} onChange={(e) => setFilters({ ...filters, invoice_nature: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Toutes</option>
+                                <option value="Paiement">Paiement</option>
+                                <option value="Acompte">Acompte</option>
+                                <option value="Avoir">Avoir</option>
+                              </select>
+                            </div>
+                          )}
 
-                      {activeTab === 'relational' && (
-                        <>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                              <BanknotesIcon className="w-4 h-4 mr-2 text-gray-500" />
-                              Montant total min
-                            </label>
-                            <input type="number" value={filters.supplier_total_amount_min} onChange={(e) => setFilters({...filters, supplier_total_amount_min: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0" min="0" />
-                          </div>
+                          {activeTab === 'relational' && (
+                            <>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                  <BanknotesIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                  Montant total min
+                                </label>
+                                <input type="number" value={filters.supplier_total_amount_min} onChange={(e) => setFilters({ ...filters, supplier_total_amount_min: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0" min="0" />
+                              </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                              <BanknotesIcon className="w-4 h-4 mr-2 text-gray-500" />
-                              Montant total max
-                            </label>
-                            <input type="number" value={filters.supplier_total_amount_max} onChange={(e) => setFilters({...filters, supplier_total_amount_max: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="1000000" min="0" />
-                          </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                  <BanknotesIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                  Montant total max
+                                </label>
+                                <input type="number" value={filters.supplier_total_amount_max} onChange={(e) => setFilters({ ...filters, supplier_total_amount_max: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="1000000" min="0" />
+                              </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                              <BanknotesIcon className="w-4 h-4 mr-2 text-gray-500" />
-                              Montant moyen min
-                            </label>
-                            <input type="number" value={filters.supplier_avg_amount_min} onChange={(e) => setFilters({...filters, supplier_avg_amount_min: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0" min="0" />
-                          </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                  <BanknotesIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                  Montant moyen min
+                                </label>
+                                <input type="number" value={filters.supplier_avg_amount_min} onChange={(e) => setFilters({ ...filters, supplier_avg_amount_min: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0" min="0" />
+                              </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                              <BanknotesIcon className="w-4 h-4 mr-2 text-gray-500" />
-                              Montant moyen max
-                            </label>
-                            <input type="number" value={filters.supplier_avg_amount_max} onChange={(e) => setFilters({...filters, supplier_avg_amount_max: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="50000" min="0" />
-                          </div>
-                        </>
-                      )}
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                  <BanknotesIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                  Montant moyen max
+                                </label>
+                                <input type="number" value={filters.supplier_avg_amount_max} onChange={(e) => setFilters({ ...filters, supplier_avg_amount_max: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="50000" min="0" />
+                              </div>
+                            </>
+                          )}
                         </>
                       )}
                     </div>
@@ -1087,9 +1073,9 @@ function Search() {
               </div>
 
               <div className="flex flex-wrap gap-3 pt-6 border-t">
-                <button 
-                  type="submit" 
-                  disabled={!filtersModified || invoiceSearch.loading || supplierSearch.loading || relationalSearch.loading} 
+                <button
+                  type="submit"
+                  disabled={!filtersModified || invoiceSearch.loading || supplierSearch.loading || relationalSearch.loading}
                   className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <MagnifyingGlassIcon className="w-4 h-4 mr-2" />
@@ -1104,9 +1090,9 @@ function Search() {
                 <div className="flex-1"></div>
 
                 <div className="flex gap-2">
-                  <button 
-                    type="button" 
-                    onClick={() => handleExport('pdf')} 
+                  <button
+                    type="button"
+                    onClick={() => handleExport('pdf')}
                     disabled={isExportingPdf || isExportingExcel || (!invoiceSearch.data?.length && !supplierSearch.data?.length && !relationalSearch.data?.length)}
                     className="flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -1125,9 +1111,9 @@ function Search() {
                       </>
                     )}
                   </button>
-                  <button 
-                    type="button" 
-                    onClick={() => handleExport('xlsx')} 
+                  <button
+                    type="button"
+                    onClick={() => handleExport('xlsx')}
                     disabled={isExportingPdf || isExportingExcel || (!invoiceSearch.data?.length && !supplierSearch.data?.length && !relationalSearch.data?.length)}
                     className="flex items-center px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -1230,8 +1216,8 @@ function Search() {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                   <div className="flex space-x-2">
-                                    <button 
-                                      onClick={() => handleShowInvoiceOverview(invoice)} 
+                                    <button
+                                      onClick={() => handleShowInvoiceOverview(invoice)}
                                       className="text-blue-600 hover:text-blue-900 transition-colors"
                                       title="Voir les détails"
                                     >
@@ -1245,8 +1231,8 @@ function Search() {
                         </table>
                       </div>
 
-                      <Pagination 
-                        meta={invoiceSearch.meta} 
+                      <Pagination
+                        meta={invoiceSearch.meta}
                         onPageChange={(page) => handlePageChange(page)}
                         onLimitChange={(limit) => handleLimitChange(limit)}
                       />
@@ -1298,8 +1284,8 @@ function Search() {
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(supplier.create_at)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                   <div className="flex space-x-2">
-                                    <button 
-                                      onClick={() => handleShowSupplierOverview(supplier)} 
+                                    <button
+                                      onClick={() => handleShowSupplierOverview(supplier)}
                                       className="text-blue-600 hover:text-blue-900 transition-colors"
                                       title="Voir les détails"
                                     >
@@ -1313,8 +1299,8 @@ function Search() {
                         </table>
                       </div>
 
-                      <Pagination 
-                        meta={supplierSearch.meta} 
+                      <Pagination
+                        meta={supplierSearch.meta}
                         onPageChange={(page) => handlePageChange(page)}
                         onLimitChange={(limit) => handleLimitChange(limit)}
                       />
@@ -1346,37 +1332,37 @@ function Search() {
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-50">
                             <tr>
-                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fournisseur</th>
-                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre de factures</th>
-                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant total</th>
-                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant moyen</th>
-                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dernière facture</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fournisseur</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre de factures</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant total</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant moyen</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dernière facture</th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
                             {relationalSearch.data.map((result, index) => (
                               <tr key={index} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                      <div className="text-sm font-medium text-gray-900">{result.supplier_name}</div>
-                                      <div className="text-sm text-gray-500">{result.supplier_account}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{result.invoice_count}</span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{formatAmount(result.total_amount)}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatAmount(result.avg_amount)}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{result.last_invoice_date ? formatDate(result.last_invoice_date) : 'N/A'}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">{result.supplier_name}</div>
+                                  <div className="text-sm text-gray-500">{result.supplier_account}</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{result.invoice_count}</span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{formatAmount(result.total_amount)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatAmount(result.avg_amount)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{result.last_invoice_date ? formatDate(result.last_invoice_date) : 'N/A'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                   <div className="flex space-x-2">
                                     {/* ✅ MODIFICATION : Toujours utiliser l'overview groupé pour la recherche relationnelle */}
-                                      <button 
-                                      onClick={() => handleShowGroupedOverview(result)} 
-                                        className="text-blue-600 hover:text-blue-900 transition-colors"
+                                    <button
+                                      onClick={() => handleShowGroupedOverview(result)}
+                                      className="text-blue-600 hover:text-blue-900 transition-colors"
                                       title="Voir les statistiques du fournisseur"
-                                      >
-                                        <EyeIcon className="w-4 h-4" />
-                                      </button>
+                                    >
+                                      <EyeIcon className="w-4 h-4" />
+                                    </button>
                                   </div>
                                 </td>
                               </tr>
@@ -1385,8 +1371,8 @@ function Search() {
                         </table>
                       </div>
 
-                      <Pagination 
-                        meta={relationalSearch.meta} 
+                      <Pagination
+                        meta={relationalSearch.meta}
                         onPageChange={(page) => handlePageChange(page)}
                         onLimitChange={(limit) => handleLimitChange(limit)}
                       />
@@ -1535,8 +1521,8 @@ function Search() {
                   </div>
 
                   <div className="mt-6 flex justify-end space-x-3">
-                    <button 
-                      onClick={() => handleExport('pdf', selectedInvoice)} 
+                    <button
+                      onClick={() => handleExport('pdf', selectedInvoice)}
                       disabled={isExportingPdf || isExportingExcel}
                       className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -1555,8 +1541,8 @@ function Search() {
                         </>
                       )}
                     </button>
-                    <button 
-                      onClick={() => handleExport('xlsx', selectedInvoice)} 
+                    <button
+                      onClick={() => handleExport('xlsx', selectedInvoice)}
                       disabled={isExportingPdf || isExportingExcel}
                       className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -1645,8 +1631,8 @@ function Search() {
                   </div>
 
                   <div className="mt-6 flex justify-end space-x-3">
-                    <button 
-                      onClick={() => handleExport('pdf', selectedSupplier)} 
+                    <button
+                      onClick={() => handleExport('pdf', selectedSupplier)}
                       disabled={isExportingPdf || isExportingExcel}
                       className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -1665,8 +1651,8 @@ function Search() {
                         </>
                       )}
                     </button>
-                    <button 
-                      onClick={() => handleExport('xlsx', selectedSupplier)} 
+                    <button
+                      onClick={() => handleExport('xlsx', selectedSupplier)}
                       disabled={isExportingPdf || isExportingExcel}
                       className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -1756,8 +1742,8 @@ function Search() {
                   </div>
 
                   <div className="mt-6 flex justify-end space-x-3">
-                    <button 
-                      onClick={() => handleExport('pdf', selectedGroupedResult)} 
+                    <button
+                      onClick={() => handleExport('pdf', selectedGroupedResult)}
                       disabled={isExportingPdf || isExportingExcel}
                       className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -1776,8 +1762,8 @@ function Search() {
                         </>
                       )}
                     </button>
-                    <button 
-                      onClick={() => handleExport('xlsx', selectedGroupedResult)} 
+                    <button
+                      onClick={() => handleExport('xlsx', selectedGroupedResult)}
                       disabled={isExportingPdf || isExportingExcel}
                       className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >

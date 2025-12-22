@@ -1,277 +1,275 @@
-# Documentation des Routes API
+# API Routes Documentation
 
 ## 🚀 **Base URL**
 ```
 http://localhost:3000/api
 ```
 
-## 🔐 **Routes d'Authentification**
+## 🔐 **Authentication Routes**
 
 ### **POST** `/auth/login`
-- **Description** : Connexion utilisateur avec gestion rememberMe
-- **Body** : `{ email, password, role, rememberMe }`
-- **Response** : Cookie `auth_token` + données utilisateur + tracking d'activité
-- **Protection** : Aucune
-- **Tracking** : `LOGIN` automatique
+- **Description**: User login with rememberMe management
+- **Body**: `{ email, password, role, rememberMe }`
+- **Response**: `auth_token` cookie + user data + activity tracking
+- **Protection**: None
+- **Tracking**: Automatic `LOGIN`
 
 ### **POST** `/auth/register`
-- **Description** : Inscription utilisateur avec validation
-- **Body** : `{ email, password, firstName, lastName, role, terms }`
-- **Response** : Email de vérification envoyé
-- **Protection** : Aucune
-- **Rôles** : Tous
+- **Description**: User registration with validation
+- **Body**: `{ email, password, firstName, lastName, role, terms }`
+- **Response**: Verification email sent
+- **Protection**: None
+- **Roles**: All
 
 ### **POST** `/auth/forgot-password`
-- **Description** : Demande de réinitialisation de mot de passe
-- **Body** : `{ email }`
-- **Response** : Email de réinitialisation envoyé
-- **Protection** : Aucune
+- **Description**: Password reset request
+- **Body**: `{ email }`
+- **Response**: Reset email sent
+- **Protection**: None
 
 ### **POST** `/auth/reset-password`
-- **Description** : Réinitialisation du mot de passe
-- **Body** : `{ token, password }`
-- **Response** : Confirmation de réinitialisation
-- **Protection** : Aucune
+- **Description**: Password reset
+- **Body**: `{ token, password }`
+- **Response**: Reset confirmation
+- **Protection**: None
 
 ### **POST** `/auth/logout`
-- **Description** : Déconnexion de l'utilisateur
-- **Response** : Confirmation de déconnexion
-- **Protection** : `authGuard`
+- **Description**: User logout
+- **Response**: Logout confirmation
+- **Protection**: `authGuard`
 
 ### **POST** `/auth/silent-refresh`
-- **Description** : Rafraîchissement silencieux du token
-- **Response** : Nouveau token
-- **Protection** : `authGuard`
+- **Description**: Silent token refresh
+- **Response**: New token
+- **Protection**: `authGuard`
 
 ### **GET** `/auth/status`
-- **Description** : Vérification de l'état d'authentification
-- **Response** : Statut de l'utilisateur
-- **Protection** : `authGuard`
-- **Tracking** : `REFRESH_PROFILE`
+- **Description**: Check authentication status
+- **Response**: User status
+- **Protection**: `authGuard`
+- **Tracking**: `REFRESH_PROFILE`
 
 ### **POST** `/auth/admin/create-user`
-- **Description** : Création d'utilisateur (admin uniquement)
-- **Body** : `{ email, password, firstName, lastName, role }`
-- **Response** : Détails de l'utilisateur créé
-- **Protection** : `authGuard` + `requireAdmin`
-- **Rôles** : `admin`
+- **Description**: User creation (admin only)
+- **Body**: `{ email, password, firstName, lastName, role }`
+- **Response**: Created user details
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
 
-## 📄 **Gestion des Factures**
+## 📄 **Invoice Management**
 
 ### **GET** `/invoices`
-- **Description** : Lister les factures
-- **Query Params** : `status`, `supplierId`, `dateFrom`, `dateTo`
-- **Response** : Liste des factures
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
+- **Description**: List invoices
+- **Query Params**: `status`, `supplierId`, `dateFrom`, `dateTo`
+- **Response**: List of invoices
+- **Protection**: `authGuard` + `requireAgentOrManager`
+- **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/invoices/last-num`
-- **Description** : Récupérer le dernier numéro de facture
-- **Response** : `{ lastNumber: string }`
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
+- **Description**: Get last invoice number
+- **Response**: `{ lastNumber: string }`
+- **Protection**: `authGuard` + `requireAgentOrManager`
+- **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/invoices/next-num`
-- **Description** : Récupérer le prochain numéro de facture attendu
-- **Response** : `{ nextNumber: string }`
-- **Protection** : `authGuard` + `requireManagerOrAdmin`
-- **Rôles** : `invoice_manager`, `admin`
+- **Description**: Get next expected invoice number
+- **Response**: `{ nextNumber: string }`
+- **Protection**: `authGuard` + `requireManagerOrAdmin`
+- **Roles**: `invoice_manager`, `admin`
 
 ### **GET** `/invoices/dfc/pending`
-- **Description** : Lister les factures en attente DFC
-- **Response** : Liste des factures en attente
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
+- **Description**: List pending DFC invoices
+- **Response**: List of pending invoices
+- **Protection**: `authGuard` + `requireAgentOrManager`
+- **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **POST** `/invoices`
-- **Description** : Créer une nouvelle facture
-- **Body** : Données de la facture
-- **Response** : Facture créée
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
+- **Description**: Create new invoice
+- **Body**: Invoice data
+- **Response**: Created invoice
+- **Protection**: `authGuard` + `requireAgentOrManager`
+- **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **POST** `/invoices/:id/dfc/approve`
-- **Description** : Approuver une facture DFC
-- **Response** : Confirmation d'approbation
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
+- **Description**: Approve DFC invoice
+- **Response**: Approval confirmation
+- **Protection**: `authGuard` + `requireAgentOrManager`
+- **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **POST** `/invoices/:id/dfc/reject`
-- **Description** : Rejeter une facture DFC
-- **Body** : `{ comments?: string }`
-- **Response** : Confirmation de rejet
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
+- **Description**: Reject DFC invoice
+- **Body**: `{ comments?: string }`
+- **Response**: Rejection confirmation
+- **Protection**: `authGuard` + `requireAgentOrManager`
+- **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/invoices/:id`
-- **Description** : Récupérer une facture spécifique
-- **Response** : Détails de la facture
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
+- **Description**: Get specific invoice
+- **Response**: Invoice details
+- **Protection**: `authGuard` + `requireAgentOrManager`
+- **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **POST** `/invoices/update/:id`
-- **Description** : Mettre à jour une facture
-- **Body** : Données mises à jour de la facture
-- **Response** : Facture mise à jour
-- **Protection** : `authGuard` + `requireManagerOrAdmin`
-- **Rôles** : `invoice_manager`, `admin`
+- **Description**: Update invoice
+- **Body**: Updated invoice data
+- **Response**: Updated invoice
+- **Protection**: `authGuard` + `requireManagerOrAdmin`
+- **Roles**: `invoice_manager`, `admin`
 
 ### **POST** `/invoices/delete/:id`
-- **Description** : Supprimer une facture
-- **Response** : Confirmation de suppression
-- **Protection** : `authGuard` + `requireAdmin`
-- **Rôles** : `admin`
+- **Description**: Delete invoice
+- **Response**: Deletion confirmation
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
 
-## 👥 **Gestion des Fournisseurs**
+## 👥 **Supplier Management**
 
 ### **POST** `/supplier`
-- **Description** : Créer un fournisseur
-- **Protection** : `authGuard` + `requireManagerOrAdmin`
-- **Rôles** : `invoice_manager`, `admin`
+- **Description**: Create supplier
+- **Protection**: `authGuard` + `requireManagerOrAdmin`
+- **Roles**: `invoice_manager`, `admin`
 
 ### **POST** `/supplier/delete/:id`
-- **Description** : Supprimer un fournisseur (simulation DELETE)
-- **Protection** : `authGuard` + `requireAdmin`
-- **Rôles** : `admin`
+- **Description**: Delete supplier (simulation DELETE)
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
 
 ### **GET** `/supplier`
-- **Description** : Lister tous les fournisseurs
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
+- **Description**: List all suppliers
+- **Protection**: `authGuard` + `requireAgentOrManager`
+- **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/supplier/phone`
-- **Description** : Rechercher un fournisseur par téléphone (`?phone=`)
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
+- **Description**: Search supplier by phone (`?phone=`)
+- **Protection**: `authGuard` + `requireAgentOrManager`
+- **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/supplier/:id`
-- **Description** : Récupérer un fournisseur spécifique
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
+- **Description**: Get specific supplier
+- **Protection**: `authGuard` + `requireAgentOrManager`
+- **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/suppliers/search`
-- **Description** : Recherche flexible par champ (`?field=&value=`)
-- **Protection** : `authGuard` + `requireManagerOrAdmin`
-- **Rôles** : `invoice_manager`, `admin`
+- **Description**: Flexible search by field (`?field=&value=`)
+- **Protection**: `authGuard` + `requireManagerOrAdmin`
+- **Roles**: `invoice_manager`, `admin`
 
 ### **GET** `/suppliers/find`
-- **Description** : Recherche multi-champs (ex: `?name=ABC&account_number=123`)
-- **Protection** : `authGuard` + `requireManagerOrAdmin`
-- **Rôles** : `invoice_manager`, `admin`
+- **Description**: Multi-field search (e.g. `?name=ABC&account_number=123`)
+- **Protection**: `authGuard` + `requireManagerOrAdmin`
+- **Roles**: `invoice_manager`, `admin`
 
 ### **GET** `/suppliers/verify-conflicts`
-- **Description** : Vérifier les conflits (numéro de compte / téléphone)
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
+- **Description**: Verify conflicts (account number / phone)
+- **Protection**: `authGuard` + `requireAgentOrManager`
+- **Roles**: `dfc_agent`, `invoice_manager`
 
-## 🔍 **Recherche avancée et Export**
+## 🔍 **Advanced Search & Export**
 
 ### **GET** `/search/invoices`
-- **Description** : Recherche avancée de factures
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
+- **Description**: Advanced invoice search
+- **Protection**: `authGuard` + `requireAgentOrManager`
+- **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/search/suppliers`
-- **Description** : Recherche avancée de fournisseurs
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
+- **Description**: Advanced supplier search
+- **Protection**: `authGuard` + `requireAgentOrManager`
+- **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/search/relational`
-- **Description** : Recherche relationnelle (factures/fournisseurs)
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
+- **Description**: Relational search (invoices/suppliers)
+- **Protection**: `authGuard` + `requireAgentOrManager`
+- **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **POST** `/export`
-- **Description** : Générer un export basé sur une recherche standardisée
-- **Body** :
+- **Description**: Generate export based on standardized search
+- **Body**:
   ```json
   {
     "type": "invoice" | "supplier" | "relational",
     "variant": "list" | "overview",
     "format": "pdf" | "odt" | "xlsx",
-    "search": { /* mêmes filtres que /search/... */ }
+    "search": { /* same filters as /search/... */ }
   }
   ```
-- **Response** : Fichier binaire
-  - `application/pdf` si `format=pdf`
-  - `application/vnd.oasis.opendocument.text` si `format=odt`
-  - `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` si `format=xlsx`
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
+- **Response**: Binary file
+  - `application/pdf` if `format=pdf`
+  - `application/vnd.oasis.opendocument.text` if `format=odt`
+  - `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` if `format=xlsx`
+- **Protection**: `authGuard` + `requireAgentOrManager`
+- **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/fiscal-years`
-- **Description** : Récupérer les années fiscales disponibles
-- **Protection** : `authGuard` + `requireAgentOrManager`
-- **Rôles** : `dfc_agent`, `invoice_manager`
+- **Description**: Get available fiscal years
+- **Protection**: `authGuard` + `requireAgentOrManager`
+- **Roles**: `dfc_agent`, `invoice_manager`
 
-## 📊 **Statistiques & Tableau de bord**
+## 📊 **Statistics & Dashboard**
 
 ### **GET** `/stats/dashboard/kpis`
-- **Description** : Indicateurs clés (KPIs) pour le tableau de bord admin
-- **Response** : `{ total_employee, total_invoices, business_amount, total_invoice_pending, dateFrom, dateTo }`
-- **Protection** : `authGuard` + `requireAdmin`
-- **Rôles** : `admin`
+- **Description**: Key Performance Indicators for admin dashboard
+- **Response**: `{ total_employee, total_invoices, business_amount, total_invoice_pending, dateFrom, dateTo }`
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
 
 ### **GET** `/stats/invoices/evolution`
-- **Description** : Évolution des factures et montants par mois
-- **Response** : Données pour graphiques
-- **Protection** : `authGuard` + `requireAdmin`
-- **Rôles** : `admin`
+- **Description**: Invoice evolution and amounts per month
+- **Response**: Chart data
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
 
-## ⚙️ **Paramètres fiscaux**
+## ⚙️ **Fiscal Settings**
 
 ### **GET** `/settings/fiscal`
-- **Description** : Informations fiscales courantes (année fiscale, format CMDT, compteur, seuils, alerte, etc.)
-- **Protection** : `authGuard`
-- **Rôles** : `dfc_agent`, `invoice_manager`, `admin`
+- **Description**: Current fiscal year info (fiscal year, CMDT format, counter, thresholds, alerts, etc.)
+- **Protection**: `authGuard`
+- **Roles**: `dfc_agent`, `invoice_manager`, `admin`
 
 ### **POST** `/settings/auto-year-switch`
-- **Description** : Activer/Désactiver la bascule automatique d'année fiscale
-- **Body** : `{ enable: boolean }`
-- **Protection** : `authGuard` + `requireAdmin`
-- **Rôles** : `admin`
+- **Description**: Enable/Disable automatic fiscal year switch
+- **Body**: `{ enable: boolean }`
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
 
 ### **POST** `/settings/fiscal-year/switch`
-- **Description** : Bascule manuelle d'année fiscale
-- **Body** : `{ newYear: string }`
-- **Protection** : `authGuard` + `requireAdmin`
-- **Rôles** : `admin`
+- **Description**: Manual fiscal year switch
+- **Body**: `{ newYear: string }`
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
 
-
-
-## 🛡️ **Routes de Test**
+## 🛡️ **Test Routes**
 
 ### **GET** `/protected`
-- **Description** : Test d'authentification
-- **Response** : `{ user: req.user }`
-- **Protection** : `authGuard`
+- **Description**: Authentication test
+- **Response**: `{ user: req.user }`
+- **Protection**: `authGuard`
 
 ### **GET** `/health`
-- **Description** : Vérification de l'état du serveur
-- **Response** : `{ status: 'OK', message: 'Serveur fonctionnel' }`
-- **Protection** : Aucune
+- **Description**: Server health check
+- **Response**: `{ status: 'OK', message: 'Server functional' }`
+- **Protection**: None
 
-## 🔧 **Utilisation côté Client**
+## 🔧 **Client-Side Usage**
 
-### **Configuration Axios avec gestion d'inactivité**
+### **Axios Configuration with Inactivity Handling**
 ```javascript
 import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'http://localhost:3000/api',
-  withCredentials: true, // Important pour les cookies
+  withCredentials: true, // Important for cookies
 });
 
-// Intercepteur pour gérer les erreurs d'auth et l'inactivité
+// Interceptor to handle auth errors and inactivity
 api.interceptors.response.use(
   response => response,
   error => {
     if (error.response?.status === 401) {
-      // Rediriger vers login
+      // Redirect to login
       window.location.href = '/login';
     }
-    if (error.response?.data?.message?.includes('inactivité')) {
-      // Gérer la déconnexion automatique
+    if (error.response?.data?.message?.includes('inactivity')) {
+      // Handle auto logout
       localStorage.clear();
       window.location.href = '/login?reason=inactivity';
     }
@@ -280,9 +278,9 @@ api.interceptors.response.use(
 );
 ```
 
-### **Exemple d'utilisation avec nouvelles fonctionnalités**
+### **Example Usage**
 ```javascript
-// Connexion avec rememberMe
+// Login with rememberMe
 const login = async (email, password, role, rememberMe) => {
   const response = await api.post('/auth/login', { 
     email, password, role, rememberMe 
@@ -290,7 +288,7 @@ const login = async (email, password, role, rememberMe) => {
   return response.data;
 };
 
-// Inscription avec validation
+// Register with validation
 const register = async (userData) => {
   const response = await api.post('/auth/register', {
     email: userData.email,
@@ -303,54 +301,30 @@ const register = async (userData) => {
   return response.data;
 };
 
-// Vérification du statut avec gestion d'inactivité
+// Check status
 const checkAuthStatus = async () => {
   const response = await api.get('/auth/status');
   return response.data;
 };
-
-// Rafraîchissement silencieux
-const silentRefresh = async () => {
-  const response = await api.post('/auth/silent-refresh');
-  return response.data;
-};
-
-// Créer une facture avec traçabilité
-const createInvoice = async (invoiceData) => {
-  const response = await api.post('/invoices', invoiceData);
-  return response.data;
-};
-
-// Mettre à jour une facture
-const updateInvoice = async (id, data) => {
-  const response = await api.post(`/invoices/update/${id}`, data);
-  return response.data;
-};
-
-// Supprimer une facture
-const deleteInvoice = async (id) => {
-  const response = await api.post(`/invoices/delete/${id}`);
-  return response.data;
-};
 ```
 
-## 🚨 **Codes d'Erreur**
+## 🚨 **Error Codes**
 
-- **200** : Succès
-- **201** : Créé avec succès
-- **400** : Requête invalide
-- **401** : Non authentifié
-- **403** : Accès refusé (permissions insuffisantes)
-- **404** : Ressource introuvable
-- **500** : Erreur serveur
+- **200**: Success
+- **201**: Created successfully
+- **400**: Invalid request
+- **401**: Unauthenticated
+- **403**: Forbidden (insufficient permissions)
+- **404**: Resource not found
+- **500**: Server error
 
-## 📝 **Notes Importantes**
+## 📝 **Important Notes**
 
-1. **Cookies** : Toutes les requêtes protégées nécessitent le cookie `auth_token` (HttpOnly)
-2. **CORS** : Configuré pour `http://localhost:5173` (ou `FRONTEND_URL`) avec `credentials: true`
-3. **Traçabilité** : Toutes les actions sont automatiquement associées à l'utilisateur connecté
-4. **Permissions** : Vérification automatique des rôles et de la propriété des ressources
-5. **Gestion d'inactivité** : Déconnexion automatique après 5min (30min avec rememberMe)
-6. **Tracking d'activité** : Toutes les actions sont enregistrées dans `user_activity`
-7. **Rafraîchissement** : Tokens renouvelés automatiquement avant expiration
-8. **Validation** : React Hook Form + Zod côté client, validation serveur stricte
+1. **Cookies**: All protected requests require the `auth_token` cookie (HttpOnly)
+2. **CORS**: Configured for `http://localhost:5173` (or `FRONTEND_URL`) with `credentials: true`
+3. **Traceability**: All actions are automatically associated with the logged-in user
+4. **Permissions**: Automatic check of roles and resource ownership
+5. **Inactivity**: Auto logout after 5min (30min with rememberMe)
+6. **Activity Tracking**: All actions are logged in `user_activity`
+7. **Refresh**: Tokens renewed automatically before expiration
+8. **Validation**: React Hook Form + Zod on client, strict server validation

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/auth/useAuth.js';
+import api from '../../services/api.js';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/global/Header.jsx';
 import Navbar from '../../components/navbar/Navbar.jsx';
@@ -43,16 +44,10 @@ function Dashboard({ requireAuth = false }) {
         setDashboardData(null);
         setLoading(true);
 
-        const response = await fetch('/api/stats/dashboard/kpis', {
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        });
+        const response = await api.get('/stats/dashboard/kpis');
 
-        if (response.ok && isMounted) {
-          const result = await response.json();
+        if (response.success && isMounted) {
+          const result = response;
           const data = result.data;
 
           const newData = {

@@ -53,6 +53,11 @@ if (process.env.NODE_ENV === 'development') {
 // Servir les assets du frontend avant tout le reste
 app.use(express.static(FRONTEND_PATH));
 
+// Health Check
+app.get('/api/health', (_req, res) => {
+    res.json({ status: 'OK', message: 'Serveur fonctionnel' });
+});
+
 // --------------- 4. ROUTES API (IMPORTANT : AVANT LE FRONTEND) ---------------
 // On déclare les API avant pour être sûr qu'elles soient prioritaires
 app.use('/api/migration', migrationRoutes);
@@ -65,11 +70,6 @@ app.use('/api', exportRoute);
 app.use('/api', statsRoute);
 app.use('/api', usersRoute);
 
-// Health Check
-app.get('/api/health', (_req, res) => {
-    res.json({ status: 'OK', message: 'Serveur fonctionnel' });
-});
-
 // --------------- 5. ROUTE FALLBACK FRONTEND (SPA) ---------------
 // C'EST LA CORRECTION CRITIQUE POUR EXPRESS 5
 // On utilise une Regex /^(.*)$/ au lieu de '*' qui fait crasher Express 5
@@ -78,7 +78,7 @@ app.get(/^(.*)$/, (req, res, next) => {
     if (req.path.startsWith('/api')) {
         return next(); // On passe au gestionnaire d'erreur 404
     }
-    
+
     // Sinon, on renvoie l'index.html de React
     res.sendFile(path.join(FRONTEND_PATH, 'index.html'));
 });
@@ -96,4 +96,5 @@ app.use((err: Error & { type?: string; status?: number }, req: Request, res: Res
     return ApiResponder.error(res, err);
 });
 
+export { app };
 export default app;

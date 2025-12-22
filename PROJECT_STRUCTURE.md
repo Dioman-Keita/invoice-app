@@ -1,88 +1,88 @@
-# Structure du Projet Invoice App
+# Invoice App Project Structure
 
-## Vue d'ensemble
+## Overview
 
-Application Electron de gestion de factures pour la CMDT (Compagnie Malienne pour le Développement des Textiles).
+Electron invoice management application for CMDT (Compagnie Malienne pour le Développement des Textiles).
 
-**Architecture :** Monorepo avec client React, serveur Node.js/Express, et wrapper Electron
+**Architecture:** Monorepo with React client, Node.js/Express server, and Electron wrapper.
 
-**Technologies principales :**
-- **Frontend :** React 19, Vite, Tailwind CSS
-- **Backend :** Node.js, Express 5, TypeScript
-- **Desktop :** Electron 39
-- **Base de données :** MySQL 8.2 (Docker)
-- **Build :** Electron Builder
+**Key Technologies:**
+- **Frontend:** React 19, Vite, Tailwind CSS
+- **Backend:** Node.js, Express 5, TypeScript
+- **Desktop:** Electron 39
+- **Database:** MySQL 8.2 (Docker)
+- **Build:** Electron Builder
 
 ---
 
-## Structure Racine
+## Root Structure
 
 ```
 invoice-app/
-├── main.js                    # Point d'entrée Electron (1053 lignes)
-├── package.json               # Configuration racine + Electron Builder
+├── main.js                    # Electron Entry Point (1053 lines)
+├── package.json               # Root config + Electron Builder
 ├── package-lock.json
-├── tsconfig.json              # TypeScript config racine
-├── eslint.config.js           # Configuration ESLint
+├── tsconfig.json              # Root TypeScript config
+├── eslint.config.js           # ESLint configuration
 │
 ├── README.md
 ├── LICENSE
 ├── CONTRIBUTING.md
 ├── SECURITY.md
-├── ARCHITECTURE.md            # Architecture détaillée
+├── ARCHITECTURE.md            # Detailed Architecture
 │
-├── client/                    # Application React Frontend
-├── server/                    # API Backend Express/TypeScript
-├── common/                    # Code partagé entre client/serveur
-├── dist/                      # Builds compilés
-├── architechture/             # Diagrammes d'architecture
+├── client/                    # React Frontend Application
+├── server/                    # Express/TypeScript Backend API
+├── common/                    # Shared code between client/server
+├── dist/                      # Compiled builds
+├── architechture/             # Architecture diagrams
 └── node_modules/
 ```
 
 ---
 
-## 📁 Client (Frontend React)
+## 📁 Client (React Frontend)
 
 ```
 client/
-├── package.json              # Dependencies React, Vite, Tailwind
-├── vite.config.js            # Configuration Vite
-├── tailwind.config.js        # Configuration Tailwind CSS
+├── package.json              # React, Vite, Tailwind Dependencies
+├── vite.config.js            # Vite Configuration
+├── tailwind.config.js        # Tailwind CSS Configuration
 ├── postcss.config.mjs        # PostCSS config
 ├── tsconfig.json
 │
-├── index.html                # Point d'entrée HTML
-├── public/                   # Assets statiques
+├── index.html                # HTML Entry Point
+├── public/                   # Static Assets
 │   ├── cmdt_icone.png
 │   ├── cmdt_logo.jpg
-│   ├── image-coton-*.jpg     # Images (8 fichiers)
+│   ├── image-coton-*.jpg     # Images (8 files)
 │   └── vite.svg
 │
 ├── src/
-│   ├── main.jsx              # Point d'entrée React
-│   ├── App.jsx               # Composant principal
+│   ├── main.jsx              # React Entry Point
+│   ├── App.jsx               # Main Component
 │   │
-│   ├── pages/                # Pages de l'application
-│   │   ├── auth/
+│   ├── pages/                # Application Pages
+│   │   ├── auth/             # Authentication Pages
 │   │   │   ├── Login.jsx
 │   │   │   ├── Register.jsx
 │   │   │   ├── ForgotPassword.jsx
 │   │   │   └── ResetPassword.jsx
 │   │   │
-│   │   ├── admin/
+│   │   ├── admin/            # Admin Pages
 │   │   │   ├── Dashboard.jsx
 │   │   │   ├── Users.jsx
 │   │   │   ├── Settings.jsx
 │   │   │   ├── Stats.jsx
 │   │   │   └── Messaging.jsx
 │   │   │
-│   │   ├── agent/
+│   │   ├── agent/            # Agent Pages
 │   │   │   ├── dfc/
 │   │   │   │   └── DfcFormular.jsx
 │   │   │   └── manager/
 │   │   │       └── Invoice.jsx
 │   │   │
-│   │   └── global/
+│   │   └── global/           # Global/Shared Pages
 │   │       ├── Home.jsx
 │   │       ├── Profile.jsx
 │   │       ├── Search.jsx
@@ -93,318 +93,133 @@ client/
 │   │       ├── NotFound.jsx
 │   │       └── Unauthorized.jsx
 │   │
-│   ├── components/           # Composants réutilisables
+│   ├── components/           # Reusable Components
 │   │   ├── form/
-│   │   │   ├── FormContainer.jsx
-│   │   │   ├── FormSection.jsx
-│   │   │   └── SubmitBtn.jsx
-│   │   │
-│   │   ├── validation/       # Composants de validation
-│   │   │   ├── ValidateTextInput.jsx
-│   │   │   ├── ValidatedTextarea.jsx
-│   │   │   ├── ValidatedCodeInput.jsx
-│   │   │   ├── ValidatedAmountInput.jsx
-│   │   │   ├── ValidatedInvoiceNumberInput.jsx
-│   │   │   ├── ValidateDateInput.jsx
-│   │   │   ├── ValidateSelectInput.jsx
-│   │   │   ├── ValidateSupplierInput.jsx
-│   │   │   ├── ValidateCheckboxGroup.jsx
-│   │   │   └── ValidateRadioGroup.jsx
-│   │   │
-│   │   ├── global/
-│   │   │   ├── Header.jsx
-│   │   │   ├── Footer.jsx
-│   │   │   ├── Banner.jsx
-│   │   │   └── PrivateRoute.jsx
-│   │   │
-│   │   ├── navbar/
-│   │   │   ├── Navbar.jsx
-│   │   │   └── NavbarPanel.jsx
-│   │   │
-│   │   └── notification/
-│   │       ├── CMDTNotification.jsx
-│   │       ├── NotificationManager.jsx
-│   │       └── Toast.jsx
+│   │   └── ...
 │   │
-│   ├── features/             # Features métier
+│   ├── features/             # Business Features
 │   │   └── invoices/
-│   │       ├── InvoiceForm.jsx
-│   │       └── InvoiceLastNumber.jsx
 │   │
-│   ├── hooks/                # React Hooks personnalisés
+│   ├── hooks/                # Custom React Hooks
 │   │   ├── auth/
 │   │   │   └── useAuth.js
-│   │   │
-│   │   ├── api/
-│   │   │   └── useSearch.js
-│   │   │
-│   │   ├── features/
-│   │   │   ├── useInvoice.js
-│   │   │   └── useFiscalSettings.js
-│   │   │
-│   │   └── ui/
-│   │       ├── useToastFeedBack.js
-│   │       ├── useTitle.js
-│   │       ├── useSupplierAutoComplete.js
-│   │       ├── useProgressiveValidation.js
-│   │       ├── useInputFilter.js
-│   │       ├── useDateValidation.js
-│   │       └── useBackground.js
+│   │   └── ...
 │   │
 │   ├── context/              # React Context
 │   │   ├── NotificationContext.jsx
 │   │   └── useNotification.js
 │   │
 │   ├── routes/
-│   │   └── AppRoutes.jsx     # Configuration des routes
+│   │   └── AppRoutes.jsx     # Route Configuration
 │   │
 │   ├── services/
-│   │   └── api.js            # Client API Axios
+│   │   └── api.js            # Axios API Client
 │   │
-│   ├── utils/                # Utilitaires
-│   │   ├── formatDate.js
-│   │   ├── formatDate.d.ts
-│   │   ├── validateDate.js
-│   │   └── validateDate.d.ts
+│   ├── utils/                # Utilities
 │   │
-│   ├── shema/                # Schémas de validation (Zod)
+│   ├── shema/                # Validation Schemas (Zod)
 │   │   ├── loginShema.ts
 │   │   └── InvoiceShema.ts
 │   │
-│   ├── css/                  # Styles CSS
-│   │   ├── index.css
-│   │   ├── App.css
-│   │   ├── Header.css
-│   │   ├── Banner.css
-│   │   └── custom-toastify.css
-│   │
-│   └── assets/
-│       └── react.svg
+│   └── css/                  # CSS Styles
 │
-└── dist/                     # Build production
-    ├── index.html
-    ├── assets/
-    │   ├── index-*.css
-    │   └── index-*.js
-    └── [assets publics]
+└── dist/                     # Production Build
 ```
 
-**Dependencies principales :**
+**Main Dependencies:**
 - React 19.1.1
 - React Router DOM 7.8.2
 - React Hook Form 7.62.0
 - Axios 1.12.2
 - Zod 4.1.1 (validation)
 - Tailwind CSS 4.1.12
-- Chart.js 4.5.1 (graphiques)
+- Chart.js 4.5.1 (charts)
 - React Toastify 11.0.5
 
 ---
 
-## 🖥️ Server (Backend Express/TypeScript)
+## 🖥️ Server (Express/TypeScript Backend)
 
 ```
 server/
-├── package.json              # Dependencies Express, MySQL, etc.
+├── package.json              # Express, MySQL, etc Dependencies
 ├── tsconfig.json             # TypeScript config
-├── server.ts                 # Point d'entrée serveur
-├── app.ts                    # Configuration Express app
+├── server.ts                 # Server Entry Point
+├── app.ts                    # Express App Config
 │
-├── docker-compose.yml        # Configuration Docker (MySQL)
-├── manage-stack.bat          # Script Windows pour Docker
-├── manage-stack.sh           # Script Linux/Mac pour Docker
+├── docker-compose.yml        # Docker Config (MySQL)
+├── manage-stack.bat          # Windows Docker Script
+├── manage-stack.sh           # Linux/Mac Docker Script
 │
 ├── config/                   # Configuration
-│   ├── database.ts           # Pool de connexions MySQL
-│   └── carbone.config.ts     # Config génération de documents
+│   ├── database.ts           # MySQL Connection Pool
+│   └── carbone.config.ts     # Document Generation Config
 │
-├── controllers/              # Controllers (logique métier)
-│   ├── auth.controller.ts
-│   ├── user.controller.ts
-│   ├── users.controller.ts
+├── controllers/              # Controllers (Business Logic)
 │   ├── invoice.controller.ts
-│   ├── supplier.controller.ts
-│   ├── settings.controller.ts
-│   ├── search.controller.ts
-│   ├── stats.controller.ts
-│   ├── export.controller.ts
-│   └── migration.controller.ts
+│   └── ...
 │
-├── routes/                   # Routes Express
-│   ├── auth.route.ts
-│   ├── users.route.ts
+├── routes/                   # Express Routes
 │   ├── invoice.routes.ts
-│   ├── supplier.route.ts
-│   ├── settings.route.ts
-│   ├── search.route.ts
-│   ├── stats.route.ts
-│   ├── export.route.ts
-│   └── migration.route.ts
+│   └── ...
 │
-├── middleware/               # Middlewares Express
-│   ├── authGuard.ts          # Authentification JWT
-│   ├── roleGuard.ts          # Vérification des rôles
-│   ├── validator.ts          # Validation des données
-│   ├── requestIdMiddleware.ts # Génération ID de requête
-│   ├── debugCookie.ts        # Debug cookies (dev)
-│   └── autoTrackActivity.ts  # Tracking automatique activité
+├── middleware/               # Express Middlewares
+│   ├── authGuard.ts          # JWT Auth
+│   ├── roleGuard.ts          # Role Check
+│   ├── validator.ts          # Data Validation
+│   └── ...
 │
-├── models/                   # Modèles de données
+├── models/                   # Data Models
 │   ├── User.ts
 │   ├── Invoice.ts
 │   └── Supplier.ts
 │
-├── services/                 # Services métier
-│   ├── emailService.ts       # Envoi d'emails (Nodemailer)
-│   ├── userToken.ts          # Génération tokens JWT
-│   ├── notificationFactory.ts # Factory notifications
-│   │
-│   └── export/               # Service d'export de données
-│       ├── generator.ts
-│       ├── mappers.ts
-│       ├── schemas.ts
-│       ├── providers.ts
-│       ├── enrichment.ts
-│       ├── dateRange.service.ts
-│       ├── templateRegistry.ts
-│       ├── types.ts
-│       └── validateExportMappings.ts
+├── services/                 # Business Services
+│   ├── emailService.ts       
+│   ├── userToken.ts          
+│   └── export/               # Data Export Service
 │
-├── utils/                    # Utilitaires
+├── utils/                    # Utilities
 │   ├── Logger.ts             # Winston logger
-│   ├── ApiResponder.ts       # Réponses API standardisées
-│   ├── PasswordHasher.ts     # Hash de mots de passe
-│   ├── ActivityTracker.ts    # Suivi des activités utilisateur
-│   ├── UserDataValidator.ts  # Validation données utilisateur
-│   ├── QueryBuilder.ts       # Builder de requêtes SQL
-│   ├── Formatters.ts         # Formatage de données
-│   ├── InvoiceRuleInput.ts   # Règles de numérotation factures
-│   ├── auditLogger.ts        # Logs d'audit
-│   └── json-structure-loader.ts
+│   └── ...
 │
-├── helpers/                  # Helpers métier
-│   ├── cmdtFormat.ts
-│   ├── fiscalYearCounter.ts
-│   ├── databaseCreationDate.ts
-│   ├── statsDateRange.ts
-│   └── settings.ts
-│
-├── core/                     # Logique métier core
-│   ├── generators/
-│   │   └── IdGenerator.ts
-│   │
-│   ├── managers/
-│   │   ├── InvoiceCounterManager.ts
-│   │   ├── FiscalCounterManager.ts
-│   │   └── EmployeeCounterManager.ts
-│   │
-│   └── rules/
-│       └── InvoiceNumberRule.ts
-│
-├── types/                    # Types TypeScript
-│   ├── index.ts
-│   │
-│   ├── domain/               # Types domain
-│   │   ├── User.ts
-│   │   ├── Invoice.ts
-│   │   └── Supplier.ts
-│   │
-│   ├── dto/                  # Data Transfer Objects
-│   │   ├── AuthDto.ts
-│   │   ├── UserDto.ts
-│   │   ├── InvoiceDto.ts
-│   │   └── SupplierDto.ts
-│   │
-│   ├── api/                  # Types API
-│   │   └── ApiResponse.ts
-│   │
-│   ├── express/              # Extensions Express
-│   │   └── request.ts        # AuthenticatedRequest
-│   │
-│   ├── responses/            # Types de réponses
-│   │   └── auth.ts
-│   │
-│   ├── errors/               # Types d'erreurs
-│   │   └── DbError.ts
-│   │
-│   ├── common/               # Types communs
-│   │   ├── index.ts
-│   │   ├── Nullable.ts
-│   │   └── Fn.ts
-│   │
-│   ├── export.ts
-│   └── carbone.d.ts
-│
-├── jobs/                     # Tâches planifiées
-│   └── cleanupUnverified.ts  # Nettoyage comptes non vérifiés
-│
-├── mysql/                    # Configuration MySQL
+├── mysql/                    # MySQL Configuration
 │   ├── conf/
-│   │   └── my.cnf            # Configuration MySQL
 │   └── db/
-│       └── db.sql            # Scripts SQL init
 │
-├── templates/                # Templates d'export
-│   └── odt_excel_carbone_data.json
+├── templates/                # Export Templates
 │
-├── docs/                     # Documentation
-│   ├── API_ROUTES.md         # Documentation API
-│   └── openapi.yaml          # Spec OpenAPI
-│
-├── logs/                     # Logs de l'application
-│   └── app-YYYY-MM-DD.log
-│
-└── dist/                     # Build TypeScript compilé
+└── dist/                     # Compiled TypeScript Build
     └── server/
         ├── server.js
         └── app.js
 ```
 
-**Dependencies principales :**
+**Main Dependencies:**
 - Express 5.2.1
 - MySQL2 3.14.5
 - TypeScript
-- JWT 9.0.2 (authentification)
-- Bcrypt 6.0.0 (hash passwords)
+- JWT 9.0.2 (authentication)
+- Bcrypt 6.0.0 (password hash)
 - Nodemailer 7.0.6 (emails)
 - Winston 3.19.0 (logging)
-- Carbone 3.5.6 (génération documents)
+- Carbone 3.5.6 (document generation)
 - Zod 4.1.12 (validation)
-
----
-
-## 🔧 Common (Code Partagé)
-
-```
-common/
-├── assets/
-│   └── cmdt_icone.png
-│
-└── helpers/
-    ├── formatAccountNumber.js
-    └── formatAccountNumber.ts
-```
 
 ---
 
 ## ⚡ Main.js (Electron Process)
 
-**Fichier principal :** `main.js` (1053 lignes)
+**Main File:** `main.js` (1053 lines)
 
-**Responsabilités :**
-- ✅ Gestion instance unique (single instance lock)
-- ✅ Démarrage/arrêt du backend (child process avec fork)
-- ✅ Gestion Docker (docker compose up/down)
-- ✅ Création fenêtre Electron
-- ✅ Configuration logging (electron-log)
-- ✅ Gestion des erreurs avec dialogs
-- ✅ Cycle de vie de l'application
-
-**Configuration Electron Builder :**
-- App ID: `com.invoice-app.app`
-- Product Name: `Invoice App`
-- Target: NSIS (Windows installer)
-- Resources: `server/`, `server/node_modules/`, `server/dist/`, `client/dist/`
+**Responsibilities:**
+- ✅ Single Instance Lock
+- ✅ Backend Start/Stop (Child Process fork)
+- ✅ Docker Management (docker compose up/down)
+- ✅ Window Creation
+- ✅ Logging (electron-log)
+- ✅ Error Handling
+- ✅ Application Lifecycle
 
 ---
 
@@ -422,65 +237,52 @@ architechture/
 ## 📦 Build & Distribution
 
 ```
-dist/                         # Builds compilés
-├── client/                   # Build client Vite
-├── common/                   # Build common
-└── server/                   # Build server TypeScript
-    └── server/
-        ├── app.js
-        └── server.js
+dist/                         # Compiled Builds
+├── client/                   # Client Vite Build
+├── common/                   # Common Build
+└── server/                   # Server TypeScript Build
 ```
 
-**Commandes disponibles :**
-- `npm run dev` - Démarre le client en mode dev
-- `npm run build` - Build le client
-- `npm run dist` - Build complet + package Electron
-- `npm run electron:dev` - Lance Electron en dev
+**Available Commands:**
+- `npm run dev` - Start client in dev mode
+- `npm run build` - Build client
+- `npm run dist` - Full build + Electron package
+- `npm run electron:dev` - Run Electron in dev
 
 ---
 
-## 🗄️ Base de Données
+## 🗄️ Database
 
 **MySQL 8.2** via Docker Compose
 
-**Configuration :**
+**Configuration:**
 - Port: 3306
-- Volume persistant: `final-mysql-data`
-- Init scripts: `server/mysql/db/db.sql`
+- Persistent Volume: `final-mysql-data`
+- Init Scripts: `server/mysql/db/db.sql`
 - Config: `server/mysql/conf/my.cnf`
 
 ---
 
-## 🔐 Rôles Utilisateurs
+## 🔐 User Roles
 
-1. **admin** - Accès complet
-2. **invoice_manager** - Gestion factures et fournisseurs
-3. **dfc_agent** - Gestion factures DFC
-
----
-
-## 📝 Notes Importantes
-
-1. **Monorepo** : Client et serveur dans le même repo
-2. **Electron** : Wrapper desktop de l'application web
-3. **Docker** : MySQL en conteneur, géré automatiquement par Electron
-4. **Logging** : electron-log pour main.js, Winston pour backend
-5. **Build** : TypeScript → JavaScript dans `dist/`
-6. **Authentification** : JWT via cookies HttpOnly
-7. **Validation** : Zod côté client et serveur
+1. **admin** - Full Access
+2. **invoice_manager** - Invoice & Supplier Management
+3. **dfc_agent** - DFC Invoice Management
 
 ---
 
-## 🔄 Workflow de Développement
+## 📝 Important Notes
 
-1. **Dev Backend :** `cd server && npm run dev` (tsx watch)
-2. **Dev Frontend :** `cd client && npm run dev` (Vite)
-3. **Dev Electron :** `npm run electron:dev`
-4. **Build Production :** `npm run dist`
+1. **Monorepo**: Client and server in the same repo
+2. **Electron**: Desktop wrapper for web app
+3. **Docker**: MySQL in container, managed automatically by Electron
+4. **Logging**: electron-log for main.js, Winston for backend
+5. **Build**: TypeScript → JavaScript in `dist/`
+6. **Authentication**: JWT via HttpOnly cookies
+7. **Validation**: Zod client-side and server-side
 
 ---
 
-**Version :** 0.0.0  
-**Auteur :** Dioman Keita  
-**Organisation :** CMDT - Compagnie Malienne pour le Développement des Textiles
-
+**Version:** 0.0.0  
+**Author:** Dioman Keita  
+**Organization:** CMDT - Compagnie Malienne pour le Développement des Textiles

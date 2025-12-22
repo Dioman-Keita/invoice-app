@@ -3,6 +3,7 @@ import useTitle from '../../../hooks/ui/useTitle.js';
 import Navbar from '../../../components/navbar/Navbar.jsx';
 import Footer from '../../../components/global/Footer.jsx';
 import Header from '../../../components/global/Header.jsx';
+import api from '../../../services/api.js';
 
 import {
   DocumentCheckIcon,
@@ -165,16 +166,7 @@ function DfcFormular() {
       try {
         setLoading(true);
         setError('');
-        const res = await fetch('/api/invoices/dfc/pending', {
-          credentials: 'include',
-          headers: { 'Accept': 'application/json' }
-        });
-
-        const payload = await res.json();
-
-        if (!res.ok) {
-          throw new Error(payload?.message || 'Erreur lors du chargement des factures');
-        }
+        const payload = await api.get('/invoices/dfc/pending');
 
         const rows = payload?.data || [];
         setFiscalYear(payload?.meta?.fiscalYear || new Date().getFullYear().toString());
@@ -232,29 +224,11 @@ function DfcFormular() {
   }, [fiscalYear]);
 
   const approveInvoice = async (invoiceId) => {
-    const res = await fetch(`/api/invoices/${invoiceId}/dfc/approve`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ comments })
-    });
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      throw new Error(j?.message || 'Erreur lors de l\'approbation');
-    }
+    await api.post(`/invoices/${invoiceId}/dfc/approve`, { comments });
   };
 
   const rejectInvoice = async (invoiceId) => {
-    const res = await fetch(`/api/invoices/${invoiceId}/dfc/reject`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ comments })
-    });
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      throw new Error(j?.message || 'Erreur lors du rejet');
-    }
+    await api.post(`/invoices/${invoiceId}/dfc/reject`, { comments });
   };
 
   const handleProcessInvoice = async () => {
@@ -330,8 +304,8 @@ function DfcFormular() {
                 </p>
               </div>
               <div className={`px-3 py-2 rounded border ${pendingInvoices.length > 0
-                  ? 'bg-blue-50 text-blue-700 border-blue-200'
-                  : 'bg-gray-50 text-gray-600 border-gray-200'
+                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                : 'bg-gray-50 text-gray-600 border-gray-200'
                 }`}>
                 <span className="font-semibold">{pendingInvoices.length}</span> facture(s) en attente
               </div>
@@ -393,8 +367,8 @@ function DfcFormular() {
                           key={invoice.id}
                           onClick={() => handleInvoiceSelect(invoice)}
                           className={`p-4 border rounded-lg cursor-pointer transition-all duration-150 ${currentInvoice?.id === invoice.id
-                              ? 'border-green-500 bg-green-25 ring-1 ring-green-500'
-                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-25'
+                            ? 'border-green-500 bg-green-25 ring-1 ring-green-500'
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-25'
                             }`}
                         >
                           <div className="flex items-start justify-between mb-2">
@@ -416,8 +390,8 @@ function DfcFormular() {
                                 En attente
                               </span>
                               <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${statusInfo.color === 'red'
-                                  ? 'bg-red-50 text-red-700 border border-red-200'
-                                  : 'bg-green-50 text-green-700 border border-green-200'
+                                ? 'bg-red-50 text-red-700 border border-red-200'
+                                : 'bg-green-50 text-green-700 border border-green-200'
                                 }`}>
                                 <StatusIcon className="w-3 h-3 mr-1" />
                                 {statusInfo.label}
@@ -485,8 +459,8 @@ function DfcFormular() {
                                 key={pageNumber}
                                 onClick={() => goToPage(pageNumber)}
                                 className={`min-w-[2rem] px-2 py-1 text-xs rounded border transition-colors ${currentPage === pageNumber
-                                    ? 'bg-blue-500 text-white border-blue-500'
-                                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                  ? 'bg-blue-500 text-white border-blue-500'
+                                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                                   }`}
                               >
                                 {pageNumber}
@@ -528,14 +502,14 @@ function DfcFormular() {
                           <span className="font-medium text-gray-900 text-sm">{invoice.id}</span>
                           <div className="flex items-center space-x-1">
                             <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${invoice.decision === 'approved'
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-red-50 text-red-700 border border-red-200'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-red-50 text-red-700 border border-red-200'
                               } whitespace-nowrap`}>
                               {invoice.decision === 'approved' ? 'Approuvée' : 'Rejetée'}
                             </span>
                             <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${statusInfo.color === 'red'
-                                ? 'bg-red-50 text-red-700 border border-red-200'
-                                : 'bg-green-50 text-green-700 border border-green-200'
+                              ? 'bg-red-50 text-red-700 border border-red-200'
+                              : 'bg-green-50 text-green-700 border border-green-200'
                               }`}>
                               <StatusIcon className="w-3 h-3 mr-1" />
                               {statusInfo.label}
@@ -668,8 +642,8 @@ function DfcFormular() {
                       </p>
                       <div className="grid grid-cols-1 gap-3">
                         <div className={`p-4 rounded border ${currentInvoice.status === 'Oui'
-                            ? 'bg-red-50 border-red-200'
-                            : 'bg-green-50 border-green-200'
+                          ? 'bg-red-50 border-red-200'
+                          : 'bg-green-50 border-green-200'
                           }`}>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center">
@@ -691,8 +665,8 @@ function DfcFormular() {
                               </div>
                             </div>
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${currentInvoice.status === 'Oui'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-green-100 text-green-800'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-green-100 text-green-800'
                               }`}>
                               {currentInvoice.status === 'Oui' ? 'Annulée' : 'Valide'}
                             </span>
@@ -804,10 +778,10 @@ function DfcFormular() {
                           onClick={() => setDecision('approved')}
                           disabled={currentInvoice.status === 'Oui'}
                           className={`p-3 border rounded-lg transition-all duration-150 flex items-center justify-center space-x-2 ${decision === 'approved'
-                              ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500'
-                              : currentInvoice.status === 'Oui'
-                                ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'border-gray-300 bg-white text-gray-700 hover:border-emerald-300 hover:bg-emerald-25'
+                            ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500'
+                            : currentInvoice.status === 'Oui'
+                              ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-emerald-300 hover:bg-emerald-25'
                             }`}
                         >
                           <CheckCircleIcon className="w-4 h-4 flex-shrink-0" />
@@ -817,10 +791,10 @@ function DfcFormular() {
                           onClick={() => setDecision('rejected')}
                           disabled={currentInvoice.status === 'Oui'}
                           className={`p-3 border rounded-lg transition-all duration-150 flex items-center justify-center space-x-2 ${decision === 'rejected'
-                              ? 'border-red-500 bg-red-50 text-red-700 ring-1 ring-red-500'
-                              : currentInvoice.status === 'Oui'
-                                ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'border-gray-300 bg-white text-gray-700 hover:border-red-300 hover:bg-red-25'
+                            ? 'border-red-500 bg-red-50 text-red-700 ring-1 ring-red-500'
+                            : currentInvoice.status === 'Oui'
+                              ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-red-300 hover:bg-red-25'
                             }`}
                         >
                           <XCircleIcon className="w-4 h-4 flex-shrink-0" />
@@ -851,19 +825,19 @@ function DfcFormular() {
                             rows={3}
                             disabled={currentInvoice.status === 'Oui'}
                             className={`w-full px-3 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm transition-colors duration-150 resize-none ${currentInvoice.status === 'Oui'
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : commentError
-                                  ? 'border-red-500 bg-red-50'
-                                  : comments.length > COMMENT_WARNING_THRESHOLD
-                                    ? 'border-amber-500 bg-amber-50'
-                                    : 'border-gray-300'
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : commentError
+                                ? 'border-red-500 bg-red-50'
+                                : comments.length > COMMENT_WARNING_THRESHOLD
+                                  ? 'border-amber-500 bg-amber-50'
+                                  : 'border-gray-300'
                               }`}
                           />
                           <div className={`absolute bottom-2 right-2 text-xs ${comments.length > MAX_COMMENT_LENGTH
-                              ? 'text-red-600 font-bold'
-                              : comments.length > COMMENT_WARNING_THRESHOLD
-                                ? 'text-amber-600'
-                                : 'text-gray-500'
+                            ? 'text-red-600 font-bold'
+                            : comments.length > COMMENT_WARNING_THRESHOLD
+                              ? 'text-amber-600'
+                              : 'text-gray-500'
                             } ${currentInvoice.status === 'Oui' ? 'text-gray-400' : ''}`}>
                             {comments.length}/{MAX_COMMENT_LENGTH}
                           </div>

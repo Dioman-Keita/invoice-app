@@ -19,5 +19,10 @@ export default defineConfig({
     alias: {
       '@common': path.resolve(__dirname, '../common')
     }
-  }
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+  },
 })
