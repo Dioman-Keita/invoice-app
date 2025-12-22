@@ -204,6 +204,20 @@ http://localhost:3000/api
 - **Protection** : `authGuard` + `requireAgentOrManager`
 - **Rôles** : `dfc_agent`, `invoice_manager`
 
+## 📊 **Statistiques & Tableau de bord**
+
+### **GET** `/stats/dashboard/kpis`
+- **Description** : Indicateurs clés (KPIs) pour le tableau de bord admin
+- **Response** : `{ total_employee, total_invoices, business_amount, total_invoice_pending, dateFrom, dateTo }`
+- **Protection** : `authGuard` + `requireAdmin`
+- **Rôles** : `admin`
+
+### **GET** `/stats/invoices/evolution`
+- **Description** : Évolution des factures et montants par mois
+- **Response** : Données pour graphiques
+- **Protection** : `authGuard` + `requireAdmin`
+- **Rôles** : `admin`
+
 ## ⚙️ **Paramètres fiscaux**
 
 ### **GET** `/settings/fiscal`

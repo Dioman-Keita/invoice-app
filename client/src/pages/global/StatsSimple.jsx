@@ -5,7 +5,7 @@ import Header from '../../components/global/Header.jsx';
 import { useAuth } from '../../hooks/auth/useAuth.js';
 import Chart from 'chart.js/auto';
 
-import { 
+import {
   DocumentTextIcon,
   BuildingStorefrontIcon,
   CheckCircleIcon,
@@ -19,11 +19,11 @@ import {
 function StatsSimple() {
   useTitle('CMDT - Mes Statistiques');
   const { user } = useAuth();
-  
+
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [availableDates, setAvailableDates] = useState([]); 
-  const [selectedDate, setSelectedDate] = useState(''); 
+  const [availableDates, setAvailableDates] = useState([]);
+  const [selectedDate, setSelectedDate] = useState('');
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(null);
   const [fiscalYear, setFiscalYear] = useState('2024');
@@ -65,18 +65,18 @@ function StatsSimple() {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Initialiser avec les données de fallback immédiatement
         setStats(getFallbackStats(user?.role));
-        
+
         const response = await fetch('/api/stats/personal', {
           credentials: 'include',
-          headers: { 
+          headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
           }
         });
-        
+
         if (response.ok) {
           const result = await response.json();
           setStats(result.data);
@@ -84,7 +84,7 @@ function StatsSimple() {
           if (result.meta?.fiscalYear) {
             setFiscalYear(result.meta.fiscalYear);
           }
-          
+
           // Créer les données graphiques à partir des stats existantes
           prepareChartData(result.data);
         } else {
@@ -107,62 +107,63 @@ function StatsSimple() {
     }
   }, [user]);
 
-  useEffect(() => { 
+  useEffect(() => {
     const loadAvailableDates = async () => {
-       try { 
-        if (!user || user.role !== 'invoice_manager') return; 
-        const res = await fetch('/api/stats/invoices/available-dates', { credentials: 'include', headers: { 'Accept': 'application/json' } }); 
-        if (res.ok) { 
-          const json = await res.json(); 
-          const dates = Array.isArray(json.data) ? json.data : []; 
-          setAvailableDates(dates); 
-          if (dates.length > 0) { 
-            setSelectedDate(dates[0]); 
-          } else { 
-              const today = new Date(); 
-              const y = today.getFullYear(); 
-              const m = String(today.getMonth() + 1).padStart(2, '0'); 
-              const d = String(today.getDate()).padStart(2, '0'); 
-              setSelectedDate(`${y}-${m}-${d}`); 
-            } 
-          } 
-        } catch (e) {
-          console.log(e);
-        } 
-      }; 
-      loadAvailableDates(); 
-    }, [user]
+      try {
+        if (!user || user.role !== 'invoice_manager') return;
+        const res = await fetch('/api/stats/invoices/available-dates', { credentials: 'include', headers: { 'Accept': 'application/json' } });
+        if (res.ok) {
+          const json = await res.json();
+          const dates = Array.isArray(json.data) ? json.data : [];
+          setAvailableDates(dates);
+          if (dates.length > 0) {
+            setSelectedDate(dates[0]);
+          } else {
+            const today = new Date();
+            const y = today.getFullYear();
+            const m = String(today.getMonth() + 1).padStart(2, '0');
+            const d = String(today.getDate()).padStart(2, '0');
+            setSelectedDate(`${y}-${m}-${d}`);
+          }
+        }
+      } catch (e) {
+        console.log(e);
+      }
+    };
+    loadAvailableDates();
+  }, [user]
   );
 
-  const handleExport = async () => { 
-    if (exporting) return; 
-    setExporting(true); 
-    try { 
-      const body = { 
-        type: 'invoice', 
-        variant: 'stats', 
-        format: 'pdf', 
-        search: { date: selectedDate } 
-      }; 
-      const res = await fetch('/api/export', { method: 'POST', credentials: 'include', headers: { 'Accept': 'application/octet-stream', 'Content-Type': 'application/json' }, body: JSON.stringify(body) 
-    });
+  const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const body = {
+        type: 'invoice',
+        variant: 'stats',
+        format: 'pdf',
+        search: { date: selectedDate }
+      };
+      const res = await fetch('/api/export', {
+        method: 'POST', credentials: 'include', headers: { 'Accept': 'application/octet-stream', 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      });
 
-    if (!res.ok) throw new Error('Export échoué'); 
-    const blob = await res.blob(); 
-    const url = URL.createObjectURL(blob); 
-    const a = document.createElement('a'); 
-    a.href = url; 
-    a.download = `invoice-stats_${selectedDate}.pdf`; 
-    document.body.appendChild(a); 
-    a.click(); 
-    a.remove(); 
-    URL.revokeObjectURL(url); 
-  } catch (e) { 
-    console.error('Erreur export:', e); 
-  } finally { 
-    setExporting(false);
-  } 
-};
+      if (!res.ok) throw new Error('Export échoué');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-stats_${selectedDate}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Erreur export:', e);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Créer des données graphiques significatives selon le rôle
   const prepareChartData = (statsData) => {
@@ -198,7 +199,7 @@ function StatsSimple() {
         },
         title: 'Performance de Gestion des Factures'
       });
-    } 
+    }
     else if (role === 'dfc_agent') {
       // Diagramme en barres pour les agents DFC
       setChartData({
@@ -325,11 +326,11 @@ function StatsSimple() {
               weight: '500'
             },
             callbacks: {
-              label: function(context) {
+              label: function (context) {
                 const label = context.dataset.label || '';
                 const value = context.parsed.y;
                 const dataLabel = chartData.data.labels[context.dataIndex];
-                
+
                 if (dataLabel.includes('Taux') || dataLabel.includes('Approbation') || dataLabel.includes('Rejet')) {
                   return `${dataLabel}: ${value}%`;
                 }
@@ -389,24 +390,24 @@ function StatsSimple() {
 
   // Statistiques pour Invoice Manager - LIBELLÉS EXPLICITES
   const getInvoiceManagerStats = () => [
-    { 
-      label: 'Factures créées', 
-      value: stats?.totalInvoices || 0, 
-      icon: DocumentTextIcon, 
+    {
+      label: 'Factures créées',
+      value: stats?.totalInvoices || 0,
+      icon: DocumentTextIcon,
       color: 'blue',
       description: 'Total des factures enregistrées'
     },
-    { 
-      label: 'Fournisseurs créés', 
-      value: stats?.totalSuppliers || 0, 
-      icon: BuildingStorefrontIcon, 
+    {
+      label: 'Fournisseurs créés',
+      value: stats?.totalSuppliers || 0,
+      icon: BuildingStorefrontIcon,
       color: 'green',
       description: 'Fournisseurs ajoutés au système'
     },
-    { 
+    {
       label: 'Taux création de factures',
-      value: `${stats?.invoiceCreationRate || 0}/jour`, 
-      icon: ChartBarIcon, 
+      value: `${stats?.invoiceCreationRate || 0}/jour`,
+      icon: ChartBarIcon,
       color: 'purple',
       description: 'Moyenne de factures créées par jour'
     }
@@ -414,24 +415,24 @@ function StatsSimple() {
 
   // Statistiques pour Agent DFC
   const getDfcAgentStats = () => [
-    { 
-      label: 'Taux d\'approbation', 
-      value: `${stats?.approvalRate || 0}%`, 
-      icon: CheckCircleIcon, 
+    {
+      label: 'Taux d\'approbation',
+      value: `${stats?.approvalRate || 0}%`,
+      icon: CheckCircleIcon,
       color: 'green',
       description: 'Factures approuvées'
     },
-    { 
-      label: 'Taux de rejet', 
-      value: `${stats?.rejectionRate || 0}%`, 
-      icon: XCircleIcon, 
+    {
+      label: 'Taux de rejet',
+      value: `${stats?.rejectionRate || 0}%`,
+      icon: XCircleIcon,
       color: 'red',
       description: 'Factures rejetées'
     },
-    { 
-      label: 'Taux de traitement', 
-      value: `${stats?.processingRate || 0}/jour`, 
-      icon: ClockIcon, 
+    {
+      label: 'Taux de traitement',
+      value: `${stats?.processingRate || 0}/jour`,
+      icon: ClockIcon,
       color: 'blue',
       description: 'Décisions quotidiennes sur les factures'
     }
@@ -445,8 +446,8 @@ function StatsSimple() {
 
   const getStatsByRole = () => {
     if (!stats) return [];
-    
-    switch(stats.role) {
+
+    switch (stats.role) {
       case 'invoice_manager':
         return getInvoiceManagerStats();
       case 'dfc_agent':
@@ -460,8 +461,8 @@ function StatsSimple() {
 
   const getRoleTitle = () => {
     if (!stats) return 'Utilisateur';
-    
-    switch(stats.role) {
+
+    switch (stats.role) {
       case 'invoice_manager':
         return 'Gestionnaire de Factures';
       case 'dfc_agent':
@@ -475,8 +476,8 @@ function StatsSimple() {
 
   const getRoleDescription = () => {
     if (!stats) return '';
-    
-    switch(stats.role) {
+
+    switch (stats.role) {
       case 'invoice_manager':
         return 'Gestion et enregistrement des factures fournisseurs';
       case 'dfc_agent':
@@ -490,12 +491,26 @@ function StatsSimple() {
 
   const currentStats = getStatsByRole();
 
+  const isStatsEmpty = () => {
+    if (!stats) return true;
+    if (stats.role === 'invoice_manager') {
+      return !stats.totalInvoices && !stats.totalSuppliers;
+    }
+    if (stats.role === 'dfc_agent') {
+      return !stats.approvalRate && !stats.rejectionRate && !stats.processingRate;
+    }
+    if (stats.role === 'admin') {
+      return !stats.totalInvoices && !stats.totalSuppliers && !stats.approvalRate;
+    }
+    return true;
+  };
+
   return (
     <>
       <div className="min-h-screen bg-stats">
         <Header />
         <Navbar />
-        
+
         <div className="container mx-auto px-4 py-8">
           {/* En-tête simplifiée */}
           <div className="mb-8">
@@ -553,8 +568,9 @@ function StatsSimple() {
                       <div>
                         <button
                           onClick={handleExport}
-                          disabled={exporting}
-                          className={`inline-flex items-center px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors ${exporting ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                          disabled={exporting || availableDates.length === 0}
+                          title={availableDates.length === 0 ? "Aucune donnée disponible pour l'export" : "Exporter les statistiques"}
+                          className={`inline-flex items-center px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors ${(exporting || availableDates.length === 0) ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                         >
                           {exporting && (
                             <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -572,60 +588,72 @@ function StatsSimple() {
             </div>
           </div>
 
-          {/* Cartes de statistiques personnelles */}
-          <div className={`grid gap-6 mb-8 ${
-            stats?.role === 'admin' 
-              ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6' 
-              : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
-          }`}>
-            {currentStats.map((stat, index) => {
-              const Icon = stat.icon;
-              const colorClasses = {
-                blue: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-600' },
-                green: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-600' },
-                red: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-600' },
-                purple: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-600' }
-              };
-              const colors = loading 
-                ? { bg: 'bg-gray-100', border: 'border-gray-200', text: 'text-gray-400' }
-                : colorClasses[stat.color] || colorClasses.blue;
+          {!loading && isStatsEmpty() ? (
+            <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl shadow-sm border border-gray-200 text-center">
+              <div className="bg-gray-100 p-4 rounded-full mb-4">
+                <ChartBarIcon className="w-12 h-12 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Aucune statistique disponible</h3>
+              <p className="text-gray-500 max-w-md">
+                Il semble qu'il n'y ait pas encore de données suffisantes pour générer vos statistiques.
+                Commencez à utiliser le système pour voir apparaître vos indicateurs de performance.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Cartes de statistiques personnelles */}
+              <div className={`grid gap-6 mb-8 ${stats?.role === 'admin'
+                  ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6'
+                  : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                }`}>
+                {currentStats.map((stat, index) => {
+                  const Icon = stat.icon;
+                  const colorClasses = {
+                    blue: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-600' },
+                    green: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-600' },
+                    red: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-600' },
+                    purple: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-600' }
+                  };
+                  const colors = loading
+                    ? { bg: 'bg-gray-100', border: 'border-gray-200', text: 'text-gray-400' }
+                    : colorClasses[stat.color] || colorClasses.blue;
 
-              return (
-                <div 
-                  key={index} 
-                  className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 transition-all duration-200 group relative ${
-                    loading ? 'opacity-70' : 'hover:shadow-md'
-                  }`}
-                >
-                  {/* Tooltip amélioré */}
-                  {!loading && (
-                    <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 whitespace-nowrap">
-                      {stat.description}
-                      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1 w-2 h-2 bg-gray-900 rotate-45"></div>
+                  return (
+                    <div
+                      key={index}
+                      className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 transition-all duration-200 group relative ${loading ? 'opacity-70' : 'hover:shadow-md'
+                        }`}
+                    >
+                      {/* Tooltip amélioré */}
+                      {!loading && (
+                        <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 whitespace-nowrap">
+                          {stat.description}
+                          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1 w-2 h-2 bg-gray-900 rotate-45"></div>
+                        </div>
+                      )}
+
+                      <div className="flex flex-col items-center text-center">
+                        <div className={`p-3 rounded-xl ${colors.bg} border ${colors.border} mb-4 transition-transform duration-200 ${loading ? '' : 'group-hover:scale-105'
+                          }`}>
+                          <Icon className={`w-7 h-7 ${colors.text}`} />
+                        </div>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</h3>
+                        <p className="text-gray-700 font-medium">{stat.label}</p>
+                      </div>
                     </div>
-                  )}
-                  
-                  <div className="flex flex-col items-center text-center">
-                    <div className={`p-3 rounded-xl ${colors.bg} border ${colors.border} mb-4 transition-transform duration-200 ${
-                      loading ? '' : 'group-hover:scale-105'
-                    }`}>
-                      <Icon className={`w-7 h-7 ${colors.text}`} />
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</h3>
-                    <p className="text-gray-700 font-medium">{stat.label}</p>
+                  );
+                })}
+              </div>
+
+              {/* Diagramme en barres avec données réelles */}
+              {chartData && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+                  <div className="h-80">
+                    <canvas ref={chartRef} />
                   </div>
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Diagramme en barres avec données réelles */}
-          {chartData && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-              <div className="h-80">
-                <canvas ref={chartRef} />
-              </div>
-            </div>
+              )}
+            </>
           )}
 
           {/* Message d'information */}
@@ -639,7 +667,7 @@ function StatsSimple() {
                   {loading ? 'Chargement en cours...' : 'Performance Personnelle'}
                 </h3>
                 <p className="text-blue-800">
-                  {loading 
+                  {loading
                     ? 'Vos données statistiques sont en cours de chargement...'
                     : 'Ces statistiques représentent votre activité individuelle dans le système CMDT. Les données sont mises à jour automatiquement et reflètent votre contribution à l\'efficacité globale de l\'organisation.'
                   }

@@ -29,6 +29,7 @@ invoice-app/
 ├── LICENSE
 ├── CONTRIBUTING.md
 ├── SECURITY.md
+├── ARCHITECTURE.md            # Architecture détaillée
 │
 ├── client/                    # Application React Frontend
 ├── server/                    # API Backend Express/TypeScript

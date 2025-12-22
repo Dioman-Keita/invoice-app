@@ -1,26 +1,24 @@
 # Invoice Management System (CMDT) 🚀
 
-Enterprise-ready invoice management system, designed for extreme scale: supports up to **999,999,999,999 invoices per year**, full audit trail, strong security, and a modern UI.
+**Enterprise-level Invoice Management System** designed for scalability and offline-first usage.  
+*Hybrid Architecture: Electron + Express + Docker.*
+
+![App Banner](https://via.placeholder.com/1200x300?text=Invoice+App+Dashboard)
 
 ---
 
 ## 🎯 Table of Contents
 
 * [Overview](#overview)
+* [🎥 Demo & Visuals](#-demo--visuals)
+* [🏗️ Architecture](#-architecture)
 * [Key Features](#key-features)
 * [Tech Stack](#tech-stack)
-* [Prerequisites](#prerequisites)
-* [Quick Installation](#quick-installation)
-* [Configuration](#configuration)
-* [Development](#development)
+* [Installation & Setup](#installation--setup)
+* [Deep Linking](#-deep-linking)
 * [API Documentation](#api-documentation)
-* [Billion-Scale System](#billion-scale-system)
-* [Authentication & Security](#authentication--security)
-* [Recent Updates](#recent-updates)
 * [Roadmap](#roadmap)
 * [Contributing](#contributing)
-* [License](#license)
-* [Support](#support)
 
 ---
 
@@ -28,16 +26,45 @@ Enterprise-ready invoice management system, designed for extreme scale: supports
 
 <a id="overview"></a>
 
-Invoice Manager is a comprehensive platform built for rigorous enterprise environments.
+**Invoice App** `v0.0.0` is a robust, offline-first desktop application that brings the power of a full-stack web server to the desktop. Use it to manage invoices, suppliers, and fiscal workflows with enterprise-grade security.
 
-**Highlights:**
+**Unique Selling Point**: Unlike standard Electron apps, this project runs a **real Node.js/Express server** and a **Dockerized MySQL database** locally on the user's machine, packaged into a single `.exe`.
 
-* Massive scale: up to 999,999,999,999 invoices/year (no confusion with 1 billion)
-* Security: JWT HttpOnly, complete audit trail, granular roles
-* Modern UX: React + Tailwind, real-time validation, responsive UI
-* Advanced export: PDF and Excel with full history tracking
-* Workflow: Invoice and supplier CRUD, DFC validation process
-* Fiscal year management: automatic switching and planning up to two years in advance
+---
+
+## 🎥 Demo & Visuals
+
+<a id="demo-visuals"></a>
+
+### Video Demonstration
+See the application in action:
+**[▶️ Watch the Demo Video](architechture/video/demo.mp4)**
+
+### Workflow Visualizations
+To understand the core business logic, refer to our detailed flow diagrams:
+
+| Login Flow | Register Flow | Invoice Lifecycle |
+|:---:|:---:|:---:|
+| [![Login](architechture/flows/login_flow.svg)](architechture/flows/login_flow.svg) | [![Register](architechture/flows/register_flow.svg)](architechture/flows/register_flow.svg) | [![Invoice](architechture/flows/invoice_flow.svg)](architechture/flows/invoice_flow.svg) |
+
+---
+
+## 🏗️ Architecture
+
+<a id="architecture"></a>
+
+> **[Read the detailed Technical Architecture Document (ARCHITECTURE.md)](ARCHITECTURE.md)**
+
+This project solves the "Client-Server on Desktop" challenge through a hybrid design:
+
+1.  **Orchestrator (Electron)**: Manages the lifecycle of the entire stack. It silently forks a child process to run the backend and checks for Docker availability before launching the UI.
+2.  **Logic Core (Express + TypeScript)**: A standalone API providing REST endpoints, authentication (JWT), and PDF generation.
+3.  **Data Layer (MySQL @ Docker)**: Zero-config database deployment. The app controls the Docker Desktop daemon to ensure the DB is up.
+
+### Key Technical Achievements
+*   **Deep Linking**: Integration of `invoice-app://` protocol for magic link authentication (Email -> Desktop).
+*   **Encapsulated Build**: The backend is compiled and bundled *inside* the Electron resource fork, creating a truly portable server.
+*   **Fiscal Isolation**: Strict data segregation by fiscal year at the SQL level.
 
 ---
 
@@ -45,39 +72,18 @@ Invoice Manager is a comprehensive platform built for rigorous enterprise enviro
 
 <a id="key-features"></a>
 
-### 🚀 Billion-Scale Architecture
+### 🚀 High-Volume Capacity
+*   Optimized `INV-FY2025-000000000001` ID format.
+*   `BIGINT` atomic counters for collision-proof scaling.
 
-* Optimized ID format: `INV-000000000001` (12 sequential digits)
-* High performance: indexed with a dedicated `BIGINT` counter
-* Duplicate prevention: verified IDs and automatic synchronization
+### 🔐 Enterprise Security
+*   **Local Server Security**: Validates requests even if they come from localhost.
+*   **HttpOnly Cookies**: JWT storage safe from XSS.
+*   **Audit Trail**: Every `INSERT`/`UPDATE`/`DELETE` is logged with the user ID.
 
-### 🔐 Security & Authentication
-
-* JWT HttpOnly cookies (XSS mitigation)
-* Dynamic session handling (backend-managed "remember me")
-* Role-based access: admin, invoice manager, DFC agent
-* Complete activity trail for all actions
-* Bcrypt password hashing and robust validation
-
-### 📊 Invoice Management
-
-* Full CRUD with advanced validation
-* Multi-criteria search by supplier
-* DFC workflow (approve/reject with comments)
-* Intelligent sequential numbering
-
-### 💼 Supplier Management
-
-* Account number: **all valid formats accepted** (not limited to 12 digits)
-* Conflict validation (account/supplier/phone)
-* Flexible, multi-criteria search
-* Modern, dynamic user interface
-
-### 📤 Export & Reports
-
-* PDF and Excel export only (TXT format is not supported)
-* Advanced time filtering
-* Complete export history
+### 💼 DFC Workflow
+*   Dedicated interface for "Direction Financière et Comptable".
+*   Validation/Rejection workflow with mandatory comments.
 
 ---
 
@@ -85,137 +91,61 @@ Invoice Manager is a comprehensive platform built for rigorous enterprise enviro
 
 <a id="tech-stack"></a>
 
-### Frontend
+**Dual-Stack Monorepo:**
 
-```
-React 18 + Vite
-├── UI: Tailwind CSS + Heroicons
-├── Forms: React Hook Form + Zod
-├── State: React Context + Hooks
-├── Routing: React Router
-└── Build: Vite (HMR, optimization)
-```
-
-### Backend
-
-```
-Node.js + Express + TypeScript
-├── Auth: JWT HttpOnly + bcrypt
-├── DB: MySQL 8.2 (Docker)
-├── Validation: Custom
-├── Logging: Custom logger
-├── Audit: full activity traceability
-└── API: RESTful + Express Router
-```
-
-### Database
-
-```
-MySQL 8.2 via Docker
-├── Tables: invoice, supplier, employee, audit_log
-├── Optimized indexing
-├── Foreign and unique constraints
-└── Partitioning ready
-```
+| Frontend (Client) | Backend (Server) | Infrastructure |
+| ----------------- | ---------------- | -------------- |
+| **React 18**      | **Node.js**      | **Electron 39** (Wrapper) |
+| Vite              | Express 5        | **Docker** (Database) |
+| Tailwind CSS      | TypeScript       | MySQL 8.2 |
+| HashRouter        | Carbone.io (PDF) | Electron Builder |
 
 ---
 
-## ⚡ Prerequisites
+## ⚡ Installation & Setup
 
-<a id="prerequisites"></a>
+<a id="installation--setup"></a>
 
-* Node.js 18+ and npm 9+
-* MySQL 8.2 (via Docker)
-* Modern web browser (Chrome 90+, Firefox 88+)
-* Docker + Docker Compose
+### Prerequisites
+*   **Docker Desktop** (Must be running)
+*   Node.js 18+
 
----
-
-## 🚀 Quick Installation
-
-<a id="quick-installation"></a>
+### Quick Start (Development)
 
 ```bash
-# Clone repository
-git clone https://github.com/Dioman-Keita/invoice-app.git
-cd invoice-app
-
-# Build for Production (.exe)
-npm run dist
-
-# Install dependencies
-npm install
-cd server && npm install && cd ..
-cd client && npm install && cd ..
-```
-
-### 🔗 Deep Linking
-The application uses the custom protocol `invoice-app://` for:
-- Email verification (`invoice-app://verify?token=...`)
-- Password reset (`invoice-app://reset-password?token=...`)
-
-This allows emails to open directly inside the desktop application.
-
-
-###  ⚠️ Warning: Docker Stack Management
-
-> Use the stack helpers: `server/manage-stack.sh` (macOS/Linux) or `server/manage-stack.bat` (Windows).
->
-> These scripts provide four options:
-> 1) Restart only (no removal)
-> 2) Restart with container removal (`docker compose down`, volumes preserved)
-> 3) Safe reset (remove containers and the CMDT volume only)
-> 4) Extreme clean (global `docker system prune -af --volumes`)
->
-> Option 4 purges unused Docker images/containers/networks/volumes globally on your machine (not only this project).  
-> Option 3 removes only this project's data volume. Options 1–2 keep your data.  
-> **Use with caution**, especially if you run other Docker projects.
-
----
-
-##  ⚙️ Configuration
-
-<a id="configuration"></a>
-
-Create `server/.env` with:
-
-```bash
-# Authentication
-JWT_SECRET_KEY=super_secret_key_change_me
-
-# Environment
-NODE_ENV=development
-PORT=3000
-FRONTEND_URL=http://localhost:5173
-
-# MySQL Database
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=cmdt_invoice_db
-```
-> JWT expiration is backend-managed and dynamic; no need to define it in `.env`.
-
----
-
-## 👨‍💻 Development
-
-<a id="development"></a>
-
-```bash
-# Start frontend:
-cd client
-npm run dev
-
-# Start backend:
+# 1. Start Docker container (MySQL)
 cd server
+./manage-stack.bat # (or .sh on Mac/Linux)
+
+# 2. Start Backend
 npm run dev
+
+# 3. Start Frontend (in new terminal)
+cd ../client
+npm run dev
+
+# 4. Start Electron (Optional, invokes the above)
+npm run electron:dev
 ```
 
-**Default URLs**:
+### Build for Production (`.exe`)
+This command compiles the React app, the TS server, and bundles everything into an installer:
 
-* Frontend: [http://localhost:5173](http://localhost:5173)
-* Backend API: [http://localhost:3000](http://localhost:3000)
+```bash
+npm run dist
+```
+*Output: `release/Invoice App Setup 0.0.0.exe`*
+
+---
+
+## 🔗 Deep Linking
+
+<a id="deep-linking"></a>
+
+The app registers `invoice-app://` in the Windows Registry.
+
+*   **Warm Start**: If the app is open, the renderer receives the link instantly via `IPC`.
+*   **Cold Start**: If closed, Electron launches, waits for the server to boot (health check), and *then* processes the pending link.
 
 ---
 
@@ -223,66 +153,11 @@ npm run dev
 
 <a id="api-documentation"></a>
 
-### Authentication
+The embedded server exposes a full REST API at `http://localhost:3000/api`.
 
-* POST /auth/login
-* POST /auth/register
-* POST /auth/forgot-password
-* POST /auth/reset-password
-* POST /auth/silent-refresh
-* GET /auth/status
-* GET /auth/profile
-* POST /auth/logout
-* POST /auth/admin/create-user
-
-### Invoice
-
-* Full CRUD (GET, POST, update, delete)
-* DFC workflow: approve/reject, comments
-* Multi-criteria search
-
-### Supplier
-
-* CRUD, advanced search, conflict validation
-
-### Export
-
-* PDF, Excel (TXT not supported)
-* Export history tracking
-
----
-
-## 🌟 Billion-Scale System
-
-<a id="billion-scale-system"></a>
-
-* Extreme capacity: up to 999,999,999,999 invoices/year
-* Invoice ID: `INV-FY2025-000000000001` (12 digits)
-* BIGINT counter for high performance & atomicity
-* Sequence indexing, no `SELECT MAX()`, duplication prevention
-
----
-
-## 🔐 Authentication & Security
-
-<a id="authentication--security"></a>
-
-* JWT & HttpOnly cookies, CSRF & XSS protection
-* Role-Based Access: admin / invoice manager / DFC agent
-* Full audit trail: all actions logged
-* Export & operation tracking
-
----
-
-## 🚀 Recent Updates
-
-<a id="recent-updates"></a>
-
-* Docker + MySQL 8.2 migration
-* Strict TypeScript backend
-* Enhanced PDF and Excel exports
-* Updated Docker init scripts
-* Performance and bug fixes
+*   **Auth**: `/api/auth/login`, `/api/auth/register`
+*   **Invoices**: `/api/invoices` (CRUD), `/api/invoices/:id/dfc/approve`
+*   **Stats**: `/api/stats/dashboard`
 
 ---
 
@@ -290,60 +165,22 @@ npm run dev
 
 <a id="roadmap"></a>
 
-### Phase 1 (Current)
-
-* Billion-scale architecture
-* Modernized export system
-* Enhanced audit logging
-* Complete TypeScript coverage
-* Responsive UX improvements
-
-### Phase 2 (Next)
-
-* Real-time notifications (WebSocket)
-* Advanced analytics (dashboard)
-* Bulk operations
-* API rate limiting
-* Integration tests
-
-### Phase 3 (Future)
-
-* Microservices (invoice & auth separation)
-* Background queue system
-* Mobile app (React Native)
-* Multi-tenant support
-* AI features (duplicate detection, OCR etc.)
+*   [x] **Phase 1**: Hybrid Architecture & Docker Integration
+*   [x] **Phase 2**: Deep Linking & Asset Protection
+*   [ ] **Phase 3**: Auto-updater
+*   [ ] **Phase 4**: Multi-machine sync (Remote DB option)
 
 ---
 
 ## 🤝 Contributing
 
-<a id="contributing"></a>
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
-1. Fork the repository
-2. Create a branch (`git checkout -b feature/my-feature`)
-3. Commit your changes (`git commit -m 'Add feature'`)
-4. Push to your branch (`git push origin feature/my-feature`)
-5. Open a Pull Request
+1.  Fork & Clone
+2.  `git checkout -b my-feature`
+3.  Submit PR
 
 ---
 
-## 📄 License
-
-<a id="license"></a>
-
-MIT License — see [LICENSE](LICENSE)
-
----
-
-## 📞 Support
-
-<a id="support"></a>
-
-* Email: [diomankeita001@gmail.com](mailto:diomankeita001@gmail.com)
-
----
-
-This solution is provided with a focus on robustness and high-volume performance for enterprise invoice management.
-
-*Last updated: December 2025*
+**Author**: Dioman Keita  
+**License**: MIT
