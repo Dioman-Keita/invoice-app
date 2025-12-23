@@ -3,6 +3,8 @@ import { HashRouter, useNavigate } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
 import { NotificationProvider } from './context/NotificationContext.jsx';
 import NotificationManager from './components/notification/NotificationManager.jsx';
+import ExitModal from './components/global/ExitModal.jsx';
+import { useState } from 'react';
 
 function DeepLinkHandler() {
   const navigate = useNavigate();
@@ -62,6 +64,26 @@ function DeepLinkHandler() {
 
 
 function App() {
+  const [isExitModalOpen, setIsExitModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!window.electron || !window.electron.onRequestClose) return;
+
+    const removeListener = window.electron.onRequestClose(() => {
+      setIsExitModalOpen(true);
+    });
+
+    return () => {
+      if (removeListener) removeListener();
+    };
+  }, []);
+
+  const handleConfirmExit = () => {
+    if (window.electron && window.electron.confirmQuit) {
+      window.electron.confirmQuit();
+    }
+  };
+
   return (
     <HashRouter>
       <DeepLinkHandler />
@@ -69,6 +91,11 @@ function App() {
         <AppRoutes />
         <NotificationManager />
       </NotificationProvider>
+      <ExitModal
+        isOpen={isExitModalOpen}
+        onClose={() => setIsExitModalOpen(false)}
+        onConfirm={handleConfirmExit}
+      />
     </HashRouter>
   );
 }

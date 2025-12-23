@@ -3,13 +3,13 @@ import useProgressiveValidation from "../../hooks/ui/useProgressiveValidation.js
 import { useState, useRef, useEffect } from "react";
 
 function ValidatedCodeInput({
-                                name,
-                                label,
-                                placeholder,
-                                initialValue,
-                                resetTrigger,
-                                maxLength = 12
-                            }) {
+    name,
+    label,
+    placeholder,
+    initialValue,
+    resetTrigger,
+    maxLength = 12
+}) {
     const { validateLength, validatePattern } = useProgressiveValidation();
     const {
         register,
@@ -181,8 +181,8 @@ function ValidatedCodeInput({
             <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">
                 {label}
                 <span className="ml-2 text-xs text-blue-600 font-normal">
-          {formatMode === "small" ? "(Format: 0001-0999)" : "(Format: 1000-999 999 999 999)"}
-        </span>
+                    {formatMode === "small" ? "(Format: 0001-0999)" : "(Format: 1000-999 999 999 999)"}
+                </span>
             </label>
 
             <input
@@ -192,15 +192,14 @@ function ValidatedCodeInput({
                 {...register(name)}
                 id={name}
                 onInput={handleInput}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none transition-colors ${
-                    errors[name]
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none transition-colors ${errors[name]
                         ? "focus:ring-red-500 focus:border-red-700 border-red-500"
                         : valueStatus?.type === "warning"
                             ? "border-yellow-500 focus:border-yellow-500 focus:ring-yellow-500"
                             : valueStatus?.type === "error"
                                 ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                                 : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                }`}
+                    }`}
             />
 
             {/* Messages d'état */}
@@ -208,21 +207,20 @@ function ValidatedCodeInput({
                 {errors[name]?.message ? (
                     <span className="text-red-600 text-xs block">{errors[name].message}</span>
                 ) : valueStatus ? (
-                    <span className={`text-xs block ${
-                        valueStatus.type === "success" ? "text-green-600" :
+                    <span className={`text-xs block ${valueStatus.type === "success" ? "text-green-600" :
                             valueStatus.type === "warning" ? "text-yellow-700" :
                                 "text-red-600"
-                    }`}>
-            {valueStatus.message}
-          </span>
+                        }`}>
+                        {valueStatus.message}
+                    </span>
                 ) : null}
 
                 {/* Info format dynamique */}
                 <span className="text-gray-500 text-xs block">
-          {formatMode === "small"
-              ? "Format: 4 chiffres (0001-0999)"
-              : "Format: 1-12 chiffres (1000-999 999 999 999)"}
-        </span>
+                    {formatMode === "small"
+                        ? "Format: 4 chiffres (0001-0999)"
+                        : "Format: 1-12 chiffres (1000-999 999 999 999)"}
+                </span>
             </div>
 
             {/* Bouton de correction */}

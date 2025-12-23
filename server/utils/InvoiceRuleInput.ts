@@ -40,22 +40,22 @@ export interface SupplierValidationResult {
 }
 
 class InvoiceDataValidator {
-  
+
   async validateInvoiceData(
-    data: InvoiceValidationInput, 
+    data: InvoiceValidationInput,
     user: UserDto
   ): Promise<ValidationResult> {
     const errors: Array<{ field: string; message: string; suggestion?: string }> = [];
 
     // Validation des champs obligatoires
     this.validateRequiredFields(data, errors);
-    
+
     // Validation des formats
     await this.validateFormats(data, errors);
-    
+
     // Validation de la logique métier
     this.validateBusinessLogic(data, errors);
-    
+
     // Validation du fournisseur
     const supplierResult = await this.validateSupplier(data, user, errors);
 
@@ -106,9 +106,9 @@ class InvoiceDataValidator {
     if (data.invoice_num) {
       const validationResult = await InvoiceLastNumberValidator.validateInvoiceNumberUniqueness(data.invoice_num);
       if (!validationResult.success) {
-        errors.push({ 
-          field: 'invoice_num', 
-          message: validationResult.errorMessage! 
+        errors.push({
+          field: 'invoice_num',
+          message: validationResult.errorMessage!
         });
       }
     }
@@ -117,10 +117,10 @@ class InvoiceDataValidator {
     if (data.num_cmdt) {
       const validationResult = await InvoiceLastNumberValidator.validateInvoiceNumberExpected(data.num_cmdt);
       if (!validationResult.isValid) {
-        errors.push({ 
-          field: 'num_cmdt', 
+        errors.push({
+          field: 'num_cmdt',
           message: validationResult.errorMessage!,
-          suggestion: validationResult.nextNumberExpected 
+          suggestion: validationResult.nextNumberExpected
         });
       }
     }
@@ -141,9 +141,9 @@ class InvoiceDataValidator {
     if (data.invoice_amount) {
       const amount = Number(data.invoice_amount);
       if (isNaN(amount) || amount <= 0 || amount > 100_000_000_000) {
-        errors.push({ 
-          field: 'invoice_amount', 
-          message: 'Le montant doit être compris entre 1 et 100 000 000 000' 
+        errors.push({
+          field: 'invoice_amount',
+          message: 'Le montant doit être compris entre 1 et 100 000 000 000'
         });
       }
     }
@@ -164,9 +164,9 @@ class InvoiceDataValidator {
     Object.entries(validEnums).forEach(([field, validValues]) => {
       const value = data[field as keyof InvoiceValidationInput];
       if (value && !validValues.includes(value.toString())) {
-        errors.push({ 
-          field, 
-          message: `${this.getFieldLabel(field)} est invalide. Valeurs autorisées: ${validValues.join(', ')}` 
+        errors.push({
+          field,
+          message: `${this.getFieldLabel(field)} est invalide. Valeurs autorisées: ${validValues.join(', ')}`
         });
       }
     });
@@ -178,27 +178,27 @@ class InvoiceDataValidator {
         const invoiceArrivalDate = new Date(formatDate(data.invoice_date));
 
         if (invoiceDate.getTime() > invoiceArrivalDate.getTime()) {
-          errors.push({ 
-            field: 'invoice_arrival_date', 
-            message: 'La date d\'arrivée de la facture ne peut pas être antérieure à la date réelle de la facture' 
+          errors.push({
+            field: 'invoice_arrival_date',
+            message: 'La date d\'arrivée de la facture ne peut pas être antérieure à la date réelle de la facture'
           });
         }
       } catch {
-        errors.push({ 
-          field: 'invoice_arrival_date', 
-          message: 'Format de date invalide' 
+        errors.push({
+          field: 'invoice_arrival_date',
+          message: 'Format de date invalide'
         });
       }
     }
   }
 
   private async validateSupplier(
-    data: InvoiceValidationInput, 
-    user: UserDto, 
+    data: InvoiceValidationInput,
+    user: UserDto,
     errors: Array<{ field: string; message: string; suggestion?: string }>
   ): Promise<SupplierValidationResult> {
     try {
-      const supplierResult = await getSupplierId({ 
+      const supplierResult = await getSupplierId({
         supplier_account_number: data.supplier_account_number,
         supplier_name: data.supplier_name,
         supplier_phone: data.supplier_phone || '',
@@ -208,9 +208,9 @@ class InvoiceDataValidator {
       });
 
       if (!supplierResult.success || !supplierResult.supplierId) {
-        errors.push({ 
-          field: 'supplier_account_number', 
-          message: supplierResult.message || 'Erreur lors de la gestion du fournisseur' 
+        errors.push({
+          field: 'supplier_account_number',
+          message: supplierResult.message || 'Erreur lors de la gestion du fournisseur'
         });
       }
 
@@ -219,19 +219,19 @@ class InvoiceDataValidator {
       logger.error('Erreur lors de la validation du fournisseur', {
         error: error instanceof Error ? error.message : 'Unknown error'
       });
-      
-      errors.push({ 
-        field: 'supplier_account_number', 
-        message: 'Erreur lors de la validation du fournisseur' 
+
+      errors.push({
+        field: 'supplier_account_number',
+        message: 'Erreur lors de la validation du fournisseur'
       });
-      
+
       return { success: false, message: 'Erreur de validation du fournisseur' };
     }
   }
 
   private prepareValidatedData(
-    data: InvoiceValidationInput, 
-    supplierId: number, 
+    data: InvoiceValidationInput,
+    supplierId: number,
     user: UserDto
   ): CreateInvoiceDto {
     return {

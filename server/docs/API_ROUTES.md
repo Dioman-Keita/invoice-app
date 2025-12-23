@@ -1,13 +1,15 @@
 # API Routes Documentation
 
 ## 🚀 **Base URL**
-```
+
+```bash
 http://localhost:3000/api
 ```
 
 ## 🔐 **Authentication Routes**
 
 ### **POST** `/auth/login`
+
 - **Description**: User login with rememberMe management
 - **Body**: `{ email, password, role, rememberMe }`
 - **Response**: `auth_token` cookie + user data + activity tracking
@@ -15,6 +17,7 @@ http://localhost:3000/api
 - **Tracking**: Automatic `LOGIN`
 
 ### **POST** `/auth/register`
+
 - **Description**: User registration with validation
 - **Body**: `{ email, password, firstName, lastName, role, terms }`
 - **Response**: Verification email sent
@@ -22,34 +25,40 @@ http://localhost:3000/api
 - **Roles**: All
 
 ### **POST** `/auth/forgot-password`
+
 - **Description**: Password reset request
 - **Body**: `{ email }`
 - **Response**: Reset email sent
 - **Protection**: None
 
 ### **POST** `/auth/reset-password`
+
 - **Description**: Password reset
 - **Body**: `{ token, password }`
 - **Response**: Reset confirmation
 - **Protection**: None
 
 ### **POST** `/auth/logout`
+
 - **Description**: User logout
 - **Response**: Logout confirmation
 - **Protection**: `authGuard`
 
 ### **POST** `/auth/silent-refresh`
+
 - **Description**: Silent token refresh
 - **Response**: New token
 - **Protection**: `authGuard`
 
 ### **GET** `/auth/status`
+
 - **Description**: Check authentication status
 - **Response**: User status
 - **Protection**: `authGuard`
 - **Tracking**: `REFRESH_PROFILE`
 
 ### **POST** `/auth/admin/create-user`
+
 - **Description**: User creation (admin only)
 - **Body**: `{ email, password, firstName, lastName, role }`
 - **Response**: Created user details
@@ -59,6 +68,7 @@ http://localhost:3000/api
 ## 📄 **Invoice Management**
 
 ### **GET** `/invoices`
+
 - **Description**: List invoices
 - **Query Params**: `status`, `supplierId`, `dateFrom`, `dateTo`
 - **Response**: List of invoices
@@ -66,24 +76,28 @@ http://localhost:3000/api
 - **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/invoices/last-num`
+
 - **Description**: Get last invoice number
 - **Response**: `{ lastNumber: string }`
 - **Protection**: `authGuard` + `requireAgentOrManager`
 - **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/invoices/next-num`
+
 - **Description**: Get next expected invoice number
 - **Response**: `{ nextNumber: string }`
 - **Protection**: `authGuard` + `requireManagerOrAdmin`
 - **Roles**: `invoice_manager`, `admin`
 
 ### **GET** `/invoices/dfc/pending`
+
 - **Description**: List pending DFC invoices
 - **Response**: List of pending invoices
 - **Protection**: `authGuard` + `requireAgentOrManager`
 - **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **POST** `/invoices`
+
 - **Description**: Create new invoice
 - **Body**: Invoice data
 - **Response**: Created invoice
@@ -91,12 +105,14 @@ http://localhost:3000/api
 - **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **POST** `/invoices/:id/dfc/approve`
+
 - **Description**: Approve DFC invoice
 - **Response**: Approval confirmation
 - **Protection**: `authGuard` + `requireAgentOrManager`
 - **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **POST** `/invoices/:id/dfc/reject`
+
 - **Description**: Reject DFC invoice
 - **Body**: `{ comments?: string }`
 - **Response**: Rejection confirmation
@@ -104,12 +120,14 @@ http://localhost:3000/api
 - **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/invoices/:id`
+
 - **Description**: Get specific invoice
 - **Response**: Invoice details
 - **Protection**: `authGuard` + `requireAgentOrManager`
 - **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **POST** `/invoices/update/:id`
+
 - **Description**: Update invoice
 - **Body**: Updated invoice data
 - **Response**: Updated invoice
@@ -117,6 +135,7 @@ http://localhost:3000/api
 - **Roles**: `invoice_manager`, `admin`
 
 ### **POST** `/invoices/delete/:id`
+
 - **Description**: Delete invoice
 - **Response**: Deletion confirmation
 - **Protection**: `authGuard` + `requireAdmin`
@@ -125,41 +144,49 @@ http://localhost:3000/api
 ## 👥 **Supplier Management**
 
 ### **POST** `/supplier`
+
 - **Description**: Create supplier
 - **Protection**: `authGuard` + `requireManagerOrAdmin`
 - **Roles**: `invoice_manager`, `admin`
 
 ### **POST** `/supplier/delete/:id`
+
 - **Description**: Delete supplier (simulation DELETE)
 - **Protection**: `authGuard` + `requireAdmin`
 - **Roles**: `admin`
 
 ### **GET** `/supplier`
+
 - **Description**: List all suppliers
 - **Protection**: `authGuard` + `requireAgentOrManager`
 - **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/supplier/phone`
+
 - **Description**: Search supplier by phone (`?phone=`)
 - **Protection**: `authGuard` + `requireAgentOrManager`
 - **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/supplier/:id`
+
 - **Description**: Get specific supplier
 - **Protection**: `authGuard` + `requireAgentOrManager`
 - **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/suppliers/search`
+
 - **Description**: Flexible search by field (`?field=&value=`)
 - **Protection**: `authGuard` + `requireManagerOrAdmin`
 - **Roles**: `invoice_manager`, `admin`
 
 ### **GET** `/suppliers/find`
+
 - **Description**: Multi-field search (e.g. `?name=ABC&account_number=123`)
 - **Protection**: `authGuard` + `requireManagerOrAdmin`
 - **Roles**: `invoice_manager`, `admin`
 
 ### **GET** `/suppliers/verify-conflicts`
+
 - **Description**: Verify conflicts (account number / phone)
 - **Protection**: `authGuard` + `requireAgentOrManager`
 - **Roles**: `dfc_agent`, `invoice_manager`
@@ -167,23 +194,28 @@ http://localhost:3000/api
 ## 🔍 **Advanced Search & Export**
 
 ### **GET** `/search/invoices`
+
 - **Description**: Advanced invoice search
 - **Protection**: `authGuard` + `requireAgentOrManager`
 - **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/search/suppliers`
+
 - **Description**: Advanced supplier search
 - **Protection**: `authGuard` + `requireAgentOrManager`
 - **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/search/relational`
+
 - **Description**: Relational search (invoices/suppliers)
 - **Protection**: `authGuard` + `requireAgentOrManager`
 - **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **POST** `/export`
+
 - **Description**: Generate export based on standardized search
 - **Body**:
+
   ```json
   {
     "type": "invoice" | "supplier" | "relational",
@@ -192,6 +224,7 @@ http://localhost:3000/api
     "search": { /* same filters as /search/... */ }
   }
   ```
+
 - **Response**: Binary file
   - `application/pdf` if `format=pdf`
   - `application/vnd.oasis.opendocument.text` if `format=odt`
@@ -200,6 +233,7 @@ http://localhost:3000/api
 - **Roles**: `dfc_agent`, `invoice_manager`
 
 ### **GET** `/fiscal-years`
+
 - **Description**: Get available fiscal years
 - **Protection**: `authGuard` + `requireAgentOrManager`
 - **Roles**: `dfc_agent`, `invoice_manager`
@@ -207,12 +241,14 @@ http://localhost:3000/api
 ## 📊 **Statistics & Dashboard**
 
 ### **GET** `/stats/dashboard/kpis`
+
 - **Description**: Key Performance Indicators for admin dashboard
 - **Response**: `{ total_employee, total_invoices, business_amount, total_invoice_pending, dateFrom, dateTo }`
 - **Protection**: `authGuard` + `requireAdmin`
 - **Roles**: `admin`
 
 ### **GET** `/stats/invoices/evolution`
+
 - **Description**: Invoice evolution and amounts per month
 - **Response**: Chart data
 - **Protection**: `authGuard` + `requireAdmin`
@@ -221,17 +257,20 @@ http://localhost:3000/api
 ## ⚙️ **Fiscal Settings**
 
 ### **GET** `/settings/fiscal`
+
 - **Description**: Current fiscal year info (fiscal year, CMDT format, counter, thresholds, alerts, etc.)
 - **Protection**: `authGuard`
 - **Roles**: `dfc_agent`, `invoice_manager`, `admin`
 
 ### **POST** `/settings/auto-year-switch`
+
 - **Description**: Enable/Disable automatic fiscal year switch
 - **Body**: `{ enable: boolean }`
 - **Protection**: `authGuard` + `requireAdmin`
 - **Roles**: `admin`
 
 ### **POST** `/settings/fiscal-year/switch`
+
 - **Description**: Manual fiscal year switch
 - **Body**: `{ newYear: string }`
 - **Protection**: `authGuard` + `requireAdmin`
@@ -240,11 +279,13 @@ http://localhost:3000/api
 ## 🛡️ **Test Routes**
 
 ### **GET** `/protected`
+
 - **Description**: Authentication test
 - **Response**: `{ user: req.user }`
 - **Protection**: `authGuard`
 
 ### **GET** `/health`
+
 - **Description**: Server health check
 - **Response**: `{ status: 'OK', message: 'Server functional' }`
 - **Protection**: None
@@ -252,6 +293,7 @@ http://localhost:3000/api
 ## 🔧 **Client-Side Usage**
 
 ### **Axios Configuration with Inactivity Handling**
+
 ```javascript
 import axios from 'axios';
 
@@ -279,6 +321,7 @@ api.interceptors.response.use(
 ```
 
 ### **Example Usage**
+
 ```javascript
 // Login with rememberMe
 const login = async (email, password, role, rememberMe) => {

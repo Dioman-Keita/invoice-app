@@ -108,7 +108,7 @@ function StatsSimple() {
         if (!user || user.role !== 'invoice_manager') return;
         const json = await api.get('/stats/invoices/available-dates');
         if (json.success) {
-          const dates = Array.isArray(json.data) ? json.data : [];
+          const dates = Array.isArray(json.data) ? json.data.map(d => d.split('T')[0]) : [];
           setAvailableDates(dates);
           if (dates.length > 0) {
             setSelectedDate(dates[0]);
@@ -140,6 +140,7 @@ function StatsSimple() {
       };
       const response = await api.post('/export', body, {
         responseType: 'blob',
+        timeout: 300000,
         headers: { 'Accept': 'application/octet-stream' }
       });
 

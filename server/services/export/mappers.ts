@@ -18,7 +18,10 @@ function fmtAmount(value: any): string | undefined {
   const n = typeof value === 'number' ? value : Number(String(value).replace(/\s/g, '').replace(',', '.'));
   if (!isNaN(n)) {
     try {
-      return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n);
+      return new Intl.NumberFormat('fr-FR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(n);
     } catch { }
   }
   return String(value);
@@ -43,7 +46,7 @@ export function mapInvoiceListOdt(rows: any[], dateRange: DateRange) {
       num_inv: r.num_invoice ?? '',
       object: r.invoice_object ?? '',
       supplier: r.supplier_name ?? '',
-      amount: typeof r.amount === 'number' ? String(r.amount) : (r.amount ?? ''),
+      amount: fmtAmount(r.amount) ?? '',
       inv_date: fmtDate(r.invoice_date),
       arr_date: fmtDate(r.invoice_arr_date),
       type: r.invoice_type ?? '',
@@ -76,8 +79,8 @@ export function mapRelationalListOdt(rows: any[], dateRange: DateRange) {
     total_supplier: rows.length,
     supplier: rows.map((r: any) => ({
       name: r.supplier_name ?? r.name ?? '',
-      total_amount: r.total_amount ?? '',
-      avg_amount: r.avg_amount ?? '',
+      total_amount: fmtAmount(r.total_amount) ?? '',
+      avg_amount: fmtAmount(r.avg_amount) ?? '',
       last_invoice: fmtDate(r.last_invoice_date ?? r.invoice_arr_date),
       total_inv: r.invoice_count ?? r.total_inv ?? undefined,
       phone: r.phone ?? undefined,
@@ -96,7 +99,7 @@ export function mapInvoiceListXlsx(rows: any[], fiscalYear?: string) {
       num_cmdt: r.num_cmdt ?? '',
       num_inv: r.num_invoice ?? '',
       supplier: r.supplier_name ?? '',
-      amount: typeof r.amount === 'number' ? String(r.amount) : (r.amount ?? ''),
+      amount: fmtAmount(r.amount) ?? '',
       arr_date: fmtDate(r.invoice_arr_date),
       type: r.invoice_type ?? '',
       object: r.invoice_object ?? ''
@@ -133,8 +136,8 @@ export function mapRelationalListXlsx(rows: any[], fiscalYear?: string) {
       phone: r.phone ?? undefined,
       total_inv: r.invoice_count ?? r.total_inv ?? undefined,
       last_inv: fmtDate(r.last_invoice_date ?? r.invoice_arr_date),
-      avg_amount: r.avg_amount ?? '',
-      total_amount: r.total_amount ?? ''
+      avg_amount: fmtAmount(r.avg_amount) ?? '',
+      total_amount: fmtAmount(r.total_amount) ?? ''
     }))
   };
 }
@@ -256,8 +259,8 @@ export function mapRelationalOverviewOdt(detail: any, rootFiscalYear?: string) {
       id: detail?.supplier?.id ?? '',
       name: detail?.supplier?.name ?? '',
       account_number: detail?.supplier?.account_number ?? '',
-      total_amount: detail?.supplier?.total_amount ?? '',
-      avg_amount: detail?.supplier?.avg_amount ?? '',
+      total_amount: fmtAmount(detail?.supplier?.total_amount) ?? '',
+      avg_amount: fmtAmount(detail?.supplier?.avg_amount) ?? '',
       last_invoice: fmtDate(detail?.supplier?.last_invoice),
       total_inv: detail?.supplier?.total_inv ?? undefined,
     }
@@ -277,8 +280,8 @@ export function mapRelationalOverviewXlsx(detail: any, dateRange: DateRange, roo
       account_number: detail?.supplier?.account_number ?? '',
       total_inv: detail?.supplier?.total_inv ?? undefined,
       last_inv: fmtDate(detail?.supplier?.last_invoice),
-      avg_amount: detail?.supplier?.avg_amount ?? '',
-      total_amount: detail?.supplier?.total_amount ?? '',
+      avg_amount: fmtAmount(detail?.supplier?.avg_amount) ?? '',
+      total_amount: fmtAmount(detail?.supplier?.total_amount) ?? '',
     }
   };
 }
@@ -300,5 +303,5 @@ export function mapInvoiceStatsOdt(rows: any[], dayStr?: string) {
     return String(value);
   }
 
-  return { timeserie_day: dayStr ? fmtDate(dayStr) : nowDay(), generate_at: nowDay(), generate_time: nowTime(), total_invoice: Array.isArray(rows) ? rows.length : 0, invoice: (rows || []).map((r: any) => ({ num_cmdt: r.num_cmdt ?? '', num_inv: r.num_invoice ?? '', object: r.invoice_object ?? '', supplier: r.supplier_name ?? '', amount: typeof r.amount === 'number' ? String(r.amount) : (r.amount ?? ''), inv_date: fmtDate(r.invoice_date), inv_arr_date: fmtDate(r.invoice_arr_date), type: r.invoice_type ?? '', })), };
+  return { timeserie_day: dayStr ? fmtDate(dayStr) : nowDay(), generate_at: nowDay(), generate_time: nowTime(), total_invoice: Array.isArray(rows) ? rows.length : 0, invoice: (rows || []).map((r: any) => ({ num_cmdt: r.num_cmdt ?? '', num_inv: r.num_invoice ?? '', object: r.invoice_object ?? '', supplier: r.supplier_name ?? '', amount: fmtAmount(r.amount) ?? '', inv_date: fmtDate(r.invoice_date), inv_arr_date: fmtDate(r.invoice_arr_date), type: r.invoice_type ?? '', })), };
 }

@@ -24,9 +24,12 @@ import {
   DocumentMagnifyingGlassIcon,
   BuildingStorefrontIcon as BuildingIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  PencilSquareIcon
 } from '@heroicons/react/24/outline';
 import Header from '../../components/global/Header.jsx';
+import useInvoice from '../../hooks/features/useInvoice.js';
+import useToastFeedback from '../../hooks/ui/useToastFeedBack.js';
 
 function Search() {
   useTitle('CMDT - Recherche avancée');
@@ -84,6 +87,13 @@ function Search() {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [loadingAttachments, setLoadingAttachments] = useState({});
+  const [isEditingInvoice, setIsEditingInvoice] = useState(false);
+  const [editFormData, setEditFormData] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [suppliers, setSuppliers] = useState([]);
+
+  const { updateInvoice } = useInvoice();
+  const { success: toastSuccess, error: toastError } = useToastFeedback();
 
   const invoiceSearch = useSearch('/search/invoices', 'factures');
   const supplierSearch = useSearch('/search/suppliers', 'fournisseurs');
@@ -101,6 +111,18 @@ function Search() {
       }
     };
     fetchFiscalYears();
+
+    const fetchSuppliers = async () => {
+      try {
+        const response = await api.get('/supplier');
+        if (response.success) {
+          setSuppliers(response.data || []);
+        }
+      } catch (err) {
+        console.error('Erreur chargement fournisseurs:', err);
+      }
+    };
+    fetchSuppliers();
   }, []);
 
   useEffect(() => {
@@ -372,6 +394,94 @@ function Search() {
     setSelectedInvoice(null);
     setSelectedSupplier(null);
     setSelectedGroupedResult(null);
+    setIsEditingInvoice(false);
+    setEditFormData(null);
+  };
+
+  const handleStartEditInvoice = (invoice, e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    const formData = {
+      invoice_num: invoice.invoice_num || invoice.num_invoice || '',
+      num_cmdt: invoice.num_cmdt || '',
+      invoice_date: invoice.invoice_date || '',
+      invoice_arrival_date: invoice.invoice_arrival_date || invoice.invoice_arr_date || '',
+      invoice_amount: invoice.amount || '',
+      supplier_name: invoice.supplier_name || '',
+      supplier_account_number: invoice.supplier_account_number || '',
+      supplier_phone: invoice.supplier_phone || '',
+      invoice_object: invoice.invoice_object || '',
+      invoice_nature: invoice.invoice_nature || '',
+      invoice_type: invoice.invoice_type || '',
+      invoice_status: invoice.status || invoice.invoice_status || 'Non',
+      folio: invoice.folio || '',
+      fiscal_year: invoice.fiscal_year || '',
+      supplier_id: invoice.supplier_id || ''
+    };
+
+    // Convert dates to YYYY-MM-DD for input[type="date"]
+    if (formData.invoice_date) {
+      formData.invoice_date = new Date(formData.invoice_date).toISOString().split('T')[0];
+    }
+    if (formData.invoice_arrival_date) {
+      formData.invoice_arrival_date = new Date(formData.invoice_arrival_date).toISOString().split('T')[0];
+    }
+
+    setEditFormData(formData);
+    setSelectedInvoice(invoice);
+    setIsEditingInvoice(true);
+    setShowInvoiceOverview(true);
+  };
+
+  const handleEditFormChange = (e) => {
+    const { name, value } = e.target;
+
+    if (name === 'supplier_id') {
+      const selectedSupp = suppliers.find(s => s.id.toString() === value.toString());
+      if (selectedSupp) {
+        setEditFormData(prev => ({
+          ...prev,
+          supplier_id: value,
+          supplier_name: selectedSupp.name,
+          supplier_account_number: selectedSupp.account_number,
+          supplier_phone: selectedSupp.phone
+        }));
+        return;
+      }
+    }
+
+    setEditFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveInvoiceEdit = async () => {
+    if (!editFormData || !selectedInvoice) return;
+
+    setIsSaving(true);
+    try {
+      // Prepare data for backend (some fields might need parsing)
+      const dataToSave = { ...editFormData };
+
+      // Ensure amount is string for backend validation if necessary, 
+      // but re-implementing updateInvoice handles what it receives.
+      // Based on InvoiceShema, it expects numbers or strings that regex can match.
+
+      const result = await updateInvoice(selectedInvoice.id, dataToSave);
+      if (result.success) {
+        toastSuccess(result.message);
+        setIsEditingInvoice(false);
+        // Refresh search results
+        handleSearch(currentPage, currentLimit);
+      } else {
+        toastError(result.message || 'Erreur lors de la mise à jour');
+      }
+    } catch (err) {
+      console.error('Erreur sauvegarde:', err);
+      toastError('Erreur lors de la sauvegarde');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleExport = async (format, data = null) => {
@@ -424,6 +534,7 @@ function Search() {
 
       const response = await api.post('/export', { type, variant, format: lowerFmt, search: searchPayload }, {
         responseType: 'arraybuffer',
+        timeout: 300000,
         headers: {
           Accept: accept
         }
@@ -483,8 +594,8 @@ function Search() {
       if (isNaN(num)) return 'Montant invalide';
 
       return new Intl.NumberFormat('fr-FR', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
       }).format(num) + ' FCFA';
     } catch {
       return 'Montant invalide';
@@ -600,8 +711,8 @@ function Search() {
                     key={pageNumber}
                     onClick={() => onPageChange(pageNumber)}
                     className={`min-w-[2rem] px-2 py-1 text-sm rounded border transition-colors ${currentPage === pageNumber
-                        ? 'bg-blue-500 text-white border-blue-500'
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                      ? 'bg-blue-500 text-white border-blue-500'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
                   >
                     {pageNumber}
@@ -1223,6 +1334,13 @@ function Search() {
                                     >
                                       <EyeIcon className="w-4 h-4" />
                                     </button>
+                                    <button
+                                      onClick={(e) => handleStartEditInvoice(invoice, e)}
+                                      className="text-amber-600 hover:text-amber-900 transition-colors"
+                                      title="Modifier la facture"
+                                    >
+                                      <PencilSquareIcon className="w-4 h-4" />
+                                    </button>
                                   </div>
                                 </td>
                               </tr>
@@ -1397,174 +1515,416 @@ function Search() {
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Informations principales</h3>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Référence:</span>
-                            <span className="font-medium">{selectedInvoice.id}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Numéro CMDT:</span>
-                            <span className="font-medium">{selectedInvoice.num_cmdt}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Numéro facture:</span>
-                            <span className="font-medium">{selectedInvoice.num_invoice}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Montant:</span>
-                            <span className="font-bold text-gray-900">{formatAmount(selectedInvoice.amount)}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Dates</h3>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Date de facture:</span>
-                            <span className="font-medium">{formatDate(selectedInvoice.invoice_date)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Date d'arrivée:</span>
-                            <span className="font-medium">{formatDate(selectedInvoice.invoice_arr_date)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Créée le:</span>
-                            <span className="font-medium">{formatDateTime(selectedInvoice.create_at)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Facture annulée:</span>
-                            <span className="font-medium">{selectedInvoice.status === 'Oui' ? 'Oui' : (selectedInvoice.status === 'Non' ? 'Non' : (selectedInvoice.status || 'Non spécifié'))}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Fournisseur</h3>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Nom:</span>
-                            <span className="font-medium">{selectedInvoice.supplier_name}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Compte:</span>
-                            <span className="font-medium font-mono">{selectedInvoice.supplier_account_number}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Téléphone:</span>
-                            <span className="font-medium">{selectedInvoice.supplier_phone}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Catégorisation</h3>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Type:</span>
-                            <span className="font-medium">{selectedInvoice.invoice_type}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Nature:</span>
-                            <span className="font-medium">{selectedInvoice.invoice_nature}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Folio:</span>
-                            <span className="font-medium">{selectedInvoice.folio || 'Non spécifié'}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Statut DFC:</span>
-                            <span className={getStatusBadge(selectedInvoice.dfc_status)}>{getStatusText(selectedInvoice.dfc_status)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {selectedInvoice.invoice_object && (
-                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Objet de la facture</h3>
-                      <p className="text-gray-700">{selectedInvoice.invoice_object}</p>
-                    </div>
-                  )}
-
-                  <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                      <PaperClipIcon className="w-5 h-5 mr-2 text-gray-600" />
-                      Pièces jointes
-                    </h3>
-                    {loadingAttachments[selectedInvoice.id] ? (
-                      <div className="flex items-center justify-center py-4">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                        <span className="ml-2 text-sm text-gray-600">Chargement...</span>
-                      </div>
-                    ) : invoiceAttachments[selectedInvoice.id]?.length > 0 ? (
-                      <div className="space-y-2">
-                        {invoiceAttachments[selectedInvoice.id].map((doc, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
-                            <div className="flex items-center space-x-3">
-                              <PaperClipIcon className="w-5 h-5 text-gray-400" />
-                              <span className="text-sm text-gray-900">{doc}</span>
+                  {isEditingInvoice && editFormData ? (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Informations principales</h3>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Numéro facture</label>
+                                <input
+                                  type="text"
+                                  name="invoice_num"
+                                  value={editFormData.invoice_num}
+                                  onChange={handleEditFormChange}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Numéro CMDT (Lecture seule)</label>
+                                <input
+                                  type="text"
+                                  value={editFormData.num_cmdt}
+                                  disabled
+                                  className="w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-500 cursor-not-allowed"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Montant</label>
+                                <input
+                                  type="text"
+                                  name="invoice_amount"
+                                  value={editFormData.invoice_amount ? (function (val) {
+                                    if (!val) return "";
+                                    const parts = val.toString().replace(/[^\d.,]/g, "").split(/[.,]/);
+                                    const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+                                    const decimalPart = parts.length > 1 ? parts[1].substring(0, 2) : null;
+                                    return decimalPart !== null ? `${integerPart},${decimalPart}` : integerPart;
+                                  })(editFormData.invoice_amount) : ""}
+                                  onChange={(e) => {
+                                    let val = e.target.value.replace(/[^\d.,]/g, "").replace(".", ",");
+                                    const parts = val.split(",");
+                                    if (parts.length > 2) val = parts[0] + "," + parts.slice(1).join("");
+                                    if (parts.length > 1) val = parts[0] + "," + parts[1].substring(0, 2);
+                                    handleEditFormChange({ target: { name: "invoice_amount", value: val.replace(",", ".") } });
+                                  }}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500 italic">Aucune pièce jointe disponible</p>
-                    )}
-                  </div>
 
-                  <div className="mt-6 flex justify-end space-x-3">
-                    <button
-                      onClick={() => handleExport('pdf', selectedInvoice)}
-                      disabled={isExportingPdf || isExportingExcel}
-                      className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isExportingPdf ? (
-                        <>
-                          <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Export...
-                        </>
-                      ) : (
-                        <>
-                          <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                          PDF
-                        </>
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Dates</h3>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Date de facture</label>
+                                <input
+                                  type="date"
+                                  name="invoice_date"
+                                  value={editFormData.invoice_date}
+                                  onChange={handleEditFormChange}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Date d'arrivée</label>
+                                <input
+                                  type="date"
+                                  name="invoice_arrival_date"
+                                  value={editFormData.invoice_arrival_date}
+                                  onChange={handleEditFormChange}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Année fiscale (Lecture seule)</label>
+                                <input
+                                  type="text"
+                                  value={editFormData.fiscal_year}
+                                  disabled
+                                  className="w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-500 cursor-not-allowed"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Fournisseur</h3>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Sélectionner un fournisseur</label>
+                                <select
+                                  name="supplier_id"
+                                  value={editFormData.supplier_id}
+                                  onChange={handleEditFormChange}
+                                  className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                                >
+                                  <option value="">-- Choisir un fournisseur --</option>
+                                  {suppliers.map(s => (
+                                    <option key={s.id} value={s.id}>
+                                      {s.name} ({s.account_number})
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-500 mb-1">Compte (Auto)</label>
+                                  <p className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-600 font-mono text-sm h-10 flex items-center">
+                                    {editFormData.supplier_account_number || '---'}
+                                  </p>
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-500 mb-1">Téléphone (Auto)</label>
+                                  <p className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-600 text-sm h-10 flex items-center">
+                                    {editFormData.supplier_phone || '---'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Catégorisation</h3>
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                                  <select
+                                    name="invoice_type"
+                                    value={editFormData.invoice_type}
+                                    onChange={handleEditFormChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                  >
+                                    <option value="Ordinaire">Ordinaire</option>
+                                    <option value="Transporteur">Transporteur</option>
+                                    <option value="Transitaire">Transitaire</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Nature</label>
+                                  <select
+                                    name="invoice_nature"
+                                    value={editFormData.invoice_nature}
+                                    onChange={handleEditFormChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                  >
+                                    <option value="Paiement">Paiement</option>
+                                    <option value="Acompte">Acompte</option>
+                                    <option value="Avoir">Avoir</option>
+                                  </select>
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Folio</label>
+                                <select
+                                  name="folio"
+                                  value={editFormData.folio}
+                                  onChange={handleEditFormChange}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                >
+                                  <option value="1 copie">1 copie</option>
+                                  <option value="Orig + 1 copie">Orig + 1 copie</option>
+                                  <option value="Orig + 2 copies">Orig + 2 copies</option>
+                                  <option value="Orig + 3 copies">Orig + 3 copies</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className={`block text-sm font-medium mb-1 ${editFormData.invoice_status === 'Oui' ? 'text-red-600' : 'text-gray-700'}`}>
+                                  Facture annulée
+                                </label>
+                                <select
+                                  name="invoice_status"
+                                  value={editFormData.invoice_status}
+                                  onChange={handleEditFormChange}
+                                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 font-semibold transition-all duration-200 ${editFormData.invoice_status === 'Oui'
+                                    ? 'border-red-300 bg-red-50 text-red-700 focus:ring-red-500'
+                                    : 'border-gray-300 bg-white text-gray-700 focus:ring-blue-500'
+                                    }`}
+                                >
+                                  <option value="Non">Non (Valide)</option>
+                                  <option value="Oui">Oui (ANNULÉE)</option>
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <label className="block text-lg font-semibold text-gray-900 mb-2">Objet de la facture</label>
+                        <textarea
+                          name="invoice_object"
+                          value={editFormData.invoice_object}
+                          onChange={handleEditFormChange}
+                          rows="3"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        ></textarea>
+                      </div>
+
+                      <div className="flex justify-end space-x-3 pt-6 border-t font-semibold">
+                        <button
+                          onClick={handleSaveInvoiceEdit}
+                          disabled={isSaving}
+                          className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        >
+                          {isSaving ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Enregistrement...
+                            </>
+                          ) : 'Sauvegarder les modifications'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsEditingInvoice(false);
+                            setEditFormData(null);
+                          }}
+                          className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Informations principales</h3>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Référence:</span>
+                                <span className="font-medium">{selectedInvoice.id}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Numéro CMDT:</span>
+                                <span className="font-medium">{selectedInvoice.num_cmdt}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Numéro facture:</span>
+                                <span className="font-medium">{selectedInvoice.num_invoice}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Montant:</span>
+                                <span className="font-bold text-gray-900">{formatAmount(selectedInvoice.amount)}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Dates</h3>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Date de facture:</span>
+                                <span className="font-medium">{formatDate(selectedInvoice.invoice_date)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Créée le:</span>
+                                <span className="font-medium">{formatDateTime(selectedInvoice.create_at)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Année fiscale:</span>
+                                <span className="font-medium">{selectedInvoice.fiscal_year}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Facture annulée:</span>
+                                <span className="font-medium">{selectedInvoice.status === 'Oui' ? 'Oui' : (selectedInvoice.status === 'Non' ? 'Non' : (selectedInvoice.status || 'Non spécifié'))}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Fournisseur</h3>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Nom:</span>
+                                <span className="font-medium">{selectedInvoice.supplier_name}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Compte:</span>
+                                <span className="font-medium font-mono">{selectedInvoice.supplier_account_number}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Téléphone:</span>
+                                <span className="font-medium">{selectedInvoice.supplier_phone}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Catégorisation</h3>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Type:</span>
+                                <span className="font-medium">{selectedInvoice.invoice_type}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Nature:</span>
+                                <span className="font-medium">{selectedInvoice.invoice_nature}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Folio:</span>
+                                <span className="font-medium">{selectedInvoice.folio || 'Non spécifié'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Statut DFC:</span>
+                                <span className={getStatusBadge(selectedInvoice.dfc_status)}>{getStatusText(selectedInvoice.dfc_status)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {selectedInvoice.invoice_object && (
+                        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">Objet de la facture</h3>
+                          <p className="text-gray-700">{selectedInvoice.invoice_object}</p>
+                        </div>
                       )}
-                    </button>
-                    <button
-                      onClick={() => handleExport('xlsx', selectedInvoice)}
-                      disabled={isExportingPdf || isExportingExcel}
-                      className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isExportingExcel ? (
-                        <>
-                          <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Export...
-                        </>
-                      ) : (
-                        <>
-                          <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                          Excel
-                        </>
-                      )}
-                    </button>
-                    <button onClick={handleCloseOverview} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-                      Fermer
-                    </button>
-                  </div>
+
+                      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                          <PaperClipIcon className="w-5 h-5 mr-2 text-gray-600" />
+                          Pièces jointes
+                        </h3>
+                        {loadingAttachments[selectedInvoice.id] ? (
+                          <div className="flex items-center justify-center py-4">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                            <span className="ml-2 text-sm text-gray-600">Chargement...</span>
+                          </div>
+                        ) : invoiceAttachments[selectedInvoice.id]?.length > 0 ? (
+                          <div className="space-y-2">
+                            {invoiceAttachments[selectedInvoice.id].map((doc, index) => (
+                              <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                                <div className="flex items-center space-x-3">
+                                  <PaperClipIcon className="w-5 h-5 text-gray-400" />
+                                  <span className="text-sm text-gray-900">{doc}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500 italic">Aucune pièce jointe disponible</p>
+                        )}
+                      </div>
+
+                      <div className="mt-6 flex justify-end space-x-3">
+                        {!isEditingInvoice && (
+                          <button
+                            onClick={(e) => handleStartEditInvoice(selectedInvoice, e)}
+                            className="flex items-center px-4 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors"
+                          >
+                            <PencilSquareIcon className="w-4 h-4 mr-2" />
+                            Modifier
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleExport('pdf', selectedInvoice)}
+                          disabled={isExportingPdf || isExportingExcel}
+                          className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isExportingPdf ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Export...
+                            </>
+                          ) : (
+                            <>
+                              <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                              PDF
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleExport('xlsx', selectedInvoice)}
+                          disabled={isExportingPdf || isExportingExcel}
+                          className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isExportingExcel ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Export...
+                            </>
+                          ) : (
+                            <>
+                              <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                              Excel
+                            </>
+                          )}
+                        </button>
+                        <button onClick={handleCloseOverview} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                          Fermer
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

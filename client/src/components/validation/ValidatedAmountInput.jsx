@@ -2,10 +2,10 @@ import { useFormContext } from "react-hook-form";
 import { useCallback, useMemo } from "react";
 
 function ValidatedAmountInput({
-                                  name = "invoice_amount",
-                                  label = "Montant de la facture",
-                                  placeholder = "ex. 1 000 000"
-                              }) {
+    name = "invoice_amount",
+    label = "Montant de la facture",
+    placeholder = "ex. 1 000 000"
+}) {
     const {
         register,
         formState: { errors },
@@ -20,13 +20,20 @@ function ValidatedAmountInput({
     // Mémoïser les fonctions de formatage
     const formatWithSpaces = useCallback((value) => {
         if (!value) return "";
-        const numericValue = value.toString().replace(/[^\d]/g, "");
-        return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+
+        // Séparer la partie entière de la partie décimale
+        const parts = value.toString().split(/[.,]/);
+        const integerPart = parts[0].replace(/[^\d]/g, "");
+        const decimalPart = parts.length > 1 ? parts[1].substring(0, 2) : null;
+
+        const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+
+        return decimalPart !== null ? `${formattedInteger},${decimalPart}` : formattedInteger;
     }, []);
 
     const formatNumberWith0 = useCallback((value) => {
-        if (value && value[0] === '0') {
-            return value.replace('0', '');
+        if (value && value.length > 1 && value[0] === '0' && value[1] !== ',' && value[1] !== '.') {
+            return value.replace(/^0+/, '');
         }
         return value;
     }, []);
@@ -42,22 +49,41 @@ function ValidatedAmountInput({
 
     // Gérer les changements de manière optimisée
     const handleChange = useCallback((e) => {
-        const inputValue = e.target.value;
+        let inputValue = e.target.value;
 
-        // Nettoyer et formater la valeur
-        const rawValue = formatNumberWith0(inputValue.replace(/[^\d]/g, ""));
+        // Autoriser seulement chiffres, espace (pour le formatage), point et virgule
+        let cleanValue = inputValue.replace(/[^\d.,]/g, "");
 
-        if (!rawValue) {
+        // Remplacer le point par la virgule pour la saisie (unifier le séparateur visuel)
+        cleanValue = cleanValue.replace('.', ',');
+
+        // Gérer les multiples virgules (garder seulement la première)
+        const parts = cleanValue.split(',');
+        if (parts.length > 2) {
+            cleanValue = parts[0] + ',' + parts.slice(1).join('');
+        }
+
+        // Limiter à 2 décimales
+        if (parts.length > 1) {
+            cleanValue = parts[0] + ',' + parts[1].substring(0, 2);
+        }
+
+        // Nettoyer les zéros inutiles au début
+        cleanValue = formatNumberWith0(cleanValue);
+
+        if (!cleanValue || cleanValue === ",") {
             setValue(name, "", { shouldValidate: true, shouldDirty: true });
             return;
         }
 
-        const numeric = parseInt(rawValue, 10);
+        // Pour la valeur stockée dans RHF, on normalise avec un point
+        const normalizedValue = cleanValue.replace(',', '.');
+        const numeric = parseFloat(normalizedValue);
 
         if (numeric > MAX_AMOUNT) {
             setValue(name, MAX_AMOUNT.toString(), { shouldValidate: true, shouldDirty: true });
         } else {
-            setValue(name, rawValue, { shouldValidate: true, shouldDirty: true });
+            setValue(name, normalizedValue, { shouldValidate: true, shouldDirty: true });
         }
     }, [name, setValue, formatNumberWith0]);
 
@@ -77,19 +103,18 @@ function ValidatedAmountInput({
             <input
                 {...inputProps}
                 type="text"
-                inputMode="numeric"
-                pattern="[0-9\s]*"
+                inputMode="decimal"
+                pattern="[0-9\s,.]*"
                 placeholder={placeholder}
                 value={displayValue}
                 id={name}
                 ref={ref}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none ${
-                    errors[name]
-                        ? "border-red-500 focus:ring-red-500 focus:border-red-700"
-                        : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                }`}
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none ${errors[name]
+                    ? "border-red-500 focus:ring-red-500 focus:border-red-700"
+                    : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                    }`}
             />
             <div className="min-h-[1.25rem] mt-1 text-sm text-red-600 transition-opacity duration-300">
                 {errors[name]?.message ?? <span className="invisible">Placeholder</span>}

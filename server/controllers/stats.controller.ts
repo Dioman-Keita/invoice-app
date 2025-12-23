@@ -416,7 +416,7 @@ export async function getInvoicesSummary(
     const series = asArray<InvoiceBucketRow>(rows);
     const totals = series.reduce<{ total: number; total_amount: number }>((acc, r) => ({
       total: acc.total + (r.total || 0),
-      total_amount: acc.total_amount + (r.total_amount || 0),
+      total_amount: acc.total_amount + Number(r.total_amount || 0),
     }), { total: 0, total_amount: 0 });
 
     return ApiResponder.success(res, { series, ...totals }, 'Série temporelle factures', {
@@ -1292,20 +1292,20 @@ export async function getAllAgentsStats(
   }
 }
 
-export async function getAvailableInvoiceDays(req: AuthenticatedRequest, res: Response): Promise<Response> { 
-  const requestId = req.headers['x-request-id'] || 'unknown'; 
-  try { 
-    const user = req.user 
-    if (!user || !user.sup) { 
-      return ApiResponder.unauthorized(res, 'Utilisateur non authentifié'); 
-    } 
-    const fy = await getSetting('fiscal_year'); 
-    const rows = await database.execute<{ day: string }[] | { day: string }>( 
-      "SELECT DISTINCT DATE(create_at) AS day FROM invoice WHERE fiscal_year = ? AND created_by = ? ORDER BY day DESC", [fy, user.sup] ); 
-      const list = (Array.isArray(rows) ? rows : (rows ? [rows] : [])).map(r => r.day); 
-      return ApiResponder.success(res, list, 'Jours disponibles', { fiscalYear: fy }); 
-  } catch (error) { 
-    logger.error(`[${requestId}] Erreur getAvailableInvoiceDays`, { error: error instanceof Error ? error.message : 'unknown' }); 
-    return ApiResponder.error(res, error); 
+export async function getAvailableInvoiceDays(req: AuthenticatedRequest, res: Response): Promise<Response> {
+  const requestId = req.headers['x-request-id'] || 'unknown';
+  try {
+    const user = req.user
+    if (!user || !user.sup) {
+      return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
+    }
+    const fy = await getSetting('fiscal_year');
+    const rows = await database.execute<{ day: string }[] | { day: string }>(
+      "SELECT DISTINCT DATE(create_at) AS day FROM invoice WHERE fiscal_year = ? AND created_by = ? ORDER BY day DESC", [fy, user.sup]);
+    const list = (Array.isArray(rows) ? rows : (rows ? [rows] : [])).map(r => r.day);
+    return ApiResponder.success(res, list, 'Jours disponibles', { fiscalYear: fy });
+  } catch (error) {
+    logger.error(`[${requestId}] Erreur getAvailableInvoiceDays`, { error: error instanceof Error ? error.message : 'unknown' });
+    return ApiResponder.error(res, error);
   }
 } 

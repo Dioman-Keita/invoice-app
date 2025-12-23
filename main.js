@@ -287,8 +287,22 @@ function createMainWindow() {
             });
         });
 
+    // 6. Intersection de la fermeture pour confirmation
+    mainWindow.on('close', (e) => {
+        if (mainWindow) {
+            e.preventDefault();
+            mainWindow.webContents.send('request-close');
+        }
+    });
+
     mainWindow.on('closed', () => mainWindow = null);
 }
+
+// IPC to finally quit
+ipcMain.on('confirm-quit', () => {
+    mainWindow = null; // Important to avoid recursive close calls
+    app.quit();
+});
 
 
 // Déplacement de la logique de démarrage À L'INTÉRIEUR du bloc "else" (Primary Instance)

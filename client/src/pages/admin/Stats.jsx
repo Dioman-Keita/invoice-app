@@ -33,7 +33,7 @@ ChartJS.register(
   ArcElement
 );
 
-import { 
+import {
   ChartBarIcon,
   CurrencyDollarIcon,
   DocumentTextIcon,
@@ -63,27 +63,27 @@ function EmptyState({ title, description, icon: Icon }) {
 // Carte de métrique avec données par année fiscale
 function PrimaryMetricCard({ title, value, description, icon: Icon, color = 'blue', loading = false }) {
   const colorConfig = {
-    blue: { 
-      bg: 'bg-blue-50', 
-      iconBg: 'bg-blue-100', 
+    blue: {
+      bg: 'bg-blue-50',
+      iconBg: 'bg-blue-100',
       iconColor: 'text-blue-600',
       border: 'border-blue-200'
     },
-    green: { 
-      bg: 'bg-green-50', 
-      iconBg: 'bg-green-100', 
+    green: {
+      bg: 'bg-green-50',
+      iconBg: 'bg-green-100',
       iconColor: 'text-green-600',
       border: 'border-green-200'
     },
-    purple: { 
-      bg: 'bg-purple-50', 
-      iconBg: 'bg-purple-100', 
+    purple: {
+      bg: 'bg-purple-50',
+      iconBg: 'bg-purple-100',
       iconColor: 'text-purple-600',
       border: 'border-purple-200'
     },
-    orange: { 
-      bg: 'bg-orange-50', 
-      iconBg: 'bg-orange-100', 
+    orange: {
+      bg: 'bg-orange-50',
+      iconBg: 'bg-orange-100',
       iconColor: 'text-orange-600',
       border: 'border-orange-200'
     }
@@ -114,7 +114,7 @@ function PrimaryMetricCard({ title, value, description, icon: Icon, color = 'blu
   return (
     <div className={`bg-white rounded-2xl shadow-lg border-2 ${config.border} p-6 hover:shadow-xl transition-all duration-300 group relative overflow-hidden`}>
       <div className="absolute inset-0 bg-gradient-to-br from-white to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300"></div>
-      
+
       <div className="relative z-10">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
@@ -126,9 +126,9 @@ function PrimaryMetricCard({ title, value, description, icon: Icon, color = 'blu
                 <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{title}</p>
               </div>
             </div>
-            
+
             <p className="text-3xl font-bold text-gray-900 mb-2 text-center">{value}</p>
-            
+
             {description && (
               <p className="text-sm text-gray-600 leading-relaxed text-center">{description}</p>
             )}
@@ -136,12 +136,11 @@ function PrimaryMetricCard({ title, value, description, icon: Icon, color = 'blu
         </div>
 
         <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
-          <div 
-            className={`h-2 rounded-full transition-all duration-1000 ${
-              color === 'blue' ? 'bg-blue-500' :
-              color === 'green' ? 'bg-green-500' :
-              color === 'purple' ? 'bg-purple-500' : 'bg-orange-500'
-            }`}
+          <div
+            className={`h-2 rounded-full transition-all duration-1000 ${color === 'blue' ? 'bg-blue-500' :
+                color === 'green' ? 'bg-green-500' :
+                  color === 'purple' ? 'bg-purple-500' : 'bg-orange-500'
+              }`}
             style={{ width: '100%' }}
           ></div>
         </div>
@@ -201,11 +200,10 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
               <button
                 key={index + 1}
                 onClick={() => onPageChange(index + 1)}
-                className={`relative inline-flex items-center px-4 py-2 text-sm font-medium border border-gray-300 ${
-                  currentPage === index + 1
+                className={`relative inline-flex items-center px-4 py-2 text-sm font-medium border border-gray-300 ${currentPage === index + 1
                     ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
                     : 'bg-white text-gray-500 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 {index + 1}
               </button>
@@ -256,18 +254,18 @@ function KpiLineChart({ data, title, selectedFiscalYear, loading = false }) {
         displayColors: true,
         usePointStyle: true,
         callbacks: {
-          label: function(context) {
+          label: function (context) {
             let label = context.dataset.label || '';
             if (label) {
               label += ': ';
             }
             if (context.parsed.y !== null) {
               const value = context.parsed.y;
-              return `${label}${value.toLocaleString('fr-FR')}`;
+              return `${label}${value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             }
             return label;
           },
-          title: function(tooltipItems) {
+          title: function (tooltipItems) {
             return tooltipItems[0].label;
           }
         }
@@ -289,7 +287,7 @@ function KpiLineChart({ data, title, selectedFiscalYear, loading = false }) {
           },
           color: '#6B7280',
           padding: 8,
-          callback: function(value) {
+          callback: function (value) {
             if (value >= 1000000) {
               return (value / 1000000).toFixed(1) + 'M';
             } else if (value >= 1000) {
@@ -365,17 +363,17 @@ function KpiLineChart({ data, title, selectedFiscalYear, loading = false }) {
     }
 
     const labels = data.map(item => item.title || item.name || 'KPI');
-    
+
     const values = data.map(item => {
       const value = item.value;
       if (typeof value === 'string') {
         const cleanValue = value.replace(/[%,MK]/g, '').replace(/,/g, '.').trim();
         const numValue = parseFloat(cleanValue) || 0;
-        
+
         if (value.includes('M')) return numValue * 1000000;
         if (value.includes('K')) return numValue * 1000;
         if (value.includes('%')) return numValue;
-        
+
         return numValue;
       }
       return value || 0;
@@ -451,7 +449,7 @@ function KpiLineChart({ data, title, selectedFiscalYear, loading = false }) {
           </div>
         </div>
       </div>
-      
+
       {hasData ? (
         <div className="h-80">
           <Line data={getChartData()} options={chartOptions} />
@@ -492,8 +490,8 @@ function ComparisonChart({ data, title, selectedFiscalYear, loading = false }) {
         displayColors: true,
         usePointStyle: true,
         callbacks: {
-          label: function(context) {
-            return `${context.label}: ${context.parsed.y.toLocaleString('fr-FR')}`;
+          label: function (context) {
+            return `${context.label}: ${context.parsed.y.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
           }
         }
       },
@@ -639,7 +637,7 @@ function ComparisonChart({ data, title, selectedFiscalYear, loading = false }) {
           </div>
         </div>
       </div>
-      
+
       {hasData ? (
         <div className="h-96"> {/* Hauteur augmentée pour accommoder plus de données */}
           <Bar data={getChartData()} options={chartOptions} />
@@ -658,14 +656,14 @@ function ComparisonChart({ data, title, selectedFiscalYear, loading = false }) {
 }
 
 // Tableau de données avec pagination CORRIGÉ - PAGINATION TOUJOURS VISIBLE
-function PrimaryDataTable({ 
-  title, 
-  headers, 
-  data, 
-  icon: Icon, 
-  selectedFiscalYear, 
+function PrimaryDataTable({
+  title,
+  headers,
+  data,
+  icon: Icon,
+  selectedFiscalYear,
   loading = false,
-  itemsPerPage = 8 
+  itemsPerPage = 8
 }) {
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -732,8 +730,8 @@ function PrimaryDataTable({
               </thead>
               <tbody>
                 {currentData.map((row, index) => (
-                  <tr 
-                    key={index} 
+                  <tr
+                    key={index}
                     className="border-b border-gray-100 last:border-0 hover:bg-blue-50 transition-colors duration-200 group"
                   >
                     {Object.values(row).map((cell, cellIndex) => (
@@ -746,11 +744,11 @@ function PrimaryDataTable({
               </tbody>
             </table>
           </div>
-          
+
           {/* PAGINATION TOUJOURS VISIBLE MÊME AVEC UNE SEULE PAGE */}
           {data && data.length > 0 && (
             <div className="mt-6">
-              <Pagination 
+              <Pagination
                 currentPage={currentPage}
                 totalPages={Math.max(totalPages, 1)} // Garantit au moins 1 page
                 onPageChange={setCurrentPage}
@@ -814,7 +812,7 @@ function useFiscalYears() {
       try {
         setLoading(true);
         const response = await api.get('/fiscal-years');
-        
+
         let years = [];
         if (response.data && Array.isArray(response.data.data)) {
           years = response.data.data;
@@ -823,7 +821,7 @@ function useFiscalYears() {
         } else if (response.data && response.data.success && Array.isArray(response.data.data)) {
           years = response.data.data;
         }
-        
+
         setFiscalYears(years);
       } catch (err) {
         console.error('Erreur lors du chargement des années fiscales:', err);
@@ -843,7 +841,7 @@ function useFiscalYears() {
 function Stats() {
   useTitle('CMDT - Tableau de Bord Statistiques par Année Fiscale');
   useBackground('bg-stats');
-  
+
   const [activeTab, setActiveTab] = useState('invoices');
   const [selectedFiscalYear, setSelectedFiscalYear] = useState('');
 
@@ -875,10 +873,10 @@ function Stats() {
   };
 
   const { data: invoicesSummary, loading: invoicesLoading } = useFiscalYearStatsData(
-    endpoints.invoices.summary, 
+    endpoints.invoices.summary,
     selectedFiscalYear
   );
-  
+
   const { data: invoicesByEmployee, loading: invoicesByEmployeeLoading } = useFiscalYearStatsData(
     endpoints.invoices.byEmployee,
     selectedFiscalYear
@@ -916,35 +914,35 @@ function Stats() {
 
   const metricsData = useMemo(() => {
     const totalAmount = invoicesSummary?.total_amount || 0;
-    const formattedTotalAmount = totalAmount ? 
+    const formattedTotalAmount = totalAmount ?
       `${Math.round(totalAmount / 1000000)}M` : '0';
 
     const suppliersActivityData = suppliersActivity || [];
     const totalSupplierInvoices = suppliersActivityData.reduce((sum, supplier) => sum + (supplier.total_invoices || 0), 0);
     const totalSupplierAmount = suppliersActivityData.reduce((sum, supplier) => sum + (parseFloat(supplier.total_amount) || 0), 0);
-    const formattedSupplierAmount = totalSupplierAmount ? 
+    const formattedSupplierAmount = totalSupplierAmount ?
       `${Math.round(totalSupplierAmount / 1000000)}M` : '0';
 
     const baseMetrics = {
       invoices: {
         metrics: [
-          { 
-            title: 'Factures Total', 
-            value: invoicesSummary?.total?.toLocaleString() || '0', 
+          {
+            title: 'Factures Total',
+            value: invoicesSummary?.total?.toLocaleString() || '0',
             description: 'Total des factures traitées',
             icon: DocumentTextIcon,
             color: 'blue'
           },
-          { 
-            title: 'Montant Total', 
-            value: formattedTotalAmount, 
+          {
+            title: 'Montant Total',
+            value: formattedTotalAmount,
             description: 'Valeur cumulée des factures',
             icon: CurrencyDollarIcon,
             color: 'green'
           },
-          { 
-            title: 'Employés Actifs', 
-            value: invoicesByEmployee?.length?.toLocaleString() || '0', 
+          {
+            title: 'Employés Actifs',
+            value: invoicesByEmployee?.length?.toLocaleString() || '0',
             description: 'Nombre d\'employés ayant créé des factures',
             icon: UserGroupIcon,
             color: 'purple'
@@ -962,23 +960,23 @@ function Stats() {
       },
       dfc: {
         metrics: [
-          { 
-            title: 'Décisions Total', 
-            value: dfcOverview?.total?.toLocaleString() || '0', 
+          {
+            title: 'Décisions Total',
+            value: dfcOverview?.total?.toLocaleString() || '0',
             description: 'Total des décisions prises',
             icon: ClipboardDocumentCheckIcon,
             color: 'green'
           },
-          { 
-            title: 'Taux d\'Appro.', 
-            value: dfcOverview?.approved_rate ? `${dfcOverview.approved_rate}%` : '0%', 
+          {
+            title: 'Taux d\'Appro.',
+            value: dfcOverview?.approved_rate ? `${dfcOverview.approved_rate}%` : '0%',
             description: 'Taux moyen de validation DFC',
             icon: ChartBarIcon,
             color: 'blue'
           },
-          { 
-            title: 'Taux de Rejet', 
-            value: dfcOverview?.rejected_rate ? `${dfcOverview.rejected_rate}%` : '0%', 
+          {
+            title: 'Taux de Rejet',
+            value: dfcOverview?.rejected_rate ? `${dfcOverview.rejected_rate}%` : '0%',
             description: 'Taux moyen de rejet DFC',
             icon: ExclamationTriangleIcon,
             color: 'orange'
@@ -997,25 +995,25 @@ function Stats() {
       },
       suppliers_created: {
         metrics: [
-          { 
-            title: 'Fournisseurs Créés', 
-            value: suppliersCreatedSummary?.total?.toLocaleString() || '0', 
+          {
+            title: 'Fournisseurs Créés',
+            value: suppliersCreatedSummary?.total?.toLocaleString() || '0',
             description: 'Total des fournisseurs créés',
             icon: UserGroupIcon,
             color: 'purple'
           },
-          { 
-            title: 'Employés Actifs', 
-            value: suppliersCreatedByEmployee?.length?.toLocaleString() || '0', 
+          {
+            title: 'Employés Actifs',
+            value: suppliersCreatedByEmployee?.length?.toLocaleString() || '0',
             description: 'Employés ayant créé des fournisseurs',
             icon: UserGroupIcon,
             color: 'blue'
           },
-          { 
-            title: 'Moyenne par Employé', 
-            value: suppliersCreatedSummary?.total && suppliersCreatedByEmployee?.length 
-              ? (suppliersCreatedSummary.total / suppliersCreatedByEmployee.length).toFixed(1) 
-              : '0', 
+          {
+            title: 'Moyenne par Employé',
+            value: suppliersCreatedSummary?.total && suppliersCreatedByEmployee?.length
+              ? (suppliersCreatedSummary.total / suppliersCreatedByEmployee.length).toFixed(1)
+              : '0',
             description: 'Nombre moyen de créations par employé',
             icon: ChartBarIcon,
             color: 'green'
@@ -1024,8 +1022,8 @@ function Stats() {
         overview: suppliersCreatedByEmployee?.map(emp => ({
           employe: emp.employee_name || 'N/A',
           creations: emp.total || 0,
-          pourcentage: suppliersCreatedSummary?.total 
-            ? `${((emp.total / suppliersCreatedSummary.total) * 100).toFixed(1)}%` 
+          pourcentage: suppliersCreatedSummary?.total
+            ? `${((emp.total / suppliersCreatedSummary.total) * 100).toFixed(1)}%`
             : '0%'
         })) || [],
         comparisonData: suppliersCreatedByEmployee?.map(emp => ({
@@ -1035,23 +1033,23 @@ function Stats() {
       },
       suppliers_activity: {
         metrics: [
-          { 
-            title: 'Fournisseurs Actifs', 
-            value: suppliersActivity?.length?.toLocaleString() || '0', 
+          {
+            title: 'Fournisseurs Actifs',
+            value: suppliersActivity?.length?.toLocaleString() || '0',
             description: 'Fournisseurs avec activité',
             icon: BuildingStorefrontIcon,
             color: 'green'
           },
-          { 
-            title: 'Factures Total', 
-            value: totalSupplierInvoices.toLocaleString() || '0', 
+          {
+            title: 'Factures Total',
+            value: totalSupplierInvoices.toLocaleString() || '0',
             description: 'Nombre total de factures',
             icon: DocumentTextIcon,
             color: 'blue'
           },
-          { 
-            title: 'Montant Total', 
-            value: formattedSupplierAmount, 
+          {
+            title: 'Montant Total',
+            value: formattedSupplierAmount,
             description: 'Valeur totale des transactions',
             icon: ChartBarIcon,
             color: 'purple'
@@ -1079,11 +1077,11 @@ function Stats() {
 
     return baseMetrics;
   }, [
-    invoicesSummary, 
-    invoicesByEmployee, 
-    dfcOverview, 
-    dfcAgentsRates, 
-    suppliersCreatedSummary, 
+    invoicesSummary,
+    invoicesByEmployee,
+    dfcOverview,
+    dfcAgentsRates,
+    suppliersCreatedSummary,
     suppliersCreatedByEmployee,
     suppliersActivity,
     suppliersTop,
@@ -1103,7 +1101,7 @@ function Stats() {
   const getTableTitle = () => {
     const titles = {
       invoices: 'Performance par Employé - Factures',
-      dfc: 'Performance par Agent - DFC', 
+      dfc: 'Performance par Agent - DFC',
       suppliers_created: 'Créations par Employé - Fournisseurs',
       suppliers_activity: 'Top Fournisseurs - Activité'
     };
@@ -1148,7 +1146,7 @@ function Stats() {
                 Analyse détaillée par année fiscale - Données spécifiques
               </p>
             </div>
-            
+
             {selectedFiscalYear && (
               <div className="flex justify-center">
                 <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-2xl font-semibold shadow-lg">
@@ -1170,7 +1168,7 @@ function Stats() {
                     Année {selectedFiscalYear}
                   </div>
                 </div>
-                
+
                 {hasMetrics ? (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {currentData.metrics.map((metric, index) => (
@@ -1225,7 +1223,7 @@ function Stats() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Année Fiscale
                   </label>
-                  
+
                   {fiscalYearsLoading ? (
                     <div className="animate-pulse">
                       <div className="h-12 bg-gray-200 rounded-lg"></div>
@@ -1270,11 +1268,10 @@ function Stats() {
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 ${
-                          activeTab === tab.id
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 ${activeTab === tab.id
                             ? 'bg-blue-50 border border-blue-200 text-blue-700 shadow-sm font-semibold'
                             : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium border border-gray-200'
-                        }`}
+                          }`}
                         title={tab.tooltip}
                       >
                         <Icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-blue-600' : 'text-gray-500'}`} />

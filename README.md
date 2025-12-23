@@ -3,7 +3,7 @@
 **Enterprise-level Invoice Management System** designed for scalability and offline-first usage.  
 *Hybrid Architecture: Electron + Express + Docker.*
 
-![App Banner](architechture/banner.png)
+![Niagnouma Corporation Logo](architechture/niagnouma_corporation.png)
 
 ---
 
@@ -11,14 +11,14 @@
 
 * [Overview](#-overview)
 * [🎥 Demo & Visuals](#-demo--visuals)
-* [Architecture](#️-architecture)
-* [Key Features](#-key-features)
-* [Tech Stack](#-tech-stack)
-* [Installation & Setup](#-installation--setup)
-* [Deep Linking](#-deep-linking)
-* [API Documentation](#-api-documentation)
-* [Roadmap](#-roadmap)
-* [Contributing](#-contributing)
+* [🏗️ Architecture](#️-architecture)
+* [✨ Key Features](#-key-features)
+* [🛠 Tech Stack](#-tech-stack)
+* [⚡ Installation & Setup](#-installation--setup)
+* [🔗 Deep Linking](#-deep-linking)
+* [📡 API Documentation](#-api-documentation)
+* [🗺 Roadmap](#-roadmap)
+* [🤝 Contributing](#-contributing)
 
 ---
 
@@ -107,19 +107,51 @@ This project solves the "Client-Server on Desktop" challenge through a hybrid de
 
 ### Quick Start (Development)
 
+Services must be started in this exact order:
+
+#### 1. Database Management (Docker)
+
 ```bash
-# 1. Start Docker container (MySQL)
 cd server
-./manage-stack.bat # (or .sh on Mac/Linux)
+docker compose up -d    # Create and start containers
+docker compose start    # Start services (if already created)
+docker compose down     # Stop containers
+```
 
-# 2. Start Backend
+##### 🛠️ Database Initialization (First Use)
+
+If this is your first time using the app, you must manually create the database structure:
+
+1. Open the file `server/mysql/db/db.sql` and copy its entire content (**Ctrl + A** then **Ctrl + C**).
+2. In your terminal, access the MySQL container:
+
+   ```bash
+   docker exec -it final_mysql mysql -u root -p
+   ```
+
+3. Enter the password (defined in your `.env`).
+4. Once in the MySQL prompt, run:
+
+   ```sql
+   use cmdt_invoice_db;
+   ```
+
+5. Paste the copied content directly into the terminal (**Ctrl + V**) to create all tables.
+
+#### 2. Start the Server (Backend)
+
+```bash
+cd server
 npm run dev
+```
 
-# 3. Start Frontend (in new terminal)
-cd ../client
-npm run dev
+#### 3. Start the Interface (Vite + Electron)
 
-# 4. Start Electron (Optional, invokes the above)
+> [!IMPORTANT]
+> Run `npm run electron:dev` ONLY after starting Docker and the server.
+
+```bash
+# From the project root
 npm run electron:dev
 ```
 

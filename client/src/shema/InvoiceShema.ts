@@ -75,8 +75,13 @@ export const invoiceSchema = z.object({
     invoice_amount: z
         .string()
         .min(1, "Le montant est requis")
-        .regex(/^\d+$/, "Le montant doit être un entier positif")
-        .transform((val) => parseInt(val, 10))
+        // Autorise les chiffres, un seul point ou virgule, et max 2 décimales
+        .regex(/^\d+([.,]\d{1,2})?$/, "Le montant est invalide (max 2 décimales)")
+        .transform((val) => {
+            // Normalisation : remplace la virgule par un point pour le parseFloat
+            const normalized = val.replace(',', '.');
+            return parseFloat(normalized);
+        })
         .refine((val) => !isNaN(val) && val > 0 && val <= 100_000_000_000, {
             message: "Montant maximum autorisé : 100 000 000 000",
         }),

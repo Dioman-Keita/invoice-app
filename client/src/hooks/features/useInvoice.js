@@ -8,12 +8,12 @@ export default function useInvoice() {
   const [fiscalYear, setFiscalYear] = useState(new Date().getFullYear());
   const [isLoading, setLoading] = useState(false);
   const location = useLocation();
-  
+
   const getLastInvoiceNum = useCallback(async (force = false) => {
     try {
       console.log(' Appel API last-form-num', { force });
       const response = await api.get('/invoices/last-num');
-      
+
       if (response?.success === true) {
         const lastInvoiceNum = response?.data?.lastInvoiceNum || '0000';
         const currentFiscalYear = response?.data?.fiscalYear || new Date().getFullYear();
@@ -28,7 +28,7 @@ export default function useInvoice() {
       }
     } catch (error) {
       setLastInvoiceNumber('0000');
-      console.log(error,  ' Erreur récupération numéro:', error?.response?.data?.message || error.message);
+      console.log(error, ' Erreur récupération numéro:', error?.response?.data?.message || error.message);
       return '0000';
     } finally {
       setLoading(false);
@@ -39,14 +39,14 @@ export default function useInvoice() {
     try {
       setLoading(true);
       const response = await api.get('/invoices/next-num');
-      if (response?.success ===  true) {
+      if (response?.success === true) {
         const nextNumberExpected = response?.data?.nextInvoiceNum;
         setNextNumberExpected(nextNumberExpected);
       }
     } catch (error) {
       setLoading(false);
       const isBackendMessage = error?.response?.status >= 400 &&
-                               error?.response?.status <= 500
+        error?.response?.status <= 500
       if (isBackendMessage) {
         setNextNumberExpected(error?.response?.data?.nextInvoiceNum || '----');
       } else {
@@ -72,15 +72,15 @@ export default function useInvoice() {
       const response = await api.post('/invoices', invoiceData);
       if (response.success === true) {
         console.log(' Facture créée, mise à jour du numéro...');
-        
+
         // Attendre un peu pour que le backend ait le temps de traiter
         await new Promise(resolve => setTimeout(resolve, 500));
-        
+
         // Recharger le dernier numéro
         const newNum = await getLastInvoiceNum(true);
         await getNextNumberExpected();
         console.log(' Numéro après création:', newNum);
-        
+
         return {
           success: true,
           message: response?.message || 'Facture envoyée avec succès',
@@ -95,7 +95,7 @@ export default function useInvoice() {
     } catch (error) {
       setLoading(false);
       const isBackendMessage = error?.response?.status >= 400 &&
-                               error.response?.status <= 500;
+        error.response?.status <= 500;
       if (isBackendMessage) {
         return {
           success: false,
@@ -112,8 +112,43 @@ export default function useInvoice() {
     }
   }, [getLastInvoiceNum, getNextNumberExpected]);
 
-  return { 
+  const updateInvoice = useCallback(async (invoiceId, invoiceData) => {
+    try {
+      setLoading(true);
+      const response = await api.post(`/invoices/update/${invoiceId}`, invoiceData);
+      if (response.success === true) {
+        return {
+          success: true,
+          message: response?.message || 'Facture mise à jour avec succès'
+        };
+      }
+      return {
+        success: false,
+        message: 'Une erreur inattendue est survenue lors de la mise à jour.'
+      };
+    } catch (error) {
+      setLoading(false);
+      const isBackendMessage = error?.response?.status >= 400 &&
+        error.response?.status <= 500;
+      if (isBackendMessage) {
+        return {
+          success: false,
+          message: error?.response?.data?.message
+        };
+      } else {
+        return {
+          message: error.message || 'Une erreur interne est survenue',
+          success: false
+        };
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return {
     saveInvoice,
+    updateInvoice,
     getLastInvoiceNum,
     lastInvoiceNumber,
     fiscalYear,
