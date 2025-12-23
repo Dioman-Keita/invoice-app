@@ -271,8 +271,8 @@ function Dashboard({ requireAuth = false }) {
   // Format exact pour le tooltip
   const formatCurrencyExact = (amount) => {
     return new Intl.NumberFormat('fr-FR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3
     }).format(amount) + ' F CFA';
   };
 

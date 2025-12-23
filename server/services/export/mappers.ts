@@ -19,8 +19,8 @@ function fmtAmount(value: any): string | undefined {
   if (!isNaN(n)) {
     try {
       return new Intl.NumberFormat('fr-FR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
+        minimumFractionDigits: 3,
+        maximumFractionDigits: 3
       }).format(n);
     } catch { }
   }

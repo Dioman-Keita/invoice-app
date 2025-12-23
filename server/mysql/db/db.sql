@@ -133,7 +133,7 @@ CREATE TABLE invoice (
     invoice_date DATE,
     invoice_type ENUM('Ordinaire', 'Transporteur', 'Transitaire') DEFAULT 'Ordinaire',
     folio ENUM('1 copie', 'Orig + 1 copie', 'Orig + 2 copies', 'Orig + 3 copies') DEFAULT '1 copie',
-    amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    amount DECIMAL(18,3) NOT NULL DEFAULT 0,
     create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     status ENUM('Oui', 'Non') DEFAULT 'Non',

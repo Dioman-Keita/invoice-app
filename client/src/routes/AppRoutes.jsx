@@ -40,7 +40,7 @@ function AppRoutes() {
             {/* ROUTES PROTÉGÉES - Accès tous utilisateurs authentifiés */}
             {/* ==================== */}
             <Route path="/search" element={
-                <PrivateRoute requiredRoles={['admin', 'invoice_manager', 'dfc_agent']}>
+                <PrivateRoute requiredRoles={['admin']}>
                     <Search />
                 </PrivateRoute>
             } />
@@ -58,10 +58,10 @@ function AppRoutes() {
             {/* ==================== */}
             {/* ROUTES SPÉCIFIQUES - Permissions par rôle */}
             {/* ==================== */}
-            
+
             {/* Facturation - Admin + Gestionnaires */}
             <Route path="/facture" element={
-                <PrivateRoute 
+                <PrivateRoute
                     requiredRoles={['admin', 'invoice_manager']}
                     customMessage="Espace de facturation réservé aux administrateurs et gestionnaires"
                 >
@@ -71,7 +71,7 @@ function AppRoutes() {
 
             {/* Paramètres - Admin seulement */}
             <Route path="/settings" element={
-                <PrivateRoute 
+                <PrivateRoute
                     requiredRoles={['admin']}
                     customMessage="Panneau d'administration réservé aux administrateurs système"
                 >
@@ -88,7 +88,7 @@ function AppRoutes() {
 
             {/* Tableau de bord admin - Accès admin seulement */}
             <Route path="/dashboard" element={
-                <PrivateRoute 
+                <PrivateRoute
                     requiredRoles={['admin']}
                     customMessage="Tableau de bord réservé aux administrateurs"
                 >
@@ -98,7 +98,7 @@ function AppRoutes() {
 
             {/* Gestion des utilisateurs - Accès admin seulement */}
             <Route path="/users" element={
-                <PrivateRoute 
+                <PrivateRoute
                     requiredRoles={['admin']}
                     customMessage="Gestion des utilisateurs réservée aux administrateurs"
                 >
@@ -108,7 +108,7 @@ function AppRoutes() {
 
             {/* Statistiques avancées - Admin seulement */}
             <Route path="/admin-stats" element={
-                <PrivateRoute 
+                <PrivateRoute
                     requiredRoles={['admin']}
                     customMessage="Statistiques avancées réservées aux administrateurs"
                 >
@@ -118,7 +118,7 @@ function AppRoutes() {
 
             {/* Messagerie admin - Accès admin seulement */}
             <Route path="/admin-messaging" element={
-                <PrivateRoute 
+                <PrivateRoute
                     requiredRoles={['admin']}
                     customMessage="Messagerie réservée aux administrateurs"
                 >
@@ -128,7 +128,7 @@ function AppRoutes() {
 
             {/* Traitement DFC - Agents DFC + Admin */}
             <Route path="/dfc_traitment" element={
-                <PrivateRoute 
+                <PrivateRoute
                     requiredRoles={['dfc_agent', 'admin']}
                     customMessage="Zone de traitement DFC réservée aux agents et administrateurs"
                 >

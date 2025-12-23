@@ -594,8 +594,8 @@ function Search() {
       if (isNaN(num)) return 'Montant invalide';
 
       return new Intl.NumberFormat('fr-FR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
+        minimumFractionDigits: 3,
+        maximumFractionDigits: 3
       }).format(num) + ' FCFA';
     } catch {
       return 'Montant invalide';
@@ -1550,14 +1550,14 @@ function Search() {
                                     if (!val) return "";
                                     const parts = val.toString().replace(/[^\d.,]/g, "").split(/[.,]/);
                                     const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-                                    const decimalPart = parts.length > 1 ? parts[1].substring(0, 2) : null;
+                                    const decimalPart = parts.length > 1 ? parts[1].substring(0, 3) : null;
                                     return decimalPart !== null ? `${integerPart},${decimalPart}` : integerPart;
                                   })(editFormData.invoice_amount) : ""}
                                   onChange={(e) => {
                                     let val = e.target.value.replace(/[^\d.,]/g, "").replace(".", ",");
                                     const parts = val.split(",");
                                     if (parts.length > 2) val = parts[0] + "," + parts.slice(1).join("");
-                                    if (parts.length > 1) val = parts[0] + "," + parts[1].substring(0, 2);
+                                    if (parts.length > 1) val = parts[0] + "," + parts[1].substring(0, 3);
                                     handleEditFormChange({ target: { name: "invoice_amount", value: val.replace(",", ".") } });
                                   }}
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"

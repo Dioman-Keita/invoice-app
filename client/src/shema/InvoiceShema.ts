@@ -75,8 +75,8 @@ export const invoiceSchema = z.object({
     invoice_amount: z
         .string()
         .min(1, "Le montant est requis")
-        // Autorise les chiffres, un seul point ou virgule, et max 2 décimales
-        .regex(/^\d+([.,]\d{1,2})?$/, "Le montant est invalide (max 2 décimales)")
+        // Autorise les chiffres, un seul point ou virgule, et max 3 décimales
+        .regex(/^\d+([.,]\d{1,3})?$/, "Le montant est invalide (max 3 décimales)")
         .transform((val) => {
             // Normalisation : remplace la virgule par un point pour le parseFloat
             const normalized = val.replace(',', '.');

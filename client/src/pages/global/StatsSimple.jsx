@@ -110,14 +110,20 @@ function StatsSimple() {
         if (json.success) {
           const dates = Array.isArray(json.data) ? json.data.map(d => d.split('T')[0]) : [];
           setAvailableDates(dates);
+
           if (dates.length > 0) {
-            setSelectedDate(dates[0]);
+            const today = new Date().toISOString().split('T')[0];
+            // Si la date d'aujourd'hui est dispo, on la prend
+            if (dates.includes(today)) {
+              setSelectedDate(today);
+            } else {
+              // Sinon on prend la plus récente (la première car triée DESC par le backend probablement, sinon on trie)
+              const sorted = [...dates].sort((a, b) => b.localeCompare(a));
+              setSelectedDate(sorted[0]);
+            }
           } else {
-            const today = new Date();
-            const y = today.getFullYear();
-            const m = String(today.getMonth() + 1).padStart(2, '0');
-            const d = String(today.getDate()).padStart(2, '0');
-            setSelectedDate(`${y}-${m}-${d}`);
+            const today = new Date().toISOString().split('T')[0];
+            setSelectedDate(today);
           }
         }
       } catch (e) {
@@ -148,7 +154,7 @@ function StatsSimple() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `invoice-stats_${selectedDate}.pdf`;
+      a.download = `etat_${selectedDate}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -552,11 +558,18 @@ function StatsSimple() {
                           className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                         >
                           {availableDates.length > 0 ? (
-                            availableDates.map((d) => (
-                              <option key={d} value={d}>{d}</option>
-                            ))
+                            availableDates.map((d) => {
+                              const [year, month, day] = d.split('-');
+                              const displayDate = `${day}/${month}/${year}`;
+                              return <option key={d} value={d}>{displayDate}</option>
+                            })
                           ) : (
-                            <option value={selectedDate}>{selectedDate || "Aujourd'hui"}</option>
+                            <option value={selectedDate}>
+                              {(function () {
+                                const parts = (selectedDate || "").split('-');
+                                return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : "Aujourd'hui";
+                              })()}
+                            </option>
                           )}
                         </select>
                       </div>
@@ -564,7 +577,7 @@ function StatsSimple() {
                         <button
                           onClick={handleExport}
                           disabled={exporting || availableDates.length === 0}
-                          title={availableDates.length === 0 ? "Aucune donnée disponible pour l'export" : "Exporter les statistiques"}
+                          title={availableDates.length === 0 ? "Aucune donnée disponible pour l'export" : "Exporter la liste des facture enregistrer"}
                           className={`inline-flex items-center px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors ${(exporting || availableDates.length === 0) ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                         >
                           {exporting && (
@@ -573,7 +586,7 @@ function StatsSimple() {
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                             </svg>
                           )}
-                          Exporter l'état
+                          Exporter la liste des facture enregistrer
                         </button>
                       </div>
                     </div>

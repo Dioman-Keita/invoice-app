@@ -24,7 +24,7 @@ function ValidatedAmountInput({
         // Séparer la partie entière de la partie décimale
         const parts = value.toString().split(/[.,]/);
         const integerPart = parts[0].replace(/[^\d]/g, "");
-        const decimalPart = parts.length > 1 ? parts[1].substring(0, 2) : null;
+        const decimalPart = parts.length > 1 ? parts[1].substring(0, 3) : null;
 
         const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 
@@ -63,9 +63,9 @@ function ValidatedAmountInput({
             cleanValue = parts[0] + ',' + parts.slice(1).join('');
         }
 
-        // Limiter à 2 décimales
+        // Limiter à 3 décimales
         if (parts.length > 1) {
-            cleanValue = parts[0] + ',' + parts[1].substring(0, 2);
+            cleanValue = parts[0] + ',' + parts[1].substring(0, 3);
         }
 
         // Nettoyer les zéros inutiles au début

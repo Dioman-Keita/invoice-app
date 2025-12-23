@@ -110,8 +110,8 @@ function NavbarPanel({ isOpen, onClose }) {
   const availableActions = useMemo(() => {
     const userRole = user?.role;
 
-    // Définir les actions admin (y compris la messagerie)
-    const adminActions = ['dashboard', 'users', 'adminStats', 'adminMessaging'];
+    // Définir les actions admin
+    const adminActions = ['dashboard', 'users', 'adminStats', 'adminMessaging', 'search'];
 
     // Pour les non-connectés, montrer seulement les pages publiques
     if (!userRole) {

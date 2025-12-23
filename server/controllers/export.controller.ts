@@ -120,7 +120,7 @@ export async function exportData(req: AuthenticatedRequest, res: Response): Prom
         FROM invoice i 
         LEFT JOIN supplier s ON s.id = i.supplier_id 
         WHERE i.fiscal_year = ? AND i.created_by = ? AND DATE(i.create_at) = ? 
-        ORDER BY i.create_at DESC`,
+        ORDER BY CAST(i.num_cmdt AS UNSIGNED) ASC`,
         [fy, employeeId, selectedDate]
       );
 

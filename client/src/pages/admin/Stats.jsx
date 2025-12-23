@@ -138,8 +138,8 @@ function PrimaryMetricCard({ title, value, description, icon: Icon, color = 'blu
         <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
           <div
             className={`h-2 rounded-full transition-all duration-1000 ${color === 'blue' ? 'bg-blue-500' :
-                color === 'green' ? 'bg-green-500' :
-                  color === 'purple' ? 'bg-purple-500' : 'bg-orange-500'
+              color === 'green' ? 'bg-green-500' :
+                color === 'purple' ? 'bg-purple-500' : 'bg-orange-500'
               }`}
             style={{ width: '100%' }}
           ></div>
@@ -201,8 +201,8 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
                 key={index + 1}
                 onClick={() => onPageChange(index + 1)}
                 className={`relative inline-flex items-center px-4 py-2 text-sm font-medium border border-gray-300 ${currentPage === index + 1
-                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                    : 'bg-white text-gray-500 hover:bg-gray-50'
+                  ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                  : 'bg-white text-gray-500 hover:bg-gray-50'
                   }`}
               >
                 {index + 1}
@@ -261,7 +261,7 @@ function KpiLineChart({ data, title, selectedFiscalYear, loading = false }) {
             }
             if (context.parsed.y !== null) {
               const value = context.parsed.y;
-              return `${label}${value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+              return `${label}${value.toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}`;
             }
             return label;
           },
@@ -491,7 +491,7 @@ function ComparisonChart({ data, title, selectedFiscalYear, loading = false }) {
         usePointStyle: true,
         callbacks: {
           label: function (context) {
-            return `${context.label}: ${context.parsed.y.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            return `${context.label}: ${context.parsed.y.toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}`;
           }
         }
       },
@@ -1269,8 +1269,8 @@ function Stats() {
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 ${activeTab === tab.id
-                            ? 'bg-blue-50 border border-blue-200 text-blue-700 shadow-sm font-semibold'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium border border-gray-200'
+                          ? 'bg-blue-50 border border-blue-200 text-blue-700 shadow-sm font-semibold'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium border border-gray-200'
                           }`}
                         title={tab.tooltip}
                       >
