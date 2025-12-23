@@ -3,7 +3,11 @@
 **Enterprise-level Invoice Management System** designed for scalability and offline-first usage.  
 *Hybrid Architecture: Electron + Express + Docker.*
 
-![Niagnouma Corporation Logo](architechture/niagnouma_corporation.png)
+<!-- markdownlint-disable MD033 -->
+<p align="center">
+  <img src="architechture/niagnouma_corporation.png" alt="Niagnouma Corporation Banner" width="800">
+</p>
+<!-- markdownlint-enable MD033 -->
 
 ---
 
@@ -27,6 +31,9 @@
 **Invoice App** `v0.0.0` is a robust, offline-first desktop application that brings the power of a full-stack web server to the desktop. Use it to manage invoices, suppliers, and fiscal workflows with enterprise-grade security.
 
 **Unique Selling Point**: Unlike standard Electron apps, this project runs a **real Node.js/Express server** and a **Dockerized MySQL database** locally on the user's machine, packaged into a single `.exe`.
+
+> [!IMPORTANT]  
+> Ce projet dépend de **Docker Desktop** (pour la base de données) et de **LibreOffice** (pour la génération des PDF via Carbone.io). Ces deux composants doivent être installés et fonctionnels.
 
 ---
 
@@ -103,6 +110,7 @@ This project solves the "Client-Server on Desktop" challenge through a hybrid de
 ### Prerequisites
 
 * **Docker Desktop** (Must be running)
+* **LibreOffice** (Version 25.8 recommandée pour la génération PDF)
 * Node.js 18+
 
 ### Quick Start (Development)
