@@ -7,17 +7,17 @@ Electron invoice management application for CMDT (Compagnie Malienne pour le Dé
 **Architecture:** Monorepo with React client, Node.js/Express server, and Electron wrapper.
 
 **Key Technologies:**
-- **Frontend:** React 19, Vite, Tailwind CSS
-- **Backend:** Node.js, Express 5, TypeScript
-- **Desktop:** Electron 39
-- **Database:** MySQL 8.2 (Docker)
-- **Build:** Electron Builder
+-**Frontend:** React 19, Vite, Tailwind CSS
+-**Backend:** Node.js, Express 5, TypeScript
+-**Desktop:** Electron 39
+-**Database:** MySQL 8.2 (Docker)
+-**Build:** Electron Builder
 
 ---
 
 ## Root Structure
 
-```
+```plaintext
 invoice-app/
 ├── main.js                    # Electron Entry Point (1053 lines)
 ├── package.json               # Root config + Electron Builder
@@ -43,7 +43,7 @@ invoice-app/
 
 ## 📁 Client (React Frontend)
 
-```
+```plaintext
 client/
 ├── package.json              # React, Vite, Tailwind Dependencies
 ├── vite.config.js            # Vite Configuration
@@ -127,6 +127,7 @@ client/
 ```
 
 **Main Dependencies:**
+
 - React 19.1.1
 - React Router DOM 7.8.2
 - React Hook Form 7.62.0
@@ -140,7 +141,7 @@ client/
 
 ## 🖥️ Server (Express/TypeScript Backend)
 
-```
+```plaintext
 server/
 ├── package.json              # Express, MySQL, etc Dependencies
 ├── tsconfig.json             # TypeScript config
@@ -196,6 +197,7 @@ server/
 ```
 
 **Main Dependencies:**
+
 - Express 5.2.1
 - MySQL2 3.14.5
 - TypeScript
@@ -213,6 +215,7 @@ server/
 **Main File:** `main.js` (1053 lines)
 
 **Responsibilities:**
+
 - ✅ Single Instance Lock
 - ✅ Backend Start/Stop (Child Process fork)
 - ✅ Docker Management (docker compose up/down)
@@ -225,7 +228,7 @@ server/
 
 ## 🏗️ Architecture
 
-```
+```plaintext
 architechture/
 ├── invoice_flow.svg
 ├── login_flow.svg
@@ -236,7 +239,7 @@ architechture/
 
 ## 📦 Build & Distribution
 
-```
+```plaintext
 dist/                         # Compiled Builds
 ├── client/                   # Client Vite Build
 ├── common/                   # Common Build
@@ -244,6 +247,7 @@ dist/                         # Compiled Builds
 ```
 
 **Available Commands:**
+
 - `npm run dev` - Start client in dev mode
 - `npm run build` - Build client
 - `npm run dist` - Full build + Electron package
@@ -256,6 +260,7 @@ dist/                         # Compiled Builds
 **MySQL 8.2** via Docker Compose
 
 **Configuration:**
+
 - Port: 3306
 - Persistent Volume: `final-mysql-data`
 - Init Scripts: `server/mysql/db/db.sql`

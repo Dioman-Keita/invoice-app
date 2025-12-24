@@ -7,7 +7,7 @@
 
 ## 🎯 Table of Contents
 
-* [Overview](#-overview)
+* [📋 Overview](#-overview)
 * [🎥 Demo & Visuals](#-demo--visuals)
 * [🏗️ Architecture](#️-architecture)
 * [✨ Key Features](#-key-features)
@@ -42,9 +42,9 @@ See the application in action:
 
 To understand the core business logic, refer to our detailed flow diagrams:
 
-| Login Flow | Register Flow | Invoice Lifecycle |
-|:---:|:---:|:---:|
-| [![Login](architechture/flows/login_flow.svg)](architechture/flows/login_flow.svg) | [![Register](architechture/flows/register_flow.svg)](architechture/flows/register_flow.svg) | [![Invoice](architechture/flows/invoice_flow.svg)](architechture/flows/invoice_flow.svg) |
+| Login Flow                                                                                   | Register Flow                                                                                      | Invoice Lifecycle                                                                                  |
+|:--------------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------:|
+| [![Login](architechture/flows/login_flow.svg)](architechture/flows/login_flow.svg)           | [![Register](architechture/flows/register_flow.svg)](architechture/flows/register_flow.svg)        | [![Invoice](architechture/flows/invoice_flow.svg)](architechture/flows/invoice_flow.svg)           |
 
 ---
 
@@ -90,12 +90,12 @@ This project solves the "Client-Server on Desktop" challenge through a hybrid de
 
 **Dual-Stack Monorepo:**
 
-| Frontend (Client) | Backend (Server) | Infrastructure |
-| ----------------- | ---------------- | -------------- |
+| Frontend (Client) | Backend (Server) | Infrastructure            |
+| ----------------- | ---------------- | ------------------------- |
 | **React 18**      | **Node.js**      | **Electron 39** (Wrapper) |
-| Vite              | Express 5        | **Docker** (Database) |
-| Tailwind CSS      | TypeScript       | MySQL 8.2 |
-| HashRouter        | Carbone.io (PDF) | Electron Builder |
+| Vite              | Express 5        | **Docker** (Database)     |
+| Tailwind CSS      | TypeScript       | MySQL 8.2                 |
+| HashRouter        | Carbone.io (PDF) | Electron Builder          |
 
 ---
 
