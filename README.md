@@ -1,9 +1,3 @@
-<!-- markdownlint-disable MD041 MD033 -->
-<p align="center">
-  <img src="architechture/niagnouma_corporation.png" alt="Niagnouma Corporation Banner" height="150">
-</p>
-<!-- markdownlint-enable MD033 -->
-
 # Invoice Management System (CMDT) 🚀
 
 **Enterprise-level Invoice Management System** designed for scalability and offline-first usage.  
@@ -33,7 +27,7 @@
 **Unique Selling Point**: Unlike standard Electron apps, this project runs a **real Node.js/Express server** and a **Dockerized MySQL database** locally on the user's machine, packaged into a single `.exe`.
 
 > [!IMPORTANT]  
-> Ce projet dépend de **Docker Desktop** (pour la base de données) et de **LibreOffice** (pour la génération des PDF via Carbone.io). Ces deux composants doivent être installés et fonctionnels.
+> This project depends on **Docker Desktop** (for the database) and **LibreOffice** (for PDF generation via Carbone.io). Both components must be installed and functional.
 
 ---
 
@@ -110,7 +104,7 @@ This project solves the "Client-Server on Desktop" challenge through a hybrid de
 ### Prerequisites
 
 * **Docker Desktop** (Must be running)
-* **LibreOffice** (Version 25.8 recommandée pour la génération PDF)
+* **LibreOffice** (Version 25.8 recommended for PDF generation)
 * Node.js 18+
 
 ### Quick Start (Development)

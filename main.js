@@ -29,6 +29,7 @@ let mainWindow = null;
 let backendProcess = null;
 let deepLinkUrl = null;
 let isAppReady = false; // <-- NOUVEAU : On track si React est prêt
+let isQuitting = false; // <-- NOUVEAU : On track si on a confirmé le quit
 
 const BACKEND_PORT = 3000;
 const BACKEND_URL = `http://127.0.0.1:${BACKEND_PORT}`;
@@ -289,8 +290,29 @@ function createMainWindow() {
 
     // 6. Intersection de la fermeture pour confirmation
     mainWindow.on('close', (e) => {
-        if (mainWindow) {
-            e.preventDefault();
+        if (isQuitting) return; // Autoriser la fermeture si on a déjà confirmé
+
+        e.preventDefault();
+
+        if (!isAppReady) {
+            // FALLBACK : Si React n'est pas encore prêt (Splash Screen / Backend loading)
+            // On montre une boîte de dialogue native bloquante.
+            const choice = dialog.showMessageBoxSync(mainWindow, {
+                type: 'warning',
+                buttons: ['Annuler', 'Quitter'],
+                defaultId: 1,
+                cancelId: 0,
+                title: 'Quitter l\'application',
+                message: 'Voulez-vous vraiment quitter Invoice App ?',
+                detail: 'Le chargement est en cours. Toute opération sera interrompue.'
+            });
+
+            if (choice === 1) {
+                isQuitting = true;
+                app.quit();
+            }
+        } else {
+            // CAS NOMINAL : React est prêt, on utilise le modal stylisé.
             mainWindow.webContents.send('request-close');
         }
     });
@@ -300,7 +322,7 @@ function createMainWindow() {
 
 // IPC to finally quit
 ipcMain.on('confirm-quit', () => {
-    mainWindow = null; // Important to avoid recursive close calls
+    isQuitting = true; // On autorise maintenant la fermeture effective
     app.quit();
 });
 
