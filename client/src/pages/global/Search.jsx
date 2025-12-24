@@ -1622,10 +1622,10 @@ function Search() {
                                   ))}
                                 </select>
                               </div>
-                              <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-4">
                                 <div>
                                   <label className="block text-sm font-medium text-gray-500 mb-1">Compte (Auto)</label>
-                                  <p className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-600 font-mono text-sm h-10 flex items-center">
+                                  <p className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-600 font-mono text-sm min-h-10 flex items-center break-all">
                                     {editFormData.supplier_account_number || '---'}
                                   </p>
                                 </div>
@@ -1797,17 +1797,19 @@ function Search() {
                           <div className="p-4 bg-gray-50 rounded-lg">
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">Fournisseur</h3>
                             <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">Nom:</span>
-                                <span className="font-medium">{selectedInvoice.supplier_name}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">Compte:</span>
-                                <span className="font-medium font-mono">{selectedInvoice.supplier_account_number}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">Téléphone:</span>
-                                <span className="font-medium">{selectedInvoice.supplier_phone}</span>
+                              <div className="space-y-2">
+                                <div className="flex flex-col">
+                                  <span className="text-sm text-gray-500">Nom:</span>
+                                  <span className="font-medium text-gray-900">{selectedInvoice.supplier_name}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-sm text-gray-500">Compte:</span>
+                                  <span className="font-medium font-mono text-gray-900 break-all">{selectedInvoice.supplier_account_number}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-sm text-gray-500">Téléphone:</span>
+                                  <span className="font-medium text-gray-900">{selectedInvoice.supplier_phone}</span>
+                                </div>
                               </div>
                             </div>
                           </div>

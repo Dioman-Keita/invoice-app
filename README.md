@@ -1,13 +1,13 @@
+<!-- markdownlint-disable MD041 MD033 -->
+<p align="center">
+  <img src="architechture/niagnouma_corporation.png" alt="Niagnouma Corporation Banner" height="150">
+</p>
+<!-- markdownlint-enable MD033 -->
+
 # Invoice Management System (CMDT) 🚀
 
 **Enterprise-level Invoice Management System** designed for scalability and offline-first usage.  
 *Hybrid Architecture: Electron + Express + Docker.*
-
-<!-- markdownlint-disable MD033 -->
-<p align="center">
-  <img src="architechture/niagnouma_corporation.png" alt="Niagnouma Corporation Banner" width="800">
-</p>
-<!-- markdownlint-enable MD033 -->
 
 ---
 
