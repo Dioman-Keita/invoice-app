@@ -30,10 +30,12 @@ import {
 import Header from '../../components/global/Header.jsx';
 import useInvoice from '../../hooks/features/useInvoice.js';
 import useToastFeedback from '../../hooks/ui/useToastFeedBack.js';
+import { useAuth } from '../../hooks/auth/useAuth.js';
 
 function Search() {
   useTitle('CMDT - Recherche avancée');
   useBackground('bg-search');
+  const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState('invoices');
 
@@ -90,6 +92,8 @@ function Search() {
   const [isEditingInvoice, setIsEditingInvoice] = useState(false);
   const [editFormData, setEditFormData] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditingSupplier, setIsEditingSupplier] = useState(false);
+  const [supplierEditForm, setSupplierEditForm] = useState(null);
   const [suppliers, setSuppliers] = useState([]);
 
   const { updateInvoice } = useInvoice();
@@ -396,6 +400,8 @@ function Search() {
     setSelectedGroupedResult(null);
     setIsEditingInvoice(false);
     setEditFormData(null);
+    setIsEditingSupplier(false);
+    setSupplierEditForm(null);
   };
 
   const handleStartEditInvoice = (invoice, e) => {
@@ -478,6 +484,44 @@ function Search() {
       }
     } catch (err) {
       console.error('Erreur sauvegarde:', err);
+      toastError('Erreur lors de la sauvegarde');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleStartEditSupplier = (supplier, e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    setSupplierEditForm({
+      name: supplier.name || '',
+      account_number: supplier.account_number || '',
+      phone: supplier.phone || ''
+    });
+    setSelectedSupplier(supplier);
+    setIsEditingSupplier(true);
+    setShowSupplierOverview(true);
+  };
+
+  const handleUpdateSupplier = async () => {
+    if (!supplierEditForm || !selectedSupplier) return;
+
+    setIsSaving(true);
+    try {
+      const response = await api.put(`/supplier/${selectedSupplier.id}`, supplierEditForm);
+      if (response.success) {
+        toastSuccess(response.message || 'Fournisseur mis à jour');
+        setIsEditingSupplier(false);
+        setSupplierEditForm(null);
+        // Rafraîchir les résultats
+        handleSearch(currentPage, currentLimit);
+      } else {
+        toastError(response.message || 'Erreur lors de la mise à jour');
+      }
+    } catch (err) {
+      console.error('Erreur mise à jour fournisseur:', err);
       toastError('Erreur lors de la sauvegarde');
     } finally {
       setIsSaving(false);
@@ -1939,33 +1983,78 @@ function Search() {
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-gray-900 flex items-center">
                       <BuildingIcon className="w-6 h-6 mr-2 text-blue-600" />
-                      Détails du fournisseur
+                      {isEditingSupplier ? 'Modifier le fournisseur' : 'Détails du fournisseur'}
                     </h2>
-                    <button onClick={handleCloseOverview} className="text-gray-400 hover:text-gray-600 transition-colors">
-                      <XMarkIcon className="w-6 h-6" />
-                    </button>
+                    <div className="flex items-center space-x-2">
+                      {!isEditingSupplier && (user?.role === 'admin' || user?.role === 'invoice_manager') && (
+                        <button
+                          onClick={(e) => handleStartEditSupplier(selectedSupplier, e)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                          title="Modifier"
+                        >
+                          <PencilSquareIcon className="w-5 h-5" />
+                        </button>
+                      )}
+                      <button onClick={handleCloseOverview} className="text-gray-400 hover:text-gray-600 transition-colors">
+                        <XMarkIcon className="w-6 h-6" />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-6">
                     <div className="p-4 bg-gray-50 rounded-lg">
                       <h3 className="text-lg font-semibold text-gray-900 mb-3">Informations générales</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600 mb-1">Nom</label>
-                          <p className="text-gray-900 font-medium">{selectedSupplier.name}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600 mb-1">Numéro de compte</label>
-                          <p className="text-gray-900 font-medium font-mono">{selectedSupplier.account_number}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600 mb-1">Téléphone</label>
-                          <p className="text-gray-900 font-medium">{selectedSupplier.phone}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600 mb-1">Année fiscale</label>
-                          <p className="text-gray-900 font-medium">{selectedSupplier.fiscal_year}</p>
-                        </div>
+                        {isEditingSupplier ? (
+                          <>
+                            <div className="col-span-2">
+                              <label className="block text-sm font-medium text-gray-600 mb-1">Nom</label>
+                              <input
+                                type="text"
+                                value={supplierEditForm.name}
+                                onChange={(e) => setSupplierEditForm(prev => ({ ...prev, name: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-600 mb-1">Numéro de compte</label>
+                              <input
+                                type="text"
+                                value={supplierEditForm.account_number}
+                                onChange={(e) => setSupplierEditForm(prev => ({ ...prev, account_number: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-600 mb-1">Téléphone</label>
+                              <input
+                                type="text"
+                                value={supplierEditForm.phone}
+                                onChange={(e) => setSupplierEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="col-span-2 md:col-span-1">
+                              <label className="block text-sm font-medium text-gray-600 mb-1">Nom</label>
+                              <p className="text-gray-900 font-medium">{selectedSupplier.name}</p>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-600 mb-1">Numéro de compte</label>
+                              <p className="text-gray-900 font-medium font-mono break-all">{selectedSupplier.account_number}</p>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-600 mb-1">Téléphone</label>
+                              <p className="text-gray-900 font-medium">{selectedSupplier.phone}</p>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-600 mb-1">Année fiscale</label>
+                              <p className="text-gray-900 font-medium">{selectedSupplier.fiscal_year}</p>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -1993,49 +2082,78 @@ function Search() {
                   </div>
 
                   <div className="mt-6 flex justify-end space-x-3">
-                    <button
-                      onClick={() => handleExport('pdf', selectedSupplier)}
-                      disabled={isExportingPdf || isExportingExcel}
-                      className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isExportingPdf ? (
-                        <>
-                          <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Export...
-                        </>
-                      ) : (
-                        <>
-                          <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                          PDF
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => handleExport('xlsx', selectedSupplier)}
-                      disabled={isExportingPdf || isExportingExcel}
-                      className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isExportingExcel ? (
-                        <>
-                          <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Export...
-                        </>
-                      ) : (
-                        <>
-                          <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-                          Excel
-                        </>
-                      )}
-                    </button>
-                    <button onClick={handleCloseOverview} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-                      Fermer
-                    </button>
+                    {isEditingSupplier ? (
+                      <>
+                        <button
+                          onClick={handleUpdateSupplier}
+                          disabled={isSaving}
+                          className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        >
+                          {isSaving ? (
+                            <>
+                              <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Enregistrement...
+                            </>
+                          ) : 'Enregistrer'}
+                        </button>
+                        <button
+                          onClick={() => setIsEditingSupplier(false)}
+                          disabled={isSaving}
+                          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                        >
+                          Annuler
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleExport('pdf', selectedSupplier)}
+                          disabled={isExportingPdf || isExportingExcel}
+                          className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isExportingPdf ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Export...
+                            </>
+                          ) : (
+                            <>
+                              <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                              PDF
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleExport('xlsx', selectedSupplier)}
+                          disabled={isExportingPdf || isExportingExcel}
+                          className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isExportingExcel ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Export...
+                            </>
+                          ) : (
+                            <>
+                              <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                              Excel
+                            </>
+                          )}
+                        </button>
+                        <button onClick={handleCloseOverview} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                          Fermer
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

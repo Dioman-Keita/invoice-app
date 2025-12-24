@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import ApiResponder from "../utils/ApiResponder";
-import { SupplierRecord, CreateSupplierInput } from "../types";
+import { SupplierRecord, CreateSupplierInput, UpdateSupplierData } from "../types";
 import supplier from '../models/Supplier';
 import { normalizeAccountNumber, isValidAccountNumber, formatAccountCanonical } from "../../common/helpers/formatAccountNumber";
 import logger from '../utils/Logger';
@@ -32,7 +32,7 @@ export async function createSupplier(
             return ApiResponder.badRequest(res, 'Le format du numero de compte est invalide (6-34)')
         }
         const normalizeAccount = formatAccountCanonical(supplier_account_number);
-        const isSupplierExist: SupplierRecord[] = await supplier.findSupplier(normalizeAccount, {findBy: 'account_number'});
+        const isSupplierExist: SupplierRecord[] = await supplier.findSupplier(normalizeAccount, { findBy: 'account_number' });
         if (isSupplierExist && isSupplierExist.length > 0) return ApiResponder.badRequest(res, 'Ce fournisseur existe déjà');
 
         const result = await supplier.create({
@@ -45,8 +45,8 @@ export async function createSupplier(
         } as CreateSupplierInput);
         return ApiResponder.created(res, result, 'Fournisseur créé');
     } catch (err) {
-        logger.error(`[${requestId}] Erreur lors de la création du fournisseur`, { 
-            error: err instanceof Error ? err.message : 'Erreur inconnue' 
+        logger.error(`[${requestId}] Erreur lors de la création du fournisseur`, {
+            error: err instanceof Error ? err.message : 'Erreur inconnue'
         });
         return ApiResponder.error(res, err);
     }
@@ -54,7 +54,7 @@ export async function createSupplier(
 
 export async function getSupplierId(
     supplierData: CreateSupplierInput
-): Promise<{success: boolean, supplierId?: number, message?: string}> {
+): Promise<{ success: boolean, supplierId?: number, message?: string }> {
     try {
 
         const { supplier_account_number, supplier_phone, supplier_name } = supplierData;
@@ -64,7 +64,7 @@ export async function getSupplierId(
             supplier_phone,
             supplier_name
         );
-        
+
         if (exactSupplier && exactSupplier.length > 0) {
             logger.debug('Fournisseur exact trouvé', {
                 supplierId: exactSupplier[0].id,
@@ -101,7 +101,7 @@ export async function getSupplierId(
                 }
             });
         }
-        
+
         if (conflicts.hasAccountConflict && conflicts.hasPhoneConflict) {
             return {
                 success: false,
@@ -113,7 +113,7 @@ export async function getSupplierId(
                 success: false,
                 message: `Le numéro de compte existe déjà pour le fournisseur "${existing?.name}"`
             }
-        } else if (conflicts.hasPhoneConflict){
+        } else if (conflicts.hasPhoneConflict) {
             const existing = conflicts.conflictingSuppliers.find(s => s.phone === supplier_phone);
             return {
                 success: false,
@@ -150,7 +150,7 @@ export async function getSupplierId(
 
             return {
                 success: true,
-                supplierId: result.id                
+                supplierId: result.id
             }
         }
 
@@ -163,7 +163,7 @@ export async function getSupplierId(
                 phone: supplierData.supplier_phone
             }
         });
-        return { 
+        return {
             success: false,
             message: 'Erreur interne lors de la gestion du fournisseur'
         };
@@ -182,8 +182,8 @@ export async function getSupplier(
         }
         return ApiResponder.success(res, rows[0]);
     } catch (err) {
-        logger.error('Erreur lors de la récupération du fournisseur', { 
-            error: err instanceof Error ? err.message : 'Erreur inconnue' 
+        logger.error('Erreur lors de la récupération du fournisseur', {
+            error: err instanceof Error ? err.message : 'Erreur inconnue'
         });
         return ApiResponder.error(res, err);
     }
@@ -197,8 +197,8 @@ export async function listSuppliers(
         const rows = await supplier.getAllSupplier();
         return ApiResponder.success(res, rows);
     } catch (err) {
-        logger.error('Erreur lors de la récupération de la liste des fournisseurs', { 
-            error: err instanceof Error ? err.message : 'Erreur inconnue' 
+        logger.error('Erreur lors de la récupération de la liste des fournisseurs', {
+            error: err instanceof Error ? err.message : 'Erreur inconnue'
         });
         return ApiResponder.error(res, err);
     }
@@ -218,8 +218,8 @@ export async function findSupplierByPhone(
             ? ApiResponder.success(res, rows[0])
             : ApiResponder.notFound(res, 'Fournisseur introuvable');
     } catch (err) {
-        logger.error('Erreur lors de la recherche du fournisseur par téléphone', { 
-            error: err instanceof Error ? err.message : 'Erreur inconnue' 
+        logger.error('Erreur lors de la recherche du fournisseur par téléphone', {
+            error: err instanceof Error ? err.message : 'Erreur inconnue'
         });
         return ApiResponder.error(res, err);
     }
@@ -266,7 +266,7 @@ export async function searchSuppliers(
 
         let suppliers: SupplierRecord[] = [];
 
-        switch(field) {
+        switch (field) {
             case 'name':
                 suppliers = await supplier.searchSuppliersByName(decodeURIComponent(value));
                 break;
@@ -287,7 +287,7 @@ export async function searchSuppliers(
         }
 
         if (suppliers.length === 0) {
-            return  ApiResponder.success(res, [], 'Aucun fournisseur trouvé');
+            return ApiResponder.success(res, [], 'Aucun fournisseur trouvé');
         }
 
         const suggestions = suppliers.map(supplier => ({
@@ -386,7 +386,7 @@ export async function findSupplierConflicts(
         logger.info(`[${requestId}] Début de la vérification du fournisseur`);
 
         const { account_number, phone } = req.query;
-        
+
         if ((!account_number || account_number.trim() === '') && (!phone || phone.trim() === '')) {
             logger.warn(`[${requestId}] Paramètre manquant lors de l'appel à findSupplierConflicts`, {
                 account_number: !!account_number,
@@ -399,16 +399,16 @@ export async function findSupplierConflicts(
             decodeURIComponent(account_number as string) || '',
             decodeURIComponent(phone as string) || ''
         );
-        
+
         // Si on a deux types de conflits simultanément
         if (supplierConflictsResult.hasAccountConflict && supplierConflictsResult.hasPhoneConflict) {
             const accountSupplier = supplierConflictsResult.conflictingSuppliers.find(s => s.account_number === account_number);
             const phoneSupplier = supplierConflictsResult.conflictingSuppliers.find(s => s.phone === decodeURIComponent(phone as string));
-            
+
             // Si c'est le même fournisseur, on utilise un message global
             if (accountSupplier && phoneSupplier && accountSupplier.id === phoneSupplier.id) {
-                return ApiResponder.badRequest(res, 
-                    `Un fournisseur existe déjà avec ce numéro de compte et ce numéro de téléphone : "${accountSupplier.name}"`, 
+                return ApiResponder.badRequest(res,
+                    `Un fournisseur existe déjà avec ce numéro de compte et ce numéro de téléphone : "${accountSupplier.name}"`,
                     {
                         conflictType: 'both',
                         existingSupplier: accountSupplier,
@@ -417,8 +417,8 @@ export async function findSupplierConflicts(
                 );
             } else {
                 // Deux fournisseurs différents
-                return ApiResponder.badRequest(res, 
-                    'Conflits détectés : le numéro de compte et le numéro de téléphone sont déjà utilisés par des fournisseurs différents', 
+                return ApiResponder.badRequest(res,
+                    'Conflits détectés : le numéro de compte et le numéro de téléphone sont déjà utilisés par des fournisseurs différents',
                     {
                         conflictType: 'both',
                         accountConflict: accountSupplier,
@@ -428,19 +428,19 @@ export async function findSupplierConflicts(
                 );
             }
         }
-        
+
         // Un seul type de conflit
         if (supplierConflictsResult.hasAccountConflict || supplierConflictsResult.hasPhoneConflict) {
             let existingSupplier = null;
             let conflictType = '';
             let message = '';
-            
+
             if (supplierConflictsResult.hasAccountConflict) {
                 conflictType = 'account_number';
                 existingSupplier = supplierConflictsResult.conflictingSuppliers.find(s => s.account_number === account_number);
                 message = `Ce numéro de compte est déjà utilisé par le fournisseur "${existingSupplier?.name}"`;
             }
-            
+
             if (supplierConflictsResult.hasPhoneConflict) {
                 conflictType = 'phone';
                 existingSupplier = supplierConflictsResult.conflictingSuppliers.find(s => s.phone === decodeURIComponent(phone as string));
@@ -452,8 +452,8 @@ export async function findSupplierConflicts(
                 existingSupplier: existingSupplier,
                 conflictingSuppliers: supplierConflictsResult.conflictingSuppliers
             });
-        } 
-        
+        }
+
         logger.info(`[${requestId}] Fournisseur vérifié et aucun conflit détecté`);
         return ApiResponder.success(res, null, 'Aucun conflit détecté');
     } catch (error) {
@@ -463,5 +463,77 @@ export async function findSupplierConflicts(
         });
 
         return ApiResponder.badRequest(res, "Une erreur interne est survenue lors de la vérification des conflits fournisseurs");
+    }
+}
+
+export async function updateSupplier(
+    req: Request<{ id: string }, unknown, { name: string; account_number: string; phone: string }>,
+    res: Response
+): Promise<Response> {
+    const requestId = req.headers['x-request-id'] || 'unknown';
+    const { id } = req.params;
+    const { name, account_number, phone } = req.body;
+
+    try {
+        if (!name || name.trim() === '') {
+            return ApiResponder.badRequest(res, 'Le nom du fournisseur est requis');
+        }
+        if (!account_number || account_number.trim() === '') {
+            return ApiResponder.badRequest(res, 'Le numéro de compte est requis');
+        }
+
+        if (!isValidAccountNumber(normalizeAccountNumber(account_number))) {
+            return ApiResponder.badRequest(res, 'Le format du numéro de compte est invalide (6-34 chiffres)');
+        }
+
+        // Vérifier si le fournisseur existe
+        const existingResult = await supplier.findSupplier(Number(id));
+        if (!existingResult || existingResult.length === 0) {
+            return ApiResponder.notFound(res, 'Fournisseur introuvable');
+        }
+
+        const normalizedAccount = formatAccountCanonical(account_number);
+
+        // Optionnel: Vérifier les conflits si le compte ou le téléphone a changé
+        if (normalizedAccount !== existingResult[0].account_number || phone !== existingResult[0].phone) {
+            const conflicts = await supplier.findSupplierConflicts(
+                normalizedAccount !== existingResult[0].account_number ? normalizedAccount : '',
+                phone !== existingResult[0].phone ? phone : ''
+            );
+
+            // On exclut le fournisseur actuel des conflits
+            const realConflicts = conflicts.conflictingSuppliers.filter(s => s.id !== Number(id));
+
+            if (realConflicts.length > 0) {
+                const conflict = realConflicts[0];
+                if (conflict.account_number === normalizedAccount) {
+                    return ApiResponder.badRequest(res, `Le numéro de compte existe déjà pour le fournisseur "${conflict.name}"`);
+                }
+                if (conflict.phone === phone) {
+                    return ApiResponder.badRequest(res, `Le numéro de téléphone existe déjà pour le fournisseur "${conflict.name}"`);
+                }
+            }
+        }
+
+        const updateData: UpdateSupplierData = {
+            ...existingResult[0],
+            name,
+            account_number: normalizedAccount,
+            phone: phone || ''
+        };
+
+        const result = await supplier.updateSupplier(updateData);
+        if (result.success) {
+            logger.info(`[${requestId}] Fournisseur ${id} mis à jour par le système`);
+            return ApiResponder.success(res, null, 'Fournisseur mis à jour avec succès');
+        } else {
+            return ApiResponder.error(res, 'Échec de la mise à jour du fournisseur');
+        }
+
+    } catch (err) {
+        logger.error(`[${requestId}] Erreur lors de la mise à jour du fournisseur ${id}`, {
+            error: err instanceof Error ? err.message : 'Erreur inconnue'
+        });
+        return ApiResponder.error(res, err);
     }
 }
