@@ -4,6 +4,7 @@ import useBackground from '../../hooks/ui/useBackground.js';
 import Footer from '../../components/global/Footer.jsx';
 import Navbar from '../../components/navbar/Navbar.jsx';
 import api from '../../services/api';
+import { formatAmountSmart } from '../../utils/formatAmount.js';
 
 // Import de Chart.js
 import {
@@ -261,7 +262,7 @@ function KpiLineChart({ data, title, selectedFiscalYear, loading = false }) {
             }
             if (context.parsed.y !== null) {
               const value = context.parsed.y;
-              return `${label}${value.toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}`;
+              return `${label}${formatAmountSmart(value)}`;
             }
             return label;
           },
@@ -491,7 +492,7 @@ function ComparisonChart({ data, title, selectedFiscalYear, loading = false }) {
         usePointStyle: true,
         callbacks: {
           label: function (context) {
-            return `${context.label}: ${context.parsed.y.toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}`;
+            return `${context.label}: ${formatAmountSmart(context.parsed.y)}`;
           }
         }
       },

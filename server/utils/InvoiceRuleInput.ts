@@ -139,12 +139,16 @@ class InvoiceDataValidator {
 
     // Validation du montant
     if (data.invoice_amount) {
-      const amount = Number(data.invoice_amount);
+      const sanitizedAmount = String(data.invoice_amount).replace(/\s/g, '').replace(/\.(?=\d{3}(?:,|$))/g, '').replace(',', '.');
+      const amount = Number(sanitizedAmount);
       if (isNaN(amount) || amount <= 0 || amount > 100_000_000_000) {
         errors.push({
           field: 'invoice_amount',
           message: 'Le montant doit être compris entre 1 et 100 000 000 000'
         });
+      } else {
+        // Mettre à jour avec la version nettoyée pour la suite du traitement
+        data.invoice_amount = sanitizedAmount;
       }
     }
   }

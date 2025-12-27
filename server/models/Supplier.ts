@@ -4,21 +4,21 @@ import { auditLog } from "../utils/auditLogger";
 import { normalizeAccountNumber, isValidAccountNumber, formatAccountCanonical } from "../../common/helpers/formatAccountNumber";
 import { getSetting } from "../helpers/settings";
 import { SupplierRecord, CreateSupplierInput, UpdateSupplierData, SupplierConflictResult, SupplierSearchParams } from "../types";
-import {  ResultSetHeader } from 'mysql2';
+import { ResultSetHeader } from 'mysql2';
 
 
 export interface SupplierModel {
-    create(supplierData: CreateSupplierInput): Promise<{success: boolean; data?: unknown; id?: number}>;
+    create(supplierData: CreateSupplierInput): Promise<{ success: boolean; data?: unknown; id?: number }>;
     findSupplier(id: number | string, config: SupplierSearchParams): Promise<SupplierRecord[]>;
     findExactSupplier(
-        accountNumber: string, 
-        phone: string, 
+        accountNumber: string,
+        phone: string,
         name: string
     ): Promise<SupplierRecord[]>;
     findSupplierConflicts(accountNumber: string, phone: string): Promise<SupplierConflictResult>;
-    deleteSupplier(id: number): Promise<{success: boolean}>;
-    updateSupplier(data: UpdateSupplierData): Promise<{success: boolean}>;
-    searchSuppliersByName(name: string, limit: number): Promise<SupplierRecord[]>; 
+    deleteSupplier(id: number): Promise<{ success: boolean }>;
+    updateSupplier(data: UpdateSupplierData): Promise<{ success: boolean }>;
+    searchSuppliersByName(name: string, limit: number): Promise<SupplierRecord[]>;
     findSupplierByAnyField(filters: {
         name?: string;
         account_number?: string;
@@ -28,14 +28,14 @@ export interface SupplierModel {
 
 class Supplier implements SupplierModel {
 
-    async create(supplierData: CreateSupplierInput): Promise<{success: boolean; data?: unknown; id?: number}> {
+    async create(supplierData: CreateSupplierInput): Promise<{ success: boolean; data?: unknown; id?: number }> {
 
         try {
             const { supplier_name, supplier_account_number, supplier_phone, created_by, created_by_role, created_by_email } = supplierData;
-            
+
             // Validation du numéro de compte
             if (!isValidAccountNumber(normalizeAccountNumber(supplier_account_number))) {
-                throw new Error('Le numéro de compte doit contenir exactement 12 chiffres');
+                throw new Error('Le numéro de compte est invalide (6–34 caractères alphanumériques)');
             }
 
             const fiscalYear = await getSetting('fiscal_year');
@@ -52,7 +52,7 @@ class Supplier implements SupplierModel {
             if (!generatedId || generatedId === 0) {
                 throw new Error('Aucun ID généré lors de la création du fournisseur');
             }
-            
+
             await auditLog({
                 table_name: 'supplier',
                 action: 'INSERT',
@@ -74,7 +74,7 @@ class Supplier implements SupplierModel {
             };
 
         } catch (error) {
-            logger.error('Erreur lors de la création du fournisseur', { 
+            logger.error('Erreur lors de la création du fournisseur', {
                 errorMessage: error instanceof Error ? error.message : 'Erreur inconnue',
                 stack: error instanceof Error ? error.stack : 'unknown stack',
                 supplierData: {
@@ -82,7 +82,7 @@ class Supplier implements SupplierModel {
                     accountNumber: supplierData.supplier_account_number
                 }
             });
-            
+
             return {
                 success: false,
                 data: error
@@ -144,7 +144,7 @@ class Supplier implements SupplierModel {
                     table_name: 'supplier',
                     action: 'SELECT',
                     record_id: config.findBy === 'all' ? 'all' : id.toString(),
-                    performed_by: 'system',
+                    performed_by: null,
                     description: `Recherche de fournisseur par ${config.findBy}`
                 });
             }
@@ -163,8 +163,8 @@ class Supplier implements SupplierModel {
     }
 
     async findExactSupplier(
-        accountNumber: string, 
-        phone: string, 
+        accountNumber: string,
+        phone: string,
         name: string
     ): Promise<SupplierRecord[]> {
 
@@ -190,76 +190,76 @@ class Supplier implements SupplierModel {
         }
     }
 
-async findSupplierConflicts(accountNumber: string, phone: string): Promise<{
-    hasAccountConflict: boolean;
-    hasPhoneConflict: boolean;
-    conflictingSuppliers: SupplierRecord[];
-}> {
-    try {
-        // Construire la query dynamiquement selon les paramètres fournis
-        let query = 'SELECT * FROM supplier WHERE ';
-        const params = [];
-        const conditions = [];
+    async findSupplierConflicts(accountNumber: string, phone: string): Promise<{
+        hasAccountConflict: boolean;
+        hasPhoneConflict: boolean;
+        conflictingSuppliers: SupplierRecord[];
+    }> {
+        try {
+            // Construire la query dynamiquement selon les paramètres fournis
+            let query = 'SELECT * FROM supplier WHERE ';
+            const params = [];
+            const conditions = [];
 
-        // Ajouter seulement les conditions pour les paramètres non vides
-        if (accountNumber && accountNumber !== '') {
-            conditions.push('account_number = ?');
-            params.push(accountNumber);
-        }
+            // Ajouter seulement les conditions pour les paramètres non vides
+            if (accountNumber && accountNumber !== '') {
+                conditions.push('account_number = ?');
+                params.push(accountNumber);
+            }
 
-        if (phone && phone !== '') {
-            conditions.push('phone = ?');
-            params.push(phone);
-        }
+            if (phone && phone !== '') {
+                conditions.push('phone = ?');
+                params.push(phone);
+            }
 
-        // Si aucun paramètre fourni, retourner aucun conflit
-        if (conditions.length === 0) {
+            // Si aucun paramètre fourni, retourner aucun conflit
+            if (conditions.length === 0) {
+                return {
+                    hasAccountConflict: false,
+                    hasPhoneConflict: false,
+                    conflictingSuppliers: []
+                };
+            }
+
+            // Joindre les conditions avec OR
+            query += conditions.join(' OR ');
+
+            const rows = await database.execute<SupplierRecord[] | SupplierRecord>(query, params);
+            const suppliers = Array.isArray(rows) ? rows : (rows ? [rows] : []);
+
+            // Vérifier les conflits seulement pour les paramètres fournis
+            const hasAccountConflict = accountNumber && accountNumber !== ''
+                ? suppliers.some(s => s.account_number === accountNumber)
+                : false;
+
+            const hasPhoneConflict = phone && phone !== ''
+                ? suppliers.some(s => s.phone === phone)
+                : false;
+
             return {
-                hasAccountConflict: false,
-                hasPhoneConflict: false,
-                conflictingSuppliers: []
+                hasAccountConflict,
+                hasPhoneConflict,
+                conflictingSuppliers: suppliers
             };
+
+        } catch (error) {
+            logger.error('Erreur lors de la recherche de conflits fournisseur', {
+                errorMessage: error instanceof Error ? error.message : 'unknown error',
+                accountNumber,
+                phone
+            });
+            throw error;
         }
-
-        // Joindre les conditions avec OR
-        query += conditions.join(' OR ');
-
-        const rows = await database.execute<SupplierRecord[] | SupplierRecord>(query, params);
-        const suppliers = Array.isArray(rows) ? rows : (rows ? [rows] : []);
-
-        // Vérifier les conflits seulement pour les paramètres fournis
-        const hasAccountConflict = accountNumber && accountNumber !== '' 
-            ? suppliers.some(s => s.account_number === accountNumber)
-            : false;
-            
-        const hasPhoneConflict = phone && phone !== ''
-            ? suppliers.some(s => s.phone === phone)
-            : false;
-
-        return {
-            hasAccountConflict,
-            hasPhoneConflict,
-            conflictingSuppliers: suppliers
-        };
-
-    } catch (error) {
-        logger.error('Erreur lors de la recherche de conflits fournisseur', {
-            errorMessage: error instanceof Error ? error.message : 'unknown error',
-            accountNumber,
-            phone
-        });
-        throw error;
     }
-}
-    async deleteSupplier(id: number): Promise<{success: boolean}> {
+    async deleteSupplier(id: number): Promise<{ success: boolean }> {
         try {
             // Vérifier d'abord si le fournisseur existe
-            const existingSupplier = await this.findSupplier(id, { 
-                findBy: 'id', 
-                limit: 1, 
-                orderBy: 'desc' 
+            const existingSupplier = await this.findSupplier(id, {
+                findBy: 'id',
+                limit: 1,
+                orderBy: 'desc'
             });
-            
+
             if (!existingSupplier || existingSupplier.length === 0) {
                 logger.warn(`Tentative de suppression d'un fournisseur inexistant: ${id}`);
                 return { success: false };
@@ -288,11 +288,11 @@ async findSupplierConflicts(accountNumber: string, phone: string): Promise<{
         }
     }
 
-    async updateSupplier(data: UpdateSupplierData): Promise<{success: boolean}> {
+    async updateSupplier(data: UpdateSupplierData): Promise<{ success: boolean }> {
         try {
             // Validation du numéro de compte
-            if (!/^\d{12}$/.test(String(data.account_number))) {
-                throw new Error('Le numéro de compte doit contenir exactement 12 chiffres');
+            if (!isValidAccountNumber(String(data.account_number))) {
+                throw new Error('Le numéro de compte est invalide (6–34 caractères alphanumériques)');
             }
 
             // Validation du nom
@@ -302,7 +302,7 @@ async findSupplierConflicts(accountNumber: string, phone: string): Promise<{
 
             const params = [
                 data.name,
-                data.account_number,
+                normalizeAccountNumber(String(data.account_number)),
                 data.phone,
                 data.id
             ];
@@ -390,10 +390,10 @@ async findSupplierConflicts(accountNumber: string, phone: string): Promise<{
         }
     }
 
-    async findSupplierByAnyField(filters: { 
-        name?: string; 
-        account_number?: string; 
-        phone?: string; 
+    async findSupplierByAnyField(filters: {
+        name?: string;
+        account_number?: string;
+        phone?: string;
     }): Promise<SupplierRecord | null> {
         try {
             const conditions: string[] = [];
@@ -411,7 +411,7 @@ async findSupplierConflicts(accountNumber: string, phone: string): Promise<{
                 conditions.push('phone = ?');
                 params.push(filters.phone);
             }
-            if(conditions.length === 0) {
+            if (conditions.length === 0) {
                 return null;
             }
 

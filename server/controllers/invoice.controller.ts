@@ -16,11 +16,11 @@ export async function createInvoice(
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
-  
+
   try {
     // Récupérer l'utilisateur connecté depuis req.user
     const user = (req as AuthenticatedRequest).user;
-    
+
     if (!user) {
       logger.warn(`[${requestId}] Tentative de création de facture sans utilisateur authentifié`);
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
@@ -37,14 +37,14 @@ export async function createInvoice(
         errors: validationResult.errors,
         userId: user.sup
       });
-      
+
       // Retourner la première erreur (ou toutes selon votre préférence)
       const firstError = validationResult.errors[0];
       return ApiResponder.badRequest(
-        res, 
-        firstError.message, 
-        { 
-          field: firstError.field, 
+        res,
+        firstError.message,
+        {
+          field: firstError.field,
           suggestion: firstError.suggestion,
           allErrors: validationResult.errors // Optionnel: retourner toutes les erreurs
         }
@@ -63,7 +63,7 @@ export async function createInvoice(
     }
 
     logger.info(`[${requestId}] Facture créée avec succès 🎯`, {
-      userId: user.sup, 
+      userId: user.sup,
       email: user.email,
       role: user.role,
       supplierId: validationResult.validatedData!.supplier_id
@@ -82,10 +82,10 @@ export async function createInvoice(
 
     // Vérifier les alertes de fin d'année
     const warningInfo = await InvoiceLastNumberValidator.checkYearEndThresholdWarning();
-    
+
     return ApiResponder.created(res, result.data, 'Facture créée avec succès 🎯', { warningInfo });
   } catch (err) {
-    logger.error(`[${requestId}] Erreur lors de la création de facture`, { 
+    logger.error(`[${requestId}] Erreur lors de la création de facture`, {
       errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',
       stack: err instanceof Error ? err.stack : 'unknown stack',
       body: req.body
@@ -99,17 +99,17 @@ export async function getInvoice(
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
-  
+
   try {
     const user = (req as AuthenticatedRequest).user;
-    
+
     if (!user) {
       logger.warn(`[${requestId}] Tentative d'accès à une facture sans utilisateur authentifié`);
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     }
 
     const { id } = req.params;
-    
+
     if (!id) {
       return ApiResponder.badRequest(res, 'ID de la facture requis');
     }
@@ -119,7 +119,7 @@ export async function getInvoice(
       limit: 1,
       orderBy: 'desc'
     });
-    
+
     if (!invoices || invoices.length === 0) {
       logger.warn(`[${requestId}] Facture introuvable`, { invoiceId: id, userId: user.sup });
       return ApiResponder.notFound(res, 'Facture introuvable');
@@ -127,25 +127,25 @@ export async function getInvoice(
 
     // Vérifier que l'utilisateur peut accéder à cette facture
     const invoiceData = invoices[0];
-    
+
     if (!canAccessInvoice(user, invoiceData.created_by)) {
-      logger.warn(`[${requestId}] Tentative d'accès non autorisé à une facture`, { 
-        invoiceId: id, 
-        userId: user.sup, 
-        invoiceOwner: invoiceData.created_by 
+      logger.warn(`[${requestId}] Tentative d'accès non autorisé à une facture`, {
+        invoiceId: id,
+        userId: user.sup,
+        invoiceOwner: invoiceData.created_by
       });
       return ApiResponder.forbidden(res, 'Accès refusé à cette facture');
     }
 
-    logger.info(`[${requestId}] Facture récupérée`, { 
-      invoiceId: id, 
-      userId: user.sup, 
-      role: user.role 
+    logger.info(`[${requestId}] Facture récupérée`, {
+      invoiceId: id,
+      userId: user.sup,
+      role: user.role
     });
 
     return ApiResponder.success(res, invoiceData);
   } catch (err) {
-    logger.error(`[${requestId}] Erreur lors de la récupération de facture`, { 
+    logger.error(`[${requestId}] Erreur lors de la récupération de facture`, {
       errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',
       stack: err instanceof Error ? err.stack : 'unknown stack',
       invoiceId: req.params.id
@@ -159,10 +159,10 @@ export async function getUserInvoices(
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
-  
+
   try {
     const user = (req as AuthenticatedRequest).user;
-    
+
     if (!user) {
       logger.warn(`[${requestId}] Tentative de récupération des factures sans utilisateur authentifié`);
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
@@ -220,8 +220,8 @@ export async function getUserInvoices(
       invoices = invoices.filter(invoice => invoice.status === status);
     }
 
-    logger.info(`[${requestId}] Factures récupérées`, { 
-      userId: user.sup, 
+    logger.info(`[${requestId}] Factures récupérées`, {
+      userId: user.sup,
       role: user.role,
       count: invoices.length,
       filters: req.query
@@ -229,7 +229,7 @@ export async function getUserInvoices(
 
     return ApiResponder.success(res, invoices, `${invoices.length} facture(s) trouvée(s)`);
   } catch (err) {
-    logger.error(`[${requestId}] Erreur lors de la récupération des factures`, { 
+    logger.error(`[${requestId}] Erreur lors de la récupération des factures`, {
       errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',
       stack: err instanceof Error ? err.stack : 'unknown stack'
     });
@@ -242,10 +242,10 @@ export async function searchInvoices(
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
-  
+
   try {
     const user = (req as AuthenticatedRequest).user;
-    
+
     if (!user) {
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     }
@@ -325,10 +325,10 @@ export async function updateInvoice(
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
-  
+
   try {
     const user = (req as AuthenticatedRequest).user;
-    
+
     if (!user) {
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     }
@@ -368,7 +368,9 @@ export async function updateInvoice(
       invoice_date: updateData.invoice_date ?? existingInvoice.invoice_date,
       invoice_type: updateData.invoice_type ?? existingInvoice.invoice_type,
       folio: updateData.folio ?? existingInvoice.folio,
-      invoice_amount: updateData.invoice_amount ?? existingInvoice.amount,
+      invoice_amount: updateData.invoice_amount
+        ? String(updateData.invoice_amount).replace(/\s/g, '').replace(',', '.')
+        : existingInvoice.amount,
       status: updateData.status ?? existingInvoice.status,
       documents: updateData.documents ?? [],
       created_by: existingInvoice.created_by,
@@ -405,10 +407,10 @@ export async function deleteInvoice(
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
-  
+
   try {
     const user = (req as AuthenticatedRequest).user;
-    
+
     if (!user) {
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     }
@@ -484,7 +486,7 @@ async function searchInvoicesByCreator(
     `;
     const params = fiscalYear ? [createdBy, fiscalYear] : [createdBy];
     const result = await database.execute<InvoiceRecord[] | InvoiceRecord>(query, params);
-    
+
     if (result && !Array.isArray(result)) {
       return [result];
     }
@@ -526,9 +528,9 @@ async function globalSearchInvoices(
       `%${searchTerm}%`, `%${searchTerm}%`
     ];
     const finalParams = fiscalYear ? [...params, fiscalYear] : params;
-    
+
     const result = await database.execute<InvoiceRecord[] | InvoiceRecord>(query, finalParams);
-    
+
     if (result && !Array.isArray(result)) {
       return [result];
     }
@@ -544,7 +546,7 @@ async function globalSearchInvoices(
 
 export async function getLastInvoiceNumber(req: AuthenticatedRequest, res: Response): Promise<Response> {
   const requestId = req.headers['x-request-id'];
-  
+
   try {
     const user = req.user;
     if (!user || !user.sup) {
@@ -553,17 +555,17 @@ export async function getLastInvoiceNumber(req: AuthenticatedRequest, res: Respo
     }
 
     logger.info(`[${requestId}] Début de la recherche du dernier numéro de facture utilisé`);
-    
+
     // ✅ CORRECTION : Récupérer le compteur actuel, pas le prochain numéro
     const counter = await InvoiceLastNumberValidator.getCurrentFiscalYearCounter();
     const config = await getSetting('cmdt_format');
-    
+
     // Formater le dernier numéro utilisé (pas le prochain)
     const lastInvoiceNumber = counter.last_cmdt_number.toString().padStart(config.padding, '0');
 
     logger.info(`[${requestId}] Dernier numéro de facture récupéré avec succès: ${lastInvoiceNumber} pour l'année ${counter.fiscal_year}`);
-    
-    return ApiResponder.success(res, { 
+
+    return ApiResponder.success(res, {
       lastInvoiceNum: lastInvoiceNumber,
       fiscalYear: counter.fiscal_year,
       rawLastNumber: counter.last_cmdt_number // Optionnel : pour debug
@@ -576,7 +578,7 @@ export async function getLastInvoiceNumber(req: AuthenticatedRequest, res: Respo
     });
 
     // Fallback sécurisé
-    return ApiResponder.success(res, { 
+    return ApiResponder.success(res, {
       lastInvoiceNum: '0000',
       fiscalYear: new Date().getFullYear().toString()
     }, 'Erreur lors de la récupération, utilisation de la valeur par défaut');
@@ -585,7 +587,7 @@ export async function getLastInvoiceNumber(req: AuthenticatedRequest, res: Respo
 
 export async function getNextInvoiceNumber(req: AuthenticatedRequest, res: Response): Promise<Response> {
   const requestId = req.headers['x-request-id'];
-  
+
   try {
     const user = req.user;
     if (!user || !user.sup) {
@@ -594,20 +596,20 @@ export async function getNextInvoiceNumber(req: AuthenticatedRequest, res: Respo
     }
 
     logger.info(`[${requestId}] Calcul du prochain numéro de facture attendu`);
-    
+
     // ✅ Pour le prochain numéro, utiliser calculateNextNumberExpected()
     const result = await InvoiceLastNumberValidator.calculateNextNumberExpected();
 
     if (result.success) {
       logger.info(`[${requestId}] Prochain numéro de facture calculé avec succès: ${result.nextNumberExpected}`);
-      return ApiResponder.success(res, { 
+      return ApiResponder.success(res, {
         nextInvoiceNum: result.nextNumberExpected, // Note: champ différent
         fiscalYear: result.fiscalYear
       }, 'Prochain numéro de facture calculé avec succès');
     } else {
       logger.warn(`[${requestId}] Impossible de calculer le prochain numéro: ${result.errorMessage}`);
-      
-      return ApiResponder.error(res, { 
+
+      return ApiResponder.error(res, {
         nextInvoiceNum: '0000',
         fiscalYear: new Date().getFullYear().toString(),
         warning: result.errorMessage
@@ -619,7 +621,7 @@ export async function getNextInvoiceNumber(req: AuthenticatedRequest, res: Respo
       errorStack: error instanceof Error ? error.stack : 'Unknown stack'
     });
 
-    return ApiResponder.error(res, { 
+    return ApiResponder.error(res, {
       nextInvoiceNum: '0000',
       fiscalYear: new Date().getFullYear().toString()
     }, 'Erreur lors du calcul, utilisation de la valeur par défaut');
@@ -649,7 +651,7 @@ export async function getDfcPendingInvoices(
       count: invoices.length
     });
 
-    return ApiResponder.success(res, invoices, `${invoices.length} facture(s) DFC en attente`, {fiscalYear});
+    return ApiResponder.success(res, invoices, `${invoices.length} facture(s) DFC en attente`, { fiscalYear });
   } catch (error) {
     logger.error(`[${requestId}] Erreur lors de la récupération des factures DFC en attente`, {
       errorMessage: error instanceof Error ? error.message : 'Erreur inconnue',
@@ -733,22 +735,22 @@ export async function getInvoiceAttachments(
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
-  
+
   try {
     const user = (req as AuthenticatedRequest).user;
-    
+
     if (!user) {
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     }
 
     const { id } = req.params;
-    
+
     if (!id) {
       return ApiResponder.badRequest(res, 'ID de la facture requis');
     }
 
     const result = await Invoice.getInvoiceAttachments(id);
-    
+
     if (!result.success) {
       return ApiResponder.error(res, new Error('Erreur lors de la récupération des attachments'));
     }
@@ -770,17 +772,17 @@ export async function updateInvoiceAttachments(
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
-  
+
   try {
     const user = (req as AuthenticatedRequest).user;
-    
+
     if (!user) {
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     }
 
     const { id } = req.params;
     const { documents } = req.body;
-    
+
     if (!id) {
       return ApiResponder.badRequest(res, 'ID de la facture requis');
     }
@@ -790,7 +792,7 @@ export async function updateInvoiceAttachments(
     }
 
     const result = await Invoice.updateInvoiceAttachments(id, documents, user.sup || 'unknown');
-    
+
     if (!result.success) {
       return ApiResponder.error(res, new Error('Erreur lors de la mise à jour des attachments'));
     }
@@ -812,22 +814,22 @@ export async function deleteInvoiceAttachments(
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
-  
+
   try {
     const user = (req as AuthenticatedRequest).user;
-    
+
     if (!user) {
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     }
 
     const { id } = req.params;
-    
+
     if (!id) {
       return ApiResponder.badRequest(res, 'ID de la facture requis');
     }
 
     const result = await Invoice.deleteInvoiceAttachments(id, user.sup || 'unknown');
-    
+
     if (!result.success) {
       return ApiResponder.error(res, new Error('Erreur lors de la suppression des attachments'));
     }

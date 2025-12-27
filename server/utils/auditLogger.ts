@@ -18,7 +18,14 @@ export type ExportLogParams = {
 };
 
 export async function auditLog(params: AuditLogParams): Promise<void> {
-    const { action, table_name, record_id, description = null, performed_by = null } = params;
+    const { action, table_name, record_id, description = null } = params;
+    // La table audit_log a une contrainte FK sur employee(id). 
+    // 'system' ou d'autres chaînes non-ID provoquent une erreur.
+    let performed_by = params.performed_by;
+    if (performed_by === 'system' || !performed_by) {
+        performed_by = null;
+    }
+
     try {
         await database.execute(
             "INSERT INTO audit_log(action, table_name, record_id, description, performed_by) VALUES(?,?,?,?,?)",

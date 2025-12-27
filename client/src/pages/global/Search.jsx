@@ -3,6 +3,7 @@ import useTitle from '../../hooks/ui/useTitle.js';
 import useBackground from '../../hooks/ui/useBackground.js';
 import { useSearch } from '../../hooks/api/useSearch.js';
 import api from '../../services/api.js';
+import { formatAmountSmart } from '../../utils/formatAmount.js';
 import Navbar from '../../components/navbar/Navbar.jsx';
 import Footer from '../../components/global/Footer.jsx';
 import {
@@ -424,7 +425,8 @@ function Search() {
       invoice_status: invoice.status || invoice.invoice_status || 'Non',
       folio: invoice.folio || '',
       fiscal_year: invoice.fiscal_year || '',
-      supplier_id: invoice.supplier_id || ''
+      supplier_id: invoice.supplier_id || '',
+      documents: invoiceAttachments[invoice.id] || []
     };
 
     // Convert dates to YYYY-MM-DD for input[type="date"]
@@ -439,6 +441,16 @@ function Search() {
     setSelectedInvoice(invoice);
     setIsEditingInvoice(true);
     setShowInvoiceOverview(true);
+  };
+
+  const handleDocumentChange = (doc) => {
+    setEditFormData(prev => {
+      const currentDocs = prev.documents || [];
+      const newDocs = currentDocs.includes(doc)
+        ? currentDocs.filter(d => d !== doc)
+        : [...currentDocs, doc];
+      return { ...prev, documents: newDocs };
+    });
   };
 
   const handleEditFormChange = (e) => {
@@ -466,9 +478,12 @@ function Search() {
 
     setIsSaving(true);
     try {
-      // Prepare data for backend (some fields might need parsing)
-      const dataToSave = { ...editFormData };
-
+      const sanitizedAmount = editFormData.invoice_amount.toString().replace(/[^\d.]/g, '');
+      const dataToSave = {
+        ...editFormData,
+        invoice_amount: sanitizedAmount,
+        documents: editFormData.documents || []
+      };
       // Ensure amount is string for backend validation if necessary, 
       // but re-implementing updateInvoice handles what it receives.
       // Based on InvoiceShema, it expects numbers or strings that regex can match.
@@ -477,14 +492,26 @@ function Search() {
       if (result.success) {
         toastSuccess(result.message);
         setIsEditingInvoice(false);
-        // Refresh search results
+        // Rafraîchir l'overview immédiatement
+        setSelectedInvoice(prev => ({
+          ...prev,
+          ...dataToSave,
+          amount: dataToSave.invoice_amount,
+          num_invoice: dataToSave.invoice_num,
+          invoice_num: dataToSave.invoice_num,
+          invoice_date: dataToSave.invoice_date,
+          invoice_arr_date: dataToSave.invoice_arrival_date,
+          invoice_arrival_date: dataToSave.invoice_arrival_date
+        }));
+        // Rafraîchir la liste en arrière-plan
         handleSearch(currentPage, currentLimit);
       } else {
         toastError(result.message || 'Erreur lors de la mise à jour');
       }
     } catch (err) {
       console.error('Erreur sauvegarde:', err);
-      toastError('Erreur lors de la sauvegarde');
+      const errorMsg = err.response?.data?.message || 'Erreur lors de la sauvegarde';
+      toastError(errorMsg);
     } finally {
       setIsSaving(false);
     }
@@ -515,14 +542,16 @@ function Search() {
         toastSuccess(response.message || 'Fournisseur mis à jour');
         setIsEditingSupplier(false);
         setSupplierEditForm(null);
-        // Rafraîchir les résultats
+        // Rafraîchir les résultats et l'overview
+        setSelectedSupplier(prev => ({ ...prev, ...supplierEditForm }));
         handleSearch(currentPage, currentLimit);
       } else {
         toastError(response.message || 'Erreur lors de la mise à jour');
       }
     } catch (err) {
       console.error('Erreur mise à jour fournisseur:', err);
-      toastError('Erreur lors de la sauvegarde');
+      const errorMsg = err.response?.data?.message || 'Erreur lors de la sauvegarde';
+      toastError(errorMsg);
     } finally {
       setIsSaving(false);
     }
@@ -611,8 +640,19 @@ function Search() {
       window.URL.revokeObjectURL(urlObj);
       document.body.removeChild(a);
     } catch (err) {
-      console.error('Erreur export:', err);
-      alert(err?.message || 'Erreur lors de l\'export des données');
+      console.error('Erreur lors de l’exportation:', err);
+      // Tentative de décodage de l'erreur si c'est un ArrayBuffer (souvent le cas pour les exports)
+      if (err.response?.data instanceof ArrayBuffer) {
+        try {
+          const decoded = JSON.parse(new TextDecoder().decode(err.response.data));
+          toastError(decoded.message || 'Erreur lors de l’exportation');
+        } catch (e) {
+          toastError('Erreur lors de l’exportation (Format invalide)');
+        }
+      } else {
+        const errorMsg = err.response?.data?.message || 'Erreur lors de l’exportation';
+        toastError(errorMsg);
+      }
     } finally {
       // Reset the appropriate loading state
       if (format === 'pdf') {
@@ -633,17 +673,9 @@ function Search() {
 
   const formatAmount = (amount) => {
     if (!amount) return '0 FCFA';
-    try {
-      const num = typeof amount === 'string' ? parseFloat(amount.replace(/\s/g, '')) : Number(amount);
-      if (isNaN(num)) return 'Montant invalide';
-
-      return new Intl.NumberFormat('fr-FR', {
-        minimumFractionDigits: 3,
-        maximumFractionDigits: 3
-      }).format(num) + ' FCFA';
-    } catch {
-      return 'Montant invalide';
-    }
+    const formatted = formatAmountSmart(amount);
+    if (formatted === 'Invalid amount') return 'Montant invalide';
+    return formatted + ' FCFA';
   };
 
   const formatDate = (dateString) => {
@@ -1453,6 +1485,13 @@ function Search() {
                                     >
                                       <EyeIcon className="w-4 h-4" />
                                     </button>
+                                    <button
+                                      onClick={(e) => handleStartEditSupplier(supplier, e)}
+                                      className="text-amber-600 hover:text-amber-900 transition-colors"
+                                      title="Modifier le fournisseur"
+                                    >
+                                      <PencilSquareIcon className="w-4 h-4" />
+                                    </button>
                                   </div>
                                 </td>
                               </tr>
@@ -1747,6 +1786,27 @@ function Search() {
                               </div>
                             </div>
                           </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Pièces jointes</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {[
+                            "Connaissement",
+                            "Attestation de prise en charge",
+                            "Lettre de voiture Inter-Etats"
+                          ].map((doc) => (
+                            <label key={doc} className="flex items-center space-x-3 p-3 bg-white rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={(editFormData.documents || []).includes(doc)}
+                                onChange={() => handleDocumentChange(doc)}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                              />
+                              <span className="text-sm text-gray-700">{doc}</span>
+                            </label>
+                          ))}
                         </div>
                       </div>
 

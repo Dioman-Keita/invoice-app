@@ -54,5 +54,3 @@ export class ApiResponder {
 }
 
 export default ApiResponder;
-
-

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/auth/useAuth.js';
 import api from '../../services/api.js';
+import { formatAmountSmart } from '../../utils/formatAmount.js';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/global/Header.jsx';
 import Navbar from '../../components/navbar/Navbar.jsx';
@@ -270,10 +271,7 @@ function Dashboard({ requireAuth = false }) {
 
   // Format exact pour le tooltip
   const formatCurrencyExact = (amount) => {
-    return new Intl.NumberFormat('fr-FR', {
-      minimumFractionDigits: 3,
-      maximumFractionDigits: 3
-    }).format(amount) + ' F CFA';
+    return formatAmountSmart(amount) + ' F CFA';
   };
 
   const formatNumber = (number) => {

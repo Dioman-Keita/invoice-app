@@ -589,7 +589,7 @@ function StatsSimple() {
                           ) : (
                             <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
                           )}
-                          Exporter la liste des facture enregistrer
+                          Exporter l'etat
                         </button>
                       </div>
                     </div>

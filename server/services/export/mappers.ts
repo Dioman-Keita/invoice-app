@@ -1,5 +1,7 @@
 import { DateRange, ExportFormat, ExportType, ExportVariant } from './types';
 import { getSetting } from '../../helpers/settings';
+import logger from '../../utils/Logger';
+import ApiResponder from '../../utils/ApiResponder';
 
 // Helpers
 function nowDay(): string { return new Date().toLocaleDateString('fr-FR'); }
@@ -18,11 +20,15 @@ function fmtAmount(value: any): string | undefined {
   const n = typeof value === 'number' ? value : Number(String(value).replace(/\s/g, '').replace(',', '.'));
   if (!isNaN(n)) {
     try {
+      // Smart format: same logic as client/src/utils/formatAmount.js
       return new Intl.NumberFormat('fr-FR', {
-        minimumFractionDigits: 3,
+        minimumFractionDigits: 0,
         maximumFractionDigits: 3
       }).format(n);
-    } catch { }
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'unknown error';
+      logger.error(errorMsg);
+    }
   }
   return String(value);
 }
