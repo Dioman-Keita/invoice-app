@@ -13,6 +13,7 @@ import exportRoute from './routes/export.route';
 import statsRoute from './routes/stats.route';
 import usersRoute from './routes/users.route';
 import migrationRoutes from './routes/migration.route';
+import systemRoutes from './routes/system.route';
 
 import { requestIdMiddleware } from './middleware/requestIdMiddleware';
 import { debugCookies } from './middleware/debugCookie';
@@ -69,6 +70,7 @@ app.use('/api', searchRoute);
 app.use('/api', exportRoute);
 app.use('/api', statsRoute);
 app.use('/api', usersRoute);
+app.use('/api/system', systemRoutes);
 
 // --------------- 5. ROUTE FALLBACK FRONTEND (SPA) ---------------
 // C'EST LA CORRECTION CRITIQUE POUR EXPRESS 5
@@ -85,14 +87,22 @@ app.get(/^(.*)$/, (req, res, next) => {
 
 // --------------- 6. GESTION DES ERREURS ---------------
 app.use((err: Error & { type?: string; status?: number }, req: Request, res: Response, _next: NextFunction) => {
+    const errorContext = {
+        url: req.originalUrl,
+        method: req.method,
+        userId: (req as any).user?.id || (req as any).user?.sub || null,
+        error: err.message,
+        stack: err.stack
+    };
+
     // Gestion spécifique JSON malformé
     if (err?.type === 'entity.parse.failed' || (err instanceof SyntaxError && err.status === 400)) {
-        logger.error('Erreur de parsing JSON', { error: err.message });
+        logger.error('Erreur de parsing JSON', errorContext);
         return ApiResponder.badRequest(res, 'Requête JSON invalide');
     }
 
     // Gestion générique
-    logger.error('Erreur non gérée', { error: err.message, stack: err.stack });
+    logger.error('Erreur non gérée', errorContext);
     return ApiResponder.error(res, err);
 });
 

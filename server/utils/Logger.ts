@@ -61,9 +61,26 @@ class Logger {
         }
     }
 
+    private dbLogger: ((message: string, meta?: any) => void) | null = null;
+
+    /**
+     * Permet d'attacher un logger de base de données à l'instance
+     * Utilisé pour éviter les dépendances circulaires
+     */
+    public setDBLogger(loggerFunc: (message: string, meta?: any) => void) {
+        this.dbLogger = loggerFunc;
+    }
+
     private log(level: LogLevel, message: string, meta?: unknown): void {
         const line = this.formatLine(level, message, meta);
         this.writeToFile(line);
+
+        // Si c'est une erreur, on essaye de persister en DB via le callback enregistré
+        if (level === 'ERROR' && this.dbLogger) {
+            // On ne veut pas que l'erreur de log DB bloque le flux principal
+            this.dbLogger(message, meta);
+        }
+
         if (level === 'ERROR') {
             console.error(line);
         }

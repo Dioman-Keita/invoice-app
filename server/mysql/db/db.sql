@@ -203,6 +203,18 @@ CREATE TABLE audit_log (
     FOREIGN KEY (performed_by) REFERENCES employee(id)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- Table de log des erreurs système
+CREATE TABLE system_error_log (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    level ENUM('ERROR', 'WARN', 'CRITICAL') DEFAULT 'ERROR',
+    message TEXT NOT NULL,
+    stack TEXT,
+    context JSON,
+    path VARCHAR(255),
+    user_id VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- Table des décisions DFC (approbation/rejet) avec commentaires optionnels
 CREATE TABLE dfc_decision (
     id INT PRIMARY KEY AUTO_INCREMENT,

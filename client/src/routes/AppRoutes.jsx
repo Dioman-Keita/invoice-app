@@ -20,6 +20,7 @@ import Dashboard from "../pages/admin/Dashboard.jsx";
 import Users from "../pages/admin/Users.jsx";
 import StatsSimple from "../pages/global/StatsSimple.jsx";
 import Profile from "../pages/global/Profile.jsx";
+import SystemLogs from "../pages/admin/SystemLogs.jsx";
 
 function AppRoutes() {
     return (
@@ -123,6 +124,16 @@ function AppRoutes() {
                     customMessage="Messagerie réservée aux administrateurs"
                 >
                     <Messaging />
+                </PrivateRoute>
+            } />
+
+            {/* Logs Système - Admin seulement */}
+            <Route path="/admin-logs" element={
+                <PrivateRoute
+                    requiredRoles={['admin']}
+                    customMessage="Consultation des logs système réservée aux administrateurs"
+                >
+                    <SystemLogs />
                 </PrivateRoute>
             } />
 

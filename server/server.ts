@@ -1,6 +1,11 @@
 import app from './app';
 import logger from './utils/Logger';
+import { DBLogger } from './utils/DBLogger';
 import { startCleanupUnverifiedJob } from './jobs/cleanupUnverified';
+import { startCleanupLogsJob } from './jobs/cleanupLogs';
+
+// Configuration du logger pour persister les erreurs en DB
+logger.setDBLogger(DBLogger.log);
 
 const PORT = process.env.PORT || 3000;
 
@@ -17,6 +22,7 @@ async function startServer() {
             console.log(`📡 API disponible sur http://127.0.0.1:${PORT}/api`);
             console.log(`🔍 Health check: http://127.0.0.1:${PORT}/api/health`);
             startCleanupUnverifiedJob();
+            startCleanupLogsJob();
         });
     } catch (error) {
         logger.error('✗ Échec de l\'initialisation du serveur', { error });

@@ -12,7 +12,8 @@ import {
   UserIcon,
   DocumentCheckIcon,
   ArrowsRightLeftIcon,
-  EnvelopeIcon, // Icône de messagerie ajoutée
+  EnvelopeIcon,
+  BugAntIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid, CommandLineIcon } from '@heroicons/react/24/solid';
 import { StarIcon } from '@heroicons/react/24/outline';
@@ -95,6 +96,11 @@ function NavbarPanel({ isOpen, onClose }) {
       action: 'adminMessaging'
     },
     {
+      label: 'Logs Système',
+      icon: <BugAntIcon className="w-6 h-6" />,
+      action: 'adminLogs'
+    },
+    {
       label: 'Code Source GitHub',
       icon: (
         <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -111,7 +117,7 @@ function NavbarPanel({ isOpen, onClose }) {
     const userRole = user?.role;
 
     // Définir les actions admin
-    const adminActions = ['dashboard', 'users', 'adminStats', 'adminMessaging', 'search'];
+    const adminActions = ['dashboard', 'users', 'adminStats', 'adminMessaging', 'adminLogs', 'search'];
 
     // Pour les non-connectés, montrer seulement les pages publiques
     if (!userRole) {
@@ -160,7 +166,7 @@ function NavbarPanel({ isOpen, onClose }) {
 
   // Séparer les items en catégories
   const { baseItems, adminItems, additionalItems } = useMemo(() => {
-    const adminActions = ['dashboard', 'users', 'adminStats', 'adminMessaging'];
+    const adminActions = ['dashboard', 'users', 'adminStats', 'adminMessaging', 'adminLogs'];
 
     const baseItems = availableActions.filter(item =>
       !adminActions.includes(item.action) && item.action !== 'github'
@@ -243,6 +249,9 @@ function NavbarPanel({ isOpen, onClose }) {
       // NOUVEAU: Navigation vers la page de messagerie admin
       case 'adminMessaging':
         navigate('/admin-messaging');
+        break;
+      case 'adminLogs':
+        navigate('/admin-logs');
         break;
       case 'settings':
         navigate('/settings');
