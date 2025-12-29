@@ -4,7 +4,6 @@ import useBackground from '../../hooks/ui/useBackground.js';
 import api from '../../services/api.js';
 import useToastFeedback from '../../hooks/ui/useToastFeedBack.js';
 import {
-    ExclamationTriangleIcon,
     BugAntIcon,
     TrashIcon,
     ArrowPathIcon,
@@ -17,13 +16,12 @@ import {
     XMarkIcon
 } from '@heroicons/react/24/outline';
 import Header from '../../components/global/Header.jsx';
-import Banner from '../../components/global/Banner.jsx';
 import Navbar from '../../components/navbar/Navbar.jsx';
 import Footer from '../../components/global/Footer.jsx';
 
 const SystemLogs = () => {
     useTitle('CMDT - Logs Système');
-    useBackground('bg-gray-50');
+    useBackground('bg-log');
     const { toastSuccess, toastError } = useToastFeedback();
 
     const [logs, setLogs] = useState([]);
@@ -95,16 +93,11 @@ const SystemLogs = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col bg-gray-50">
-            <Banner />
+        <div className="min-h-screen flex flex-col">
+            <Header />
             <Navbar />
 
             <main className="flex-grow container mx-auto px-4 py-8 max-w-7xl">
-                <Header
-                    title="Logs d'erreurs système"
-                    subtitle="Suivez et dépannez les anomalies de l'application en temps réel"
-                    icon={<BugAntIcon className="w-8 h-8 text-red-600" />}
-                />
 
                 <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     {/* Toolbar */}
