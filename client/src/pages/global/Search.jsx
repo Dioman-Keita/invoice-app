@@ -405,11 +405,18 @@ function Search() {
     setSupplierEditForm(null);
   };
 
-  const handleStartEditInvoice = (invoice, e) => {
+  const handleStartEditInvoice = async (invoice, e) => {
     if (e) {
       e.stopPropagation();
       e.preventDefault();
     }
+
+    // 1. On récupère d'abord les pièces jointes réelles depuis le serveur
+    let docs = invoiceAttachments[invoice.id];
+    if (!docs) {
+      docs = await fetchInvoiceAttachments(invoice.id);
+    }
+
     const formData = {
       invoice_num: invoice.invoice_num || invoice.num_invoice || '',
       num_cmdt: invoice.num_cmdt || '',
@@ -426,10 +433,11 @@ function Search() {
       folio: invoice.folio || '',
       fiscal_year: invoice.fiscal_year || '',
       supplier_id: invoice.supplier_id || '',
-      documents: invoiceAttachments[invoice.id] || []
+      // On utilise les documents récupérés juste au-dessus
+      documents: docs || []
     };
 
-    // Convert dates to YYYY-MM-DD for input[type="date"]
+    // Conversion des dates
     if (formData.invoice_date) {
       formData.invoice_date = new Date(formData.invoice_date).toISOString().split('T')[0];
     }
@@ -445,7 +453,7 @@ function Search() {
 
   const handleDocumentChange = (doc) => {
     setEditFormData(prev => {
-      const currentDocs = prev.documents || [];
+      const currentDocs = Array.isArray(prev.documents) ? prev.documents : [];
       const newDocs = currentDocs.includes(doc)
         ? currentDocs.filter(d => d !== doc)
         : [...currentDocs, doc];
@@ -476,34 +484,46 @@ function Search() {
   const handleSaveInvoiceEdit = async () => {
     if (!editFormData || !selectedInvoice) return;
 
+    // Nettoyage et validation du montant
+    const sanitizedAmountString = editFormData.invoice_amount.toString().replace(/[^\d.]/g, '');
+    const numericAmount = parseFloat(sanitizedAmountString);
+
+    // Limite à 100 milliards
+    if (numericAmount > 100000000000) {
+      toastError("Le montant ne peut pas dépasser 100 milliards FCFA.");
+      return;
+    }
+
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      toastError("Veuillez saisir un montant valide supérieur à 0.");
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const sanitizedAmount = editFormData.invoice_amount.toString().replace(/[^\d.]/g, '');
       const dataToSave = {
         ...editFormData,
-        invoice_amount: sanitizedAmount,
+        invoice_amount: sanitizedAmountString, // Envoi du montant nettoyé
         documents: editFormData.documents || []
       };
-      // Ensure amount is string for backend validation if necessary, 
-      // but re-implementing updateInvoice handles what it receives.
-      // Based on InvoiceShema, it expects numbers or strings that regex can match.
 
       const result = await updateInvoice(selectedInvoice.id, dataToSave);
+
       if (result.success) {
         toastSuccess(result.message);
         setIsEditingInvoice(false);
-        // Rafraîchir l'overview immédiatement
-        setSelectedInvoice(prev => ({
-          ...prev,
-          ...dataToSave,
-          amount: dataToSave.invoice_amount,
-          num_invoice: dataToSave.invoice_num,
-          invoice_num: dataToSave.invoice_num,
-          invoice_date: dataToSave.invoice_date,
-          invoice_arr_date: dataToSave.invoice_arrival_date,
-          invoice_arrival_date: dataToSave.invoice_arrival_date
-        }));
-        // Rafraîchir la liste en arrière-plan
+
+        // --- RAFRAÎCHISSEMENT AUTOMATIQUE DE L'OVERVIEW ---
+        // On récupère la donnée fraîche du serveur pour l'overview
+        const refreshResponse = await api.get(`/invoices/${selectedInvoice.id}`);
+        if (refreshResponse.success) {
+          setSelectedInvoice(refreshResponse.data);
+        } else {
+          // Fallback local si la récupération échoue
+          setSelectedInvoice(prev => ({ ...prev, ...dataToSave, amount: numericAmount }));
+        }
+
+        // Rafraîchir la liste de recherche en arrière-plan
         handleSearch(currentPage, currentLimit);
       } else {
         toastError(result.message || 'Erreur lors de la mise à jour');
@@ -591,10 +611,6 @@ function Search() {
         } else if (showGroupedOverview && (selectedGroupedResult || data)) {
           searchPayload.supplier_id = data?.supplier_id || data?.id || selectedGroupedResult?.supplier_id || selectedGroupedResult?.id;
         }
-      } else {
-        // For list exports, keep a safe limit hint as before
-        const limitForFormat = String(format).toLowerCase() === 'pdf' ? 200 : 1000;
-        if (!searchPayload.limit) searchPayload.limit = limitForFormat;
       }
 
       const lowerFmt = String(format).toLowerCase();
@@ -1624,6 +1640,7 @@ function Search() {
                                   className="w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-500 cursor-not-allowed"
                                 />
                               </div>
+                              {/* BLOC MONTANT CORRIGÉ */}
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Montant</label>
                                 <input
@@ -1643,8 +1660,10 @@ function Search() {
                                     if (parts.length > 1) val = parts[0] + "," + parts[1].substring(0, 3);
                                     handleEditFormChange({ target: { name: "invoice_amount", value: val.replace(",", ".") } });
                                   }}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                  placeholder="0,000"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-bold"
                                 />
+                                <p className="text-[10px] text-gray-500 mt-1">Maximum: 100 000 000 000 (3 décimales)</p>
                               </div>
                             </div>
                           </div>

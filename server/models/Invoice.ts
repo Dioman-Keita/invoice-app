@@ -249,7 +249,7 @@ class Invoice implements InvoiceModel {
 					table_name: 'invoice',
 					action: 'SELECT',
 					record_id: typeof id === 'string' ? id : id.toString(),
-					performed_by: id.toString(), // À remplacer par l'ID utilisateur réel si disponible
+					performed_by: null, // À remplacer par l'ID utilisateur réel si disponible
 					description: `Recherche de facture par ${config.findBy}`
 				});
 			}
