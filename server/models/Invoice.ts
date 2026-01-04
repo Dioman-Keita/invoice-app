@@ -36,7 +36,11 @@ class Invoice implements InvoiceModel {
 				formatDate(invoiceData.invoice_date),
 				invoiceData.invoice_type,
 				invoiceData.folio,
-				String(invoiceData.invoice_amount).replace(/\s/g, '').replace(/\.(?=\d{3}(?:,|$))/g, '').replace(',', '.'),
+				// Si contient une virgule, on suppose format FR (1.000,00) -> on vire les points, remplace virgule par point.
+				// Sinon (format US ou standard JS 1000.00), on garde tel quel (juste suppression espaces).
+				String(invoiceData.invoice_amount).includes(',')
+					? String(invoiceData.invoice_amount).replace(/\s/g, '').replace(/\./g, '').replace(',', '.')
+					: String(invoiceData.invoice_amount).replace(/\s/g, ''),
 				invoiceData.status,
 				invoiceData.created_by,
 				invoiceData.created_by_email,
@@ -167,7 +171,7 @@ class Invoice implements InvoiceModel {
 			switch (config.findBy) {
 				case 'id':
 					query = `SELECT i.*, 
-                    COALESCE(JSON_EXTRACT(a.documents, '$'), JSON_ARRAY()) AS documents
+                    COALESCE(a.documents, JSON_ARRAY()) AS documents
                     FROM invoice i 
                     LEFT JOIN attachments a ON a.invoice_id = i.id 
                     WHERE i.id = ? ${fy ? 'AND i.fiscal_year = ?' : ''} 
@@ -179,7 +183,7 @@ class Invoice implements InvoiceModel {
 
 				case 'supplier_id':
 					query = `SELECT i.*, 
-                    COALESCE(JSON_EXTRACT(a.documents, '$'), JSON_ARRAY()) AS documents
+                    COALESCE(a.documents, JSON_ARRAY()) AS documents
                     FROM invoice i 
                     LEFT JOIN attachments a ON a.invoice_id = i.id 
                     WHERE i.supplier_id = ? ${fy ? 'AND i.fiscal_year = ?' : ''} 
@@ -193,7 +197,7 @@ class Invoice implements InvoiceModel {
 				case 'account_number':
 					query = `
                     SELECT i.*, 
-                        COALESCE(JSON_EXTRACT(a.documents, '$'), JSON_ARRAY()) AS documents
+                        COALESCE(a.documents, JSON_ARRAY()) AS documents
                     FROM invoice i 
                     LEFT JOIN attachments a ON a.invoice_id = i.id
                     INNER JOIN supplier s ON i.supplier_id = s.id 
@@ -207,7 +211,7 @@ class Invoice implements InvoiceModel {
 
 				case 'all':
 					query = `SELECT i.*, 
-                    COALESCE(JSON_EXTRACT(a.documents, '$'), JSON_ARRAY()) AS documents
+                    COALESCE(a.documents, JSON_ARRAY()) AS documents
                     FROM invoice i 
                     LEFT JOIN attachments a ON a.invoice_id = i.id 
                     ${fy ? 'WHERE i.fiscal_year = ?' : ''} 
@@ -245,13 +249,7 @@ class Invoice implements InvoiceModel {
 			}
 
 			if (rows && rows.length > 0) {
-				await auditLog({
-					table_name: 'invoice',
-					action: 'SELECT',
-					record_id: typeof id === 'string' ? id : id.toString(),
-					performed_by: null, // À remplacer par l'ID utilisateur réel si disponible
-					description: `Recherche de facture par ${config.findBy}`
-				});
+
 			}
 
 			return rows || [];
@@ -312,7 +310,9 @@ class Invoice implements InvoiceModel {
 				formatDate(data.invoice_date),
 				data.invoice_type,
 				data.folio,
-				String(data.invoice_amount).replace(/\s/g, '').replace(/\.(?=\d{3}(?:,|$))/g, '').replace(',', '.'),
+				String(data.invoice_amount).includes(',')
+					? String(data.invoice_amount).replace(/\s/g, '').replace(/\./g, '').replace(',', '.')
+					: String(data.invoice_amount).replace(/\s/g, ''),
 				data.status,
 				data.created_by || 'system',
 				data.created_by_email,

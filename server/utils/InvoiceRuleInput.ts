@@ -139,7 +139,10 @@ class InvoiceDataValidator {
 
     // Validation du montant
     if (data.invoice_amount) {
-      const sanitizedAmount = String(data.invoice_amount).replace(/\s/g, '').replace(/\.(?=\d{3}(?:,|$))/g, '').replace(',', '.');
+      const val = String(data.invoice_amount);
+      const sanitizedAmount = val.includes(',')
+        ? val.replace(/\s/g, '').replace(/\./g, '').replace(',', '.')
+        : val.replace(/\s/g, '');
       const amount = Number(sanitizedAmount);
       if (isNaN(amount) || amount <= 0 || amount > 100_000_000_000) {
         errors.push({

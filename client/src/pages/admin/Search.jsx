@@ -3,12 +3,10 @@ import useTitle from '../../hooks/ui/useTitle.js';
 import useBackground from '../../hooks/ui/useBackground.js';
 import { useSearch } from '../../hooks/api/useSearch.js';
 import api from '../../services/api.js';
-import { formatAmountSmart } from '../../utils/formatAmount.js';
 import Navbar from '../../components/navbar/Navbar.jsx';
 import Footer from '../../components/global/Footer.jsx';
 import {
   MagnifyingGlassIcon,
-  BuildingStorefrontIcon,
   DocumentTextIcon,
   FunnelIcon,
   XMarkIcon,
@@ -26,12 +24,79 @@ import {
   BuildingStorefrontIcon as BuildingIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  PencilSquareIcon
+  PencilSquareIcon,
+  BuildingStorefrontIcon
 } from '@heroicons/react/24/outline';
 import Header from '../../components/global/Header.jsx';
 import useInvoice from '../../hooks/features/useInvoice.js';
 import useToastFeedback from '../../hooks/ui/useToastFeedBack.js';
 import { useAuth } from '../../hooks/auth/useAuth.js';
+
+// Helper pour parser les montants de manière robuste (compatible FR/EN)
+const parseCurrencyAmount = (value) => {
+  console.log("💱 ParseCurrencyAmount input:", value, "Type:", typeof value);
+  if (value === null || value === undefined || value === '') return 0;
+  if (typeof value === 'number') return value;
+
+  let str = value.toString();
+  // 1. Nettoyage basique : espaces (insécables ou non)
+  str = str.replace(/\s/g, '');
+  console.log("   Step 1 (No spaces):", str);
+
+  if (!str) return 0;
+
+  // 2. Gestion des séparateurs
+  // Cas spécifique : s'il y a à la fois des points et des virgules
+  if (str.includes(',') && str.includes('.')) {
+    const lastComma = str.lastIndexOf(',');
+    const lastDot = str.lastIndexOf('.');
+
+    if (lastComma > lastDot) {
+      // Format type 1.234,56 (Eur/FR old school) -> On vire les points, on garde la virgule comme décimale
+      str = str.replace(/\./g, '').replace(',', '.');
+    } else {
+      // Format type 1,234.56 (US) -> On vire les virgules
+      str = str.replace(/,/g, '');
+    }
+  } else if (str.includes(',')) {
+    // Cas avec virgule seule : on remplace par un point
+    str = str.replace(/,/g, '.');
+  }
+  console.log("   Step 2 (Normalized separators):", str);
+
+  // 3. Dernier nettoyage : on ne garde que chiffres et point
+  str = str.replace(/[^\d.-]/g, '');
+  console.log("   Step 3 (Cleaned):", str);
+
+  // 4. Gestion de plusieurs points (ex: 1.2.3) -> on garde le dernier
+  const parts = str.split('.');
+  if (parts.length > 2) {
+    str = parts.slice(0, -1).join('') + '.' + parts.slice(-1);
+  }
+
+  const result = parseFloat(str);
+  console.log("   Result:", result);
+  return isNaN(result) ? 0 : result;
+};
+
+
+
+// Helpers de formatage pour l'input (portés de ValidatedAmountInput)
+const formatWithSpaces = (value) => {
+  if (value === undefined || value === null || value === '') return "";
+  const parts = value.toString().split(/[.,]/);
+  const integerPart = parts[0].replace(/[^\d]/g, "");
+  const decimalPart = parts.length > 1 ? parts[1].substring(0, 3) : null;
+  const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return decimalPart !== null ? `${formattedInteger},${decimalPart}` : formattedInteger;
+};
+
+const formatNumberWith0 = (value) => {
+  if (value && value.length > 1 && value[0] === '0' && value[1] !== ',' && value[1] !== '.') {
+    return value.replace(/^0+/, '');
+  }
+  return value;
+};
 
 function Search() {
   useTitle('CMDT - Recherche avancée');
@@ -61,14 +126,14 @@ function Search() {
     supplier_invoice_count_max: '',
     supplier_total_amount_min: '',
     supplier_total_amount_max: '',
-    supplier_avg_amount_min: '',  // AJOUT : Montant moyen min
-    supplier_avg_amount_max: ''   // AJOUT : Montant moyen max
+    supplier_avg_amount_min: '',
+    supplier_avg_amount_max: ''
   });
 
   const [advancedOptions, setAdvancedOptions] = useState({
     order_by: '',
     order_direction: 'desc',
-    group_by_supplier: true  // MODIFICATION : Activé par défaut pour la recherche relationnelle
+    group_by_supplier: true
   });
 
   const [fiscalYears, setFiscalYears] = useState([]);
@@ -77,10 +142,10 @@ function Search() {
 
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
-  const [selectedGroupedResult, setSelectedGroupedResult] = useState(null);  // AJOUT : Pour l'overview des résultats groupés
+  const [selectedGroupedResult, setSelectedGroupedResult] = useState(null);
   const [showInvoiceOverview, setShowInvoiceOverview] = useState(false);
   const [showSupplierOverview, setShowSupplierOverview] = useState(false);
-  const [showGroupedOverview, setShowGroupedOverview] = useState(false);  // AJOUT : Pour l'overview des résultats groupés
+  const [showGroupedOverview, setShowGroupedOverview] = useState(false);
 
   const [filtersModified, setFiltersModified] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -152,14 +217,13 @@ function Search() {
       supplier_invoice_count_max: '',
       supplier_total_amount_min: '',
       supplier_total_amount_max: '',
-      supplier_avg_amount_min: '',  // AJOUT
-      supplier_avg_amount_max: ''   // AJOUT
+      supplier_avg_amount_min: '',
+      supplier_avg_amount_max: ''
     });
-    // MODIFICATION : Réinitialiser avec group_by_supplier activé pour relational, désactivé pour les autres
     setAdvancedOptions({
       order_by: '',
       order_direction: 'desc',
-      group_by_supplier: activeTab === 'relational'  // Activé uniquement pour relational
+      group_by_supplier: activeTab === 'relational'
     });
     setFiltersModified(false);
     setCurrentPage(1);
@@ -195,7 +259,6 @@ function Search() {
     } else if (tab === 'suppliers') {
       base.include_supplier_details = true;
     } else if (tab === 'relational') {
-      // ✅ MODIFICATION : Toujours grouper par fournisseur pour la recherche relationnelle
       base.group_by = 'supplier';
       base.aggregate = 'true';
       base.include_supplier = true;
@@ -244,8 +307,6 @@ function Search() {
         ...suppFilters
       } = filters;
 
-      // ✅ CORRECTION : Ne pas forcer supplier_with_invoices et has_active_invoices
-      // Ces filtres doivent être optionnels et seulement appliqués si l'utilisateur les spécifie
       return suppFilters;
     }
     if (tab === 'relational') {
@@ -354,14 +415,14 @@ function Search() {
       supplier_invoice_count_max: '',
       supplier_total_amount_min: '',
       supplier_total_amount_max: '',
-      supplier_avg_amount_min: '',  // ✅ AJOUT
-      supplier_avg_amount_max: ''   // ✅ AJOUT
+      supplier_avg_amount_min: '',
+      supplier_avg_amount_max: ''
     });
-    // ✅ MODIFICATION : Réinitialiser avec group_by_supplier selon l'onglet actif
+
     setAdvancedOptions({
       order_by: '',
       order_direction: 'desc',
-      group_by_supplier: activeTab === 'relational'  // Activé uniquement pour relational
+      group_by_supplier: activeTab === 'relational'
     });
 
     invoiceSearch.reset();
@@ -376,10 +437,9 @@ function Search() {
     setSelectedSupplier(supplier);
     setShowSupplierOverview(true);
     setShowInvoiceOverview(false);
-    setShowGroupedOverview(false);  // ✅ AJOUT
+    setShowGroupedOverview(false);
   };
 
-  // ✅ AJOUT : Handler pour l'overview des résultats groupés
   const handleShowGroupedOverview = (groupedResult) => {
     setSelectedGroupedResult(groupedResult);
     setShowGroupedOverview(true);
@@ -388,7 +448,6 @@ function Search() {
   };
 
   const handleCloseOverview = (e) => {
-    // Prevent event propagation to avoid triggering other handlers
     if (e) {
       e.stopPropagation();
       e.preventDefault();
@@ -411,7 +470,6 @@ function Search() {
       e.preventDefault();
     }
 
-    // 1. On récupère d'abord les pièces jointes réelles depuis le serveur
     let docs = invoiceAttachments[invoice.id];
     if (!docs) {
       docs = await fetchInvoiceAttachments(invoice.id);
@@ -422,7 +480,7 @@ function Search() {
       num_cmdt: invoice.num_cmdt || '',
       invoice_date: invoice.invoice_date || '',
       invoice_arrival_date: invoice.invoice_arrival_date || invoice.invoice_arr_date || '',
-      invoice_amount: invoice.amount || '',
+      invoice_amount: formatWithSpaces(invoice.amount) || '', // On initialise avec le format "1 000 000"
       supplier_name: invoice.supplier_name || '',
       supplier_account_number: invoice.supplier_account_number || '',
       supplier_phone: invoice.supplier_phone || '',
@@ -433,11 +491,9 @@ function Search() {
       folio: invoice.folio || '',
       fiscal_year: invoice.fiscal_year || '',
       supplier_id: invoice.supplier_id || '',
-      // On utilise les documents récupérés juste au-dessus
       documents: docs || []
     };
 
-    // Conversion des dates
     if (formData.invoice_date) {
       formData.invoice_date = new Date(formData.invoice_date).toISOString().split('T')[0];
     }
@@ -481,20 +537,59 @@ function Search() {
     setEditFormData(prev => ({ ...prev, [name]: value }));
   };
 
+
+
+  /* ✅ CORRECTION CRITIQUE 5 : Input type "Mask"
+     On stocke DIRECTEMENT la valeur formatée dans le state.
+     C'est plus stable pour l'utilisateur : ce qu'il voit = ce qu'il y a dans le state.
+  */
+  const handleAmountChange = (e) => {
+    let inputValue = e.target.value;
+
+    // 1. On récupère la valeur brute (sans espaces)
+    // On autorise chiffres, points, virgules
+    let rawValue = inputValue.replace(/[^0-9.,]/g, '');
+
+    // 2. Normalisation du séparateur (tout en virgule pour le format FR)
+    rawValue = rawValue.replace('.', ',');
+
+    // 3. Gestion des virgules multiples et décimales
+    const parts = rawValue.split(',');
+    let integerPart = parts[0];
+    let decimalPart = parts.length > 1 ? parts[1].substring(0, 3) : null;
+
+    // 4. Nettoyage zéros début
+    if (integerPart.length > 1 && integerPart.startsWith('0')) {
+      integerPart = integerPart.replace(/^0+/, '');
+      if (integerPart === '') integerPart = '0';
+    }
+
+    // 5. Formatage entier avec espaces
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+
+    // 6. Reconstruction
+    let finalValue = formattedInteger;
+    if (parts.length > 1 || rawValue.endsWith(',')) {
+      // Si on a commencé une décimale ou si on a tapé une virgule
+      finalValue += ',' + (decimalPart || '');
+    }
+
+    // 7. Mise à jour du state avec la valeur FORMATÉE
+    setEditFormData(prev => ({ ...prev, invoice_amount: finalValue }));
+  };
+
   const handleSaveInvoiceEdit = async () => {
     if (!editFormData || !selectedInvoice) return;
 
-    // Nettoyage et validation du montant
-    const sanitizedAmountString = editFormData.invoice_amount.toString().replace(/[^\d.]/g, '');
-    const numericAmount = parseFloat(sanitizedAmountString);
+    // Utilisation du parseur robuste
+    const numericAmount = parseCurrencyAmount(editFormData.invoice_amount);
 
-    // Limite à 100 milliards
     if (numericAmount > 100000000000) {
       toastError("Le montant ne peut pas dépasser 100 milliards FCFA.");
       return;
     }
 
-    if (isNaN(numericAmount) || numericAmount <= 0) {
+    if (numericAmount <= 0) {
       toastError("Veuillez saisir un montant valide supérieur à 0.");
       return;
     }
@@ -503,7 +598,7 @@ function Search() {
     try {
       const dataToSave = {
         ...editFormData,
-        invoice_amount: sanitizedAmountString, // Envoi du montant nettoyé
+        invoice_amount: numericAmount, // On envoie un Number
         documents: editFormData.documents || []
       };
 
@@ -513,17 +608,34 @@ function Search() {
         toastSuccess(result.message);
         setIsEditingInvoice(false);
 
-        // --- RAFRAÎCHISSEMENT AUTOMATIQUE DE L'OVERVIEW ---
-        // On récupère la donnée fraîche du serveur pour l'overview
-        const refreshResponse = await api.get(`/invoices/${selectedInvoice.id}`);
-        if (refreshResponse.success) {
-          setSelectedInvoice(refreshResponse.data);
-        } else {
-          // Fallback local si la récupération échoue
+        // ✅ CORRECTION CRITIQUE 2 : Rafraîchissement avec cache-busting
+        try {
+          console.log("🔄 Tentative de rafraîchissement de la facture...");
+          const refreshResponse = await api.get(`/invoices/${selectedInvoice.id}?t=${Date.now()}`);
+          console.log("📥 Réponse refresh:", refreshResponse);
+
+          if (refreshResponse && refreshResponse.data) {
+            // On checke si on a data directement ou dans .data (dépend de l'intercepteur)
+            const freshData = refreshResponse.data;
+            console.log("✅ Mise à jour de selectedInvoice avec:", freshData);
+            setSelectedInvoice(freshData);
+
+            // ✅ Correction : Mettre à jour aussi le state des pièces jointes
+            if (freshData.documents) {
+              setInvoiceAttachments(prev => ({
+                ...prev,
+                [freshData.id]: freshData.documents
+              }));
+            }
+          } else {
+            console.warn("⚠️ Pas de data dans la réponse refresh, utilisation du fallback");
+            setSelectedInvoice(prev => ({ ...prev, ...dataToSave, amount: numericAmount }));
+          }
+        } catch (refreshErr) {
+          console.error("❌ Erreur refresh:", refreshErr);
           setSelectedInvoice(prev => ({ ...prev, ...dataToSave, amount: numericAmount }));
         }
 
-        // Rafraîchir la liste de recherche en arrière-plan
         handleSearch(currentPage, currentLimit);
       } else {
         toastError(result.message || 'Erreur lors de la mise à jour');
@@ -562,7 +674,6 @@ function Search() {
         toastSuccess(response.message || 'Fournisseur mis à jour');
         setIsEditingSupplier(false);
         setSupplierEditForm(null);
-        // Rafraîchir les résultats et l'overview
         setSelectedSupplier(prev => ({ ...prev, ...supplierEditForm }));
         handleSearch(currentPage, currentLimit);
       } else {
@@ -578,20 +689,17 @@ function Search() {
   };
 
   const handleExport = async (format, data = null) => {
-    // Set the appropriate loading state based on format
     if (format === 'pdf') {
       setIsExportingPdf(true);
     } else if (format === 'xlsx') {
       setIsExportingExcel(true);
     }
     try {
-      // Map active tab to API type
       const typeMap = { invoices: 'invoice', suppliers: 'supplier', relational: 'relational' };
       const type = typeMap[activeTab] || 'invoice';
       const isOverview = !!data && (showInvoiceOverview || showSupplierOverview || showGroupedOverview);
       const variant = isOverview ? 'overview' : 'list';
 
-      // Build search payload exactly like QueryBuilder inputs
       const filtersForTab = buildFiltersForTab(activeTab);
       const options = buildOptionsForTab(activeTab);
       const cleanFilters = Object.fromEntries(
@@ -602,7 +710,6 @@ function Search() {
       );
       const searchPayload = { ...cleanFilters, ...cleanOptions };
 
-      // For overview, pass the specific identifier expected by the backend
       if (isOverview) {
         if (showInvoiceOverview && (selectedInvoice || data)) {
           searchPayload.invoice_id = data?.id || selectedInvoice?.id;
@@ -629,13 +736,11 @@ function Search() {
         }
       });
 
-      // Forcer le type MIME pour éviter les mauvaises associations (WPS, etc.)
       const blob = new Blob([response], { type: accept });
       const urlObj = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = urlObj;
 
-      // Générer le nom de fichier selon le contexte
       if (data) {
         if (showInvoiceOverview && selectedInvoice) {
           a.download = `facture-${data.num_cmdt || data.id}-${new Date().toISOString().split('T')[0]}.${format.toLowerCase()}`;
@@ -657,7 +762,6 @@ function Search() {
       document.body.removeChild(a);
     } catch (err) {
       console.error('Erreur lors de l’exportation:', err);
-      // Tentative de décodage de l'erreur si c'est un ArrayBuffer (souvent le cas pour les exports)
       if (err.response?.data instanceof ArrayBuffer) {
         try {
           const decoded = JSON.parse(new TextDecoder().decode(err.response.data));
@@ -670,7 +774,6 @@ function Search() {
         toastError(errorMsg);
       }
     } finally {
-      // Reset the appropriate loading state
       if (format === 'pdf') {
         setIsExportingPdf(false);
       } else if (format === 'xlsx') {
@@ -687,11 +790,23 @@ function Search() {
     await handleSearch(1, limit);
   };
 
+  // ✅ CORRECTION CRITIQUE 3 : Formatage robuste pour le tableau (lecture seule)
+  // Utilise Intl pour forcer le format français (espaces + virgule) sans risque
   const formatAmount = (amount) => {
-    if (!amount) return '0 FCFA';
-    const formatted = formatAmountSmart(amount);
-    if (formatted === 'Invalid amount') return 'Montant invalide';
-    return formatted + ' FCFA';
+    if (amount === undefined || amount === null || amount === '') return '0 FCFA';
+
+    let num = amount;
+    if (typeof amount === 'string') {
+      // Conversion sécurisée : on enlève espaces, on change virgule en point
+      num = parseFloat(amount.toString().replace(/\s/g, '').replace(',', '.'));
+    }
+
+    if (isNaN(num)) return 'Montant invalide';
+
+    return new Intl.NumberFormat('fr-FR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 3
+    }).format(num) + ' FCFA';
   };
 
   const formatDate = (dateString) => {
@@ -1572,7 +1687,6 @@ function Search() {
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{result.last_invoice_date ? formatDate(result.last_invoice_date) : 'N/A'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                   <div className="flex space-x-2">
-                                    {/* ✅ MODIFICATION : Toujours utiliser l'overview groupé pour la recherche relationnelle */}
                                     <button
                                       onClick={() => handleShowGroupedOverview(result)}
                                       className="text-blue-600 hover:text-blue-900 transition-colors"
@@ -1640,30 +1754,18 @@ function Search() {
                                   className="w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-500 cursor-not-allowed"
                                 />
                               </div>
-                              {/* BLOC MONTANT CORRIGÉ */}
+                              {/* ✅ CORRECTION CRITIQUE 4 : Input standardisé (Format "1 000 000,00" via formatWithSpaces) */}
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Montant</label>
                                 <input
                                   type="text"
                                   name="invoice_amount"
-                                  value={editFormData.invoice_amount ? (function (val) {
-                                    if (!val) return "";
-                                    const parts = val.toString().replace(/[^\d.,]/g, "").split(/[.,]/);
-                                    const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-                                    const decimalPart = parts.length > 1 ? parts[1].substring(0, 3) : null;
-                                    return decimalPart !== null ? `${integerPart},${decimalPart}` : integerPart;
-                                  })(editFormData.invoice_amount) : ""}
-                                  onChange={(e) => {
-                                    let val = e.target.value.replace(/[^\d.,]/g, "").replace(".", ",");
-                                    const parts = val.split(",");
-                                    if (parts.length > 2) val = parts[0] + "," + parts.slice(1).join("");
-                                    if (parts.length > 1) val = parts[0] + "," + parts[1].substring(0, 3);
-                                    handleEditFormChange({ target: { name: "invoice_amount", value: val.replace(",", ".") } });
-                                  }}
-                                  placeholder="0,000"
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-bold"
+                                  value={editFormData.invoice_amount}
+                                  onChange={handleAmountChange}
+                                  placeholder="ex. 1 000 000"
+                                  className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-bold text-gray-900"
                                 />
-                                <p className="text-[10px] text-gray-500 mt-1">Maximum: 100 000 000 000 (3 décimales)</p>
+                                <p className="text-[10px] text-gray-500 mt-1">Maximum: 100 milliards (Format auto avec espaces)</p>
                               </div>
                             </div>
                           </div>
@@ -2239,7 +2341,6 @@ function Search() {
             </div>
           )}
 
-          {/* ✅ AJOUT : Overview pour les résultats groupés par fournisseur */}
           {showGroupedOverview && selectedGroupedResult && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">

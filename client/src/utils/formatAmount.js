@@ -7,11 +7,13 @@
  * @returns {string} Formatted amount string
  */
 export function formatAmountSmart(amount) {
-    if (!amount && amount !== 0) return '0';
+    if (amount === undefined || amount === null || amount === '') return '0';
 
-    const num = typeof amount === 'string'
-        ? parseFloat(amount.replace(/\s/g, ''))
-        : Number(amount);
+    // CORRECTION : On s'assure de convertir en String, 
+    // on vire les espaces ET on remplace la virgule par un point
+    // pour que JavaScript puisse comprendre le nombre.
+    const cleanString = amount.toString().replace(/\s/g, '').replace(',', '.');
+    const num = parseFloat(cleanString);
 
     if (isNaN(num)) return 'Invalid amount';
 

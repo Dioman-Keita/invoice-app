@@ -4,7 +4,7 @@ import Login from "../pages/auth/Login.jsx";
 import Home from "../pages/global/Home.jsx";
 import Register from "../pages/auth/Register.jsx";
 import Invoice from "../pages/agent/manager/Invoice.jsx";
-import Search from "../pages/global/Search.jsx";
+import Search from "../pages/admin/Search.jsx";
 import Stats from "../pages/admin/Stats.jsx";
 import Settings from "../pages/admin/Settings.jsx";
 import RoleMigration from "../pages/global/RoleMigration.jsx";

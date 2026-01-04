@@ -16,7 +16,8 @@ export function useSearch(endpoint, entityName) {
         ...filters,
         ...options,
         page,
-        limit
+        limit,
+        _t: Date.now() // Force fresh data from backend (Source of Truth)
       };
 
       const result = await api.get(endpoint, { params });

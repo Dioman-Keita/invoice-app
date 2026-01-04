@@ -166,7 +166,7 @@ function NavbarPanel({ isOpen, onClose }) {
 
   // Séparer les items en catégories
   const { baseItems, adminItems, additionalItems } = useMemo(() => {
-    const adminActions = ['dashboard', 'users', 'adminStats', 'adminMessaging', 'adminLogs'];
+    const adminActions = ['dashboard', 'users', 'adminStats', 'adminMessaging', 'adminLogs', 'search'];
 
     const baseItems = availableActions.filter(item =>
       !adminActions.includes(item.action) && item.action !== 'github'
