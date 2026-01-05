@@ -36,7 +36,7 @@ function Users({ requireAuth = false }) {
   const navigate = useNavigate();
   useTitle('CMDT - Gestion des utilisateurs');
   useBackground('bg-settings');
-  
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -114,11 +114,11 @@ function Users({ requireAuth = false }) {
   const searchInputRef = useRef(null);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  const { 
-    register, 
-    handleSubmit, 
-    formState: { errors }, 
-    control, 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    control,
     trigger,
     setValue,
     reset,
@@ -286,14 +286,14 @@ function Users({ requireAuth = false }) {
         </div>
       `;
       document.body.appendChild(modal);
-      
+
       buttons.forEach((btn) => {
         modal.querySelector(`[data-action="${btn.toLowerCase()}"]`).addEventListener('click', () => {
           document.body.removeChild(modal);
           resolve(btn);
         });
       });
-      
+
       modal.querySelector('.fixed.inset-0').addEventListener('click', () => {
         document.body.removeChild(modal);
         resolve('Cancel');
@@ -414,14 +414,14 @@ function Users({ requireAuth = false }) {
   };
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = 
+    const matchesSearch =
       user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
-    
+
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -513,7 +513,7 @@ function Users({ requireAuth = false }) {
 
   const handleDeleteUser = async (userId) => {
     const userToDelete = users.find(u => u.id === userId);
-    
+
     if (userToDelete?.role === 'admin') {
       await showCustomMessage({
         type: 'error',
@@ -548,7 +548,7 @@ function Users({ requireAuth = false }) {
       console.error('Erreur lors de la suppression:', error);
       const isConflict = error?.response?.status === 409;
       const backendError = error?.response?.data?.message || error?.response?.data?.error;
-      
+
       await showCustomMessage({
         type: 'error',
         title: 'Erreur',
@@ -568,7 +568,7 @@ function Users({ requireAuth = false }) {
   };
 
   const getRoleIcon = (roleType) => {
-    switch(roleType) {
+    switch (roleType) {
       case 'dfc_agent':
         return (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -601,7 +601,7 @@ function Users({ requireAuth = false }) {
     }
     setSubmitting(true);
     setErrorMsg('');
-    
+
     try {
       if (selectedUser) {
         // Pour la modification
@@ -609,7 +609,7 @@ function Users({ requireAuth = false }) {
         if (data.role && data.role !== selectedUser.role) {
           // Messages conditionnels selon le type de changement
           let detailMessage = '';
-          
+
           if (selectedUser.role === 'invoice_manager' && data.role === 'dfc_agent') {
             detailMessage = `
               <div style="margin-top: 8px;">
@@ -652,7 +652,7 @@ function Users({ requireAuth = false }) {
               </div>
             `;
           }
-          
+
           const confirm = await showCustomMessage({
             type: 'warning',
             title: 'Changement de rôle',
@@ -673,20 +673,20 @@ function Users({ requireAuth = false }) {
           department: data.department.trim(),
           employeeId: data.employeeId.trim(),
         };
-        
+
         if (data.password && data.password.trim().length > 0) {
           payload.password = data.password; // envoyé au backend, hashé côté serveur
         }
-        
+
         await api.put(`/users/${selectedUser.id}`, payload, { timeout: 30000 });
-        
+
         await showCustomMessage({
           type: 'success',
           title: 'Modification réussie',
           message: 'Utilisateur modifié',
           detail: 'L\'utilisateur a été modifié avec succès.'
         });
-        
+
       } else {
         // Pour la création
         const payload = {
@@ -700,9 +700,9 @@ function Users({ requireAuth = false }) {
           department: data.department.trim(),
           terms: data.terms,
         };
-        
+
         await api.post('/users', payload, { timeout: 30000 });
-        
+
         await showCustomMessage({
           type: 'success',
           title: 'Email de vérification envoyé',
@@ -710,7 +710,7 @@ function Users({ requireAuth = false }) {
           detail: "Un email de vérification a été envoyé à cet utilisateur. Demandez-lui de cliquer sur le lien pour finaliser son inscription. Si vous êtes administrateur et certain de l'intégrité de son email, vous pouvez activer son compte manuellement."
         });
       }
-      
+
       await fetchUsers();
       // Nettoyer le formulaire après soumission (surtout en création)
       if (!selectedUser) {
@@ -729,11 +729,11 @@ function Users({ requireAuth = false }) {
       }
       setShowUserModal(false);
       setSelectedUser(null);
-      
+
     } catch (err) {
       console.error('Erreur détaillée:', err.response || err);
       const backendError = err?.response?.data?.message || err?.response?.data?.error;
-      
+
       if (backendError) {
         setErrorMsg(backendError);
       } else if (err.response?.status === 409) {
@@ -756,20 +756,46 @@ function Users({ requireAuth = false }) {
     reset();
   };
 
-  if (loading) {
+  // Skeleton Loader Component
+  const UserRowSkeleton = () => (
+    <tr className="animate-pulse border-b border-gray-100">
+      <td className="px-6 py-4"><div className="h-4 w-32 bg-gray-200 rounded"></div></td>
+      <td className="px-6 py-4"><div className="h-4 w-40 bg-gray-200 rounded"></div></td>
+      <td className="px-6 py-4"><div className="h-6 w-20 bg-gray-200 rounded-full"></div></td>
+      <td className="px-6 py-4"><div className="h-6 w-16 bg-gray-200 rounded-full"></div></td>
+      <td className="px-6 py-4"><div className="h-4 w-24 bg-gray-200 rounded"></div></td>
+      <td className="px-6 py-4 text-right"><div className="h-8 w-24 bg-gray-200 rounded ml-auto"></div></td>
+    </tr>
+  );
+
+  // Initial loading only (no users yet)
+  if (loading && users.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
+        <Navbar />
         <div className="container mx-auto px-4 py-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
-            <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map(i => (
-                <div key={i} className="bg-white p-6 rounded-lg shadow">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                </div>
-              ))}
+          <div className="mb-8 animate-pulse">
+            <div className="h-8 w-48 bg-gray-200 rounded mb-2"></div>
+            <div className="h-4 w-64 bg-gray-200 rounded"></div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-4 border-b border-gray-200 flex gap-4">
+              <div className="h-10 w-full bg-gray-100 rounded"></div>
             </div>
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-gray-50">
+                <tr>
+                  {[1, 2, 3, 4, 5, 6].map(i => (
+                    <th key={i} className="px-6 py-4"><div className="h-4 w-20 bg-gray-200 rounded"></div></th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[1, 2, 3, 4, 5].map(i => <UserRowSkeleton key={i} />)}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -780,6 +806,20 @@ function Users({ requireAuth = false }) {
     <div className="min-h-screen">
       <Header />
       <Navbar />
+
+      {/* Loading overlay for refreshes */}
+      {loading && users.length > 0 && (
+        <div className="fixed top-20 right-4 z-50">
+          <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm animate-pulse shadow-lg flex items-center">
+            <svg className="animate-spin h-4 w-4 mr-2 text-white" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Actualisation...
+          </div>
+        </div>
+      )}
+
       {actionLoading.active && (
         <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-lg shadow-lg px-6 py-4 flex items-center gap-3">
@@ -851,9 +891,8 @@ function Users({ requireAuth = false }) {
           <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
             {/* Recherche améliorée */}
             <div className="relative flex-1 max-w-md">
-              <MagnifyingGlassIcon className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors ${
-                isSearchFocused ? 'text-blue-500' : 'text-gray-400'
-              }`} />
+              <MagnifyingGlassIcon className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors ${isSearchFocused ? 'text-blue-500' : 'text-gray-400'
+                }`} />
               <input
                 type="text"
                 placeholder="Rechercher un utilisateur..."
@@ -1063,12 +1102,12 @@ function Users({ requireAuth = false }) {
       {/* Modal création/édition utilisateur - Design simplifié */}
       {showUserModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          <div 
+          <div
             className="fixed inset-0 bg-black/50"
             onClick={closeModal}
           />
-          
-          <div 
+
+          <div
             className="relative bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1109,7 +1148,7 @@ function Users({ requireAuth = false }) {
                   </div>
                 </div>
               )}
-              
+
               {/* Sélection du type d'utilisateur - Style simplifié */}
               <div className="mb-8">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -1118,35 +1157,36 @@ function Users({ requireAuth = false }) {
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { key: 'invoice_manager', label: "Gestionnaire de factures", icon: (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    )},
-                    { key: 'dfc_agent', label: "Agent DFC", icon: (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                      </svg>
-                    )}
+                    {
+                      key: 'invoice_manager', label: "Gestionnaire de factures", icon: (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      )
+                    },
+                    {
+                      key: 'dfc_agent', label: "Agent DFC", icon: (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                      )
+                    }
                   ].map(({ key, label, icon }) => (
                     <button
                       key={key}
                       type="button"
                       onClick={() => setValue('role', key, { shouldValidate: true })}
-                      className={`p-4 rounded-lg border transition-all duration-200 flex items-center gap-3 ${
-                        formRole === key
+                      className={`p-4 rounded-lg border transition-all duration-200 flex items-center gap-3 ${formRole === key
                           ? 'border-blue-500 bg-blue-50 shadow-sm'
                           : 'border-gray-200 hover:border-gray-300 bg-white'
-                      }`}
+                        }`}
                     >
-                      <div className={`p-2 rounded-md ${
-                        formRole === key ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
-                      }`}>
+                      <div className={`p-2 rounded-md ${formRole === key ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
+                        }`}>
                         {icon}
                       </div>
-                      <span className={`text-sm font-medium ${
-                        formRole === key ? 'text-blue-700' : 'text-gray-700'
-                      }`}>
+                      <span className={`text-sm font-medium ${formRole === key ? 'text-blue-700' : 'text-gray-700'
+                        }`}>
                         {label}
                       </span>
                     </button>
@@ -1163,7 +1203,7 @@ function Users({ requireAuth = false }) {
                   <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
                     Informations personnelles
                   </h4>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
@@ -1174,11 +1214,10 @@ function Users({ requireAuth = false }) {
                         id="firstName"
                         onInput={handleFirstNameInput}
                         {...register("firstName")}
-                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
-                          errors['firstName']?.message 
-                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${errors['firstName']?.message
+                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
                             : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
-                        }`}
+                          }`}
                         placeholder="Votre prénom"
                       />
 
@@ -1198,11 +1237,10 @@ function Users({ requireAuth = false }) {
                         id="lastName"
                         onInput={handleLastNameInput}
                         {...register("lastName")}
-                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
-                          errors['lastName']?.message 
-                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${errors['lastName']?.message
+                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
                             : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
-                        }`}
+                          }`}
                         placeholder="Votre nom"
                       />
 
@@ -1226,13 +1264,12 @@ function Users({ requireAuth = false }) {
                         id="email"
                         {...register("email")}
                         readOnly={!!selectedUser} // Email en read-only pour la modification
-                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
-                          errors['email']?.message 
-                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${errors['email']?.message
+                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
                             : selectedUser
-                            ? 'border-gray-300 bg-gray-50 text-gray-500 cursor-not-allowed'
-                            : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
-                        }`}
+                              ? 'border-gray-300 bg-gray-50 text-gray-500 cursor-not-allowed'
+                              : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                          }`}
                         placeholder="prenom.nom@cmdt.ml"
                         onInput={handleEmailInput}
                       />
@@ -1260,11 +1297,10 @@ function Users({ requireAuth = false }) {
                         onInput={handleEmployeeIdInput}
                         id="employeeId"
                         {...register("employeeId")}
-                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
-                          errors.employeeId?.message 
-                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${errors.employeeId?.message
+                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
                             : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
-                        }`}
+                          }`}
                         placeholder="Votre identifiant CMDT"
                       />
 
@@ -1293,11 +1329,10 @@ function Users({ requireAuth = false }) {
                           }
                         }}
                         {...register("phone")}
-                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
-                          errors.phone?.message 
-                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${errors.phone?.message
+                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
                             : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
-                        }`}
+                          }`}
                         placeholder="+223 00 00 00 00"
                       />
 
@@ -1316,11 +1351,10 @@ function Users({ requireAuth = false }) {
                       <select
                         id="department"
                         {...register("department")}
-                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
-                          errors.department?.message 
-                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${errors.department?.message
+                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
                             : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
-                        }`}
+                          }`}
                       >
                         <option value="">Sélectionnez un département</option>
                         {(() => {
@@ -1355,7 +1389,7 @@ function Users({ requireAuth = false }) {
                     <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
                       Sécurité
                     </h4>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
@@ -1366,11 +1400,10 @@ function Users({ requireAuth = false }) {
                             type={showPassword ? 'text' : 'password'}
                             id="password"
                             onInput={handlePasswordInput}
-                            className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${
-                              errors.password?.message 
-                                ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                            className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${errors.password?.message
+                                ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
                                 : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
-                            }`}
+                              }`}
                             placeholder="Mot de passe"
                             {...register("password")}
                           />
@@ -1404,11 +1437,10 @@ function Users({ requireAuth = false }) {
                             type={showConfirmPassword ? 'text' : 'password'}
                             id="confirm_password"
                             onInput={handleConfirmPasswordInput}
-                            className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${
-                              errors.confirm_password?.message 
-                                ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                            className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${errors.confirm_password?.message
+                                ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
                                 : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
-                            }`}
+                              }`}
                             placeholder="Confirmez le mot de passe"
                             {...register("confirm_password")}
                           />
@@ -1453,11 +1485,10 @@ function Users({ requireAuth = false }) {
                             type={showPassword ? 'text' : 'password'}
                             id="password"
                             onInput={handlePasswordInput}
-                            className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${
-                              errors.password?.message 
-                                ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                            className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${errors.password?.message
+                                ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
                                 : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
-                            }`}
+                              }`}
                             placeholder="Laisser vide pour ne pas changer"
                             {...register("password")}
                           />
@@ -1491,11 +1522,10 @@ function Users({ requireAuth = false }) {
                             type={showConfirmPassword ? 'text' : 'password'}
                             id="confirm_password"
                             onInput={handleConfirmPasswordInput}
-                            className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${
-                              errors.confirm_password?.message 
-                                ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400' 
+                            className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${errors.confirm_password?.message
+                                ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
                                 : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
-                            }`}
+                              }`}
                             placeholder="Répétez le nouveau mot de passe"
                             {...register("confirm_password")}
                           />
@@ -1522,19 +1552,19 @@ function Users({ requireAuth = false }) {
                     </div>
                   </div>
                 )}
-                
+
 
                 {/* Actions */}
                 <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={closeModal}
                     className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     Annuler
                   </button>
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     disabled={submitting}
                     className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                   >
@@ -1558,12 +1588,12 @@ function Users({ requireAuth = false }) {
       {/* Modal détails utilisateur - Style simplifié */}
       {showDetailModal && selectedUser && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          <div 
+          <div
             className="fixed inset-0 bg-black/50"
             onClick={closeModal}
           />
-          
-          <div 
+
+          <div
             className="relative bg-white rounded-xl shadow-xl w-full max-w-md"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1584,7 +1614,7 @@ function Users({ requireAuth = false }) {
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6">
               <div className="space-y-6">
                 <div className="flex items-center gap-4">
@@ -1598,7 +1628,7 @@ function Users({ requireAuth = false }) {
                     <p className="text-sm text-gray-500">{selectedUser.email}</p>
                   </div>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-gray-50 p-4 rounded-lg">
@@ -1607,7 +1637,7 @@ function Users({ requireAuth = false }) {
                         {getRoleDisplayName(selectedUser.role)}
                       </span>
                     </div>
-                    
+
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <p className="text-sm font-medium text-gray-500 mb-1">Statut</p>
                       <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(selectedUser.status)}`}>
@@ -1615,7 +1645,7 @@ function Users({ requireAuth = false }) {
                       </span>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-3">
                     {selectedUser.employeeId && (
                       <div className="flex items-center justify-between py-2 border-b border-gray-100">
@@ -1629,26 +1659,26 @@ function Users({ requireAuth = false }) {
                         <span className="text-sm text-gray-900">{selectedUser.phone}</span>
                       </div>
                     )}
-                    
+
                     {selectedUser.department && (
                       <div className="flex items-center justify-between py-2 border-b border-gray-100">
                         <span className="text-sm font-medium text-gray-500">Département</span>
                         <span className="text-sm text-gray-900">{selectedUser.department}</span>
                       </div>
                     )}
-                    
+
                     <div className="flex items-center justify-between py-2 border-b border-gray-100">
                       <span className="text-sm font-medium text-gray-500">Dernière connexion</span>
                       <span className="text-sm text-gray-900">{formatDate(selectedUser.lastLogin)}</span>
                     </div>
-                    
+
                     <div className="flex items-center justify-between py-2">
                       <span className="text-sm font-medium text-gray-500">Date de création</span>
                       <span className="text-sm text-gray-900">{formatDate(selectedUser.createdAt)}</span>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex justify-end pt-6">
                   <button
                     onClick={closeModal}

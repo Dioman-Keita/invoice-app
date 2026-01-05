@@ -24,8 +24,8 @@ export class SystemController {
                 params.push(level);
             }
 
-            query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
-            params.push(limit, offset);
+            query += ` ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+            // params.push(limit, offset); // LIMIT/OFFSET injectés directement pour éviter bug mysql2 prep statements
 
             const logs = await database.execute(query, params);
             const totalResult: any = await database.execute(countQuery, level && level !== 'all' ? [level] : []);
@@ -41,7 +41,11 @@ export class SystemController {
                 }
             }, 'Logs récupérés');
         } catch (error) {
-            logger.error('Erreur lors de la récupération des logs système', { error });
+            logger.error('Erreur lors de la récupération des logs système', {
+                error,
+                path: req.originalUrl,
+                userId: (req as any).user?.id
+            });
             return ApiResponder.error(res, error);
         }
     }

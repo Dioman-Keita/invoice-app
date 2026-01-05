@@ -33,7 +33,11 @@ export async function auditLog(params: AuditLogParams): Promise<void> {
         );
         logger.info('Audit log enregistré', { action, table_name, record_id, performed_by });
     } catch (error) {
-        logger.error('Echec de l\'enregistrement de l\'audit_log', { error, params });
+        logger.error('Echec de l\'enregistrement de l\'audit_log', {
+            error,
+            params,
+            user_id: performed_by
+        });
     }
 }
 
@@ -46,6 +50,10 @@ export async function exportLog(params: ExportLogParams): Promise<void> {
         );
         logger.info('Export log enregistré', { invoice_id, format, exported_by });
     } catch (error) {
-        logger.error('Echec de l\'enregistrement de l\'export_log', { error, params });
+        logger.error('Echec de l\'enregistrement de l\'export_log', {
+            error,
+            params,
+            user_id: exported_by
+        });
     }
 }

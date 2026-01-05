@@ -26,12 +26,13 @@ const SystemLogs = () => {
 
     const [logs, setLogs] = useState([]);
     const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
+    const [currentPage, setCurrentPage] = useState(1); // ✅ Ajout d'un state explicite pour la page courante
     const [loading, setLoading] = useState(true);
     const [filterLevel, setFilterLevel] = useState('all');
     const [selectedLog, setSelectedLog] = useState(null);
     const [isClearing, setIsClearing] = useState(false);
 
-    const fetchLogs = async (page = 1) => {
+    const fetchLogs = async (page) => {
         setLoading(true);
         try {
             const response = await api.get(`/system/logs?page=${page}&limit=50&level=${filterLevel}`);
@@ -47,8 +48,14 @@ const SystemLogs = () => {
         }
     };
 
+    // ✅ Un seul useEffect qui écoute la page et le filtre
     useEffect(() => {
-        fetchLogs(1);
+        fetchLogs(currentPage);
+    }, [currentPage, filterLevel]);
+
+    // Reset page on filter change
+    useEffect(() => {
+        setCurrentPage(1);
     }, [filterLevel]);
 
     const handleClearLogs = async () => {
@@ -59,7 +66,12 @@ const SystemLogs = () => {
             const response = await api.delete('/system/logs');
             if (response.success) {
                 toastSuccess('Logs réinitialisés');
-                fetchLogs(1);
+                setLogs([]); // Vider immédiatement
+                if (currentPage === 1) {
+                    fetchLogs(1);
+                } else {
+                    setCurrentPage(1);
+                }
             }
         } catch (err) {
             toastError('Erreur lors de la suppression');
@@ -115,7 +127,7 @@ const SystemLogs = () => {
                             </select>
 
                             <button
-                                onClick={() => fetchLogs(pagination.page)}
+                                onClick={() => fetchLogs(currentPage)}
                                 disabled={loading}
                                 className="p-2 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
                                 title="Actualiser"
@@ -214,7 +226,7 @@ const SystemLogs = () => {
                         <div className="flex items-center space-x-2">
                             <button
                                 disabled={pagination.page === 1}
-                                onClick={() => fetchLogs(pagination.page - 1)}
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                 className="p-2 rounded-lg border border-gray-300 hover:bg-white disabled:opacity-40 transition-colors"
                             >
                                 <ChevronLeftIcon className="w-5 h-5" />
@@ -224,7 +236,7 @@ const SystemLogs = () => {
                             </span>
                             <button
                                 disabled={pagination.page >= pagination.totalPages}
-                                onClick={() => fetchLogs(pagination.page + 1)}
+                                onClick={() => setCurrentPage(prev => prev + 1)}
                                 className="p-2 rounded-lg border border-gray-300 hover:bg-white disabled:opacity-40 transition-colors"
                             >
                                 <ChevronRightIcon className="w-5 h-5" />
