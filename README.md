@@ -37,15 +37,15 @@
 
 See the application in action:
 
-![Invoice App Demo](architecture/video/demo.mp4)
+![Invoice App Demo](architecture/video/demo_lite.mp4)
 
 ### Workflow Visualizations
 
 To understand the core business logic, refer to our detailed flow diagrams:
 
-| Login Flow | Register Flow | Invoice Lifecycle |
-| :---: | :---: | :---: |
-| [![Login](architecture/flows/login_flow.svg)](architecture/flows/login_flow.svg) | [![Register](architecture/flows/register_flow.svg)](architecture/flows/register_flow.svg) | [![Invoice](architecture/flows/invoice_flow.svg)](architecture/flows/invoice_flow.svg) |
+| Login Flow                                                                                   | Register Flow                                                                                      | Invoice Lifecycle                                                                                  |
+|:--------------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------:|
+| [![Login](architecture/flows/login_flow.svg)](architecture/flows/login_flow.svg)           | [![Register](architecture/flows/register_flow.svg)](architecture/flows/register_flow.svg)        | [![Invoice](architecture/flows/invoice_flow.svg)](architecture/flows/invoice_flow.svg)           |
 
 ---
 
