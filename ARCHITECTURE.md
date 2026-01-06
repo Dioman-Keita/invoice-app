@@ -78,7 +78,7 @@ Packaging a complex Node.js app (with native dependencies) into an Electron exe 
 ## 🎥 Demonstration
 
 A video demonstration of the full flow is available:
-[Watch the demo video](architecture/video/demo_lite.mp4)
+[Watch the demo video](architecture/video/demo.mp4)
 
 ---
 
