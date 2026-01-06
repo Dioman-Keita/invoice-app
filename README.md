@@ -37,10 +37,7 @@
 
 See the application in action:
 
-![Invoice App Demo](architecture/video/demo.mp4)
-
-> [!NOTE]
-> If the video does not play above, you can [download it here](architecture/video/demo.mp4?raw=true).
+![Invoice App Demo](architecture/video/demo_lite.mp4)
 
 ### Workflow Visualizations
 
