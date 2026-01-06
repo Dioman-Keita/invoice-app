@@ -37,7 +37,7 @@
 
 See the application in action:
 
-<video src="./architechture/video/demo.mp4" controls width="100%"></video>
+<https://github.com/Dioman-Keita/invoice-app/blob/main/architechture/video/demo.mp4?raw=true>
 
 ### Workflow Visualizations
 
@@ -132,6 +132,8 @@ npm run electron:dev
 
 > [!CAUTION]
 > Unlike the frontend (Vite), the backend does **not** hot-reload inside Electron. You **must** re-run `npm run build --prefix server` (or `cd server && npm run build`) for your changes to be reflected in the app.
+
+---
 
 > [!TIP]
 > `npm run electron:dev` will automatically:
