@@ -1,1 +1,2 @@
-architechture/video/demo.mp4 filter=lfs diff=lfs merge=lfs -text
+architecture/video/demo.mp4 filter=lfs diff=lfs merge=lfs -text
+*.svg -text

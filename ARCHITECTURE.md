@@ -42,15 +42,15 @@ The application handles deep links for email authentication.
 
 ### Authentication Flow (Login)
 
-![Login Flow](architechture/flows/login_flow.svg)
+![Login Flow](architecture/flows/login_flow.svg)
 
 ### Registration Flow
 
-![Register Flow](architechture/flows/register_flow.svg)
+![Register Flow](architecture/flows/register_flow.svg)
 
 ### Invoice Lifecycle
 
-![Invoice Flow](architechture/flows/invoice_flow.svg)
+![Invoice Flow](architecture/flows/invoice_flow.svg)
 
 ---
 

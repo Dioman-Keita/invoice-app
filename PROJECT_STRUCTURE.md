@@ -35,7 +35,7 @@ invoice-app/
 ├── server/                    # Express/TypeScript Backend API
 ├── common/                    # Shared code between client/server
 ├── dist/                      # Compiled builds
-├── architechture/             # Architecture diagrams
+├── architecture/             # Architecture diagrams
 └── node_modules/
 ```
 

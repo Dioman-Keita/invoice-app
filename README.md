@@ -37,7 +37,10 @@
 
 See the application in action:
 
-![Invoice App Demo](architechture/video/demo.mp4)
+![Invoice App Demo](architecture/video/demo.mp4)
+
+> [!NOTE]
+> If the video does not play above, you can [download it here](architecture/video/demo.mp4?raw=true).
 
 ### Workflow Visualizations
 
@@ -45,7 +48,7 @@ To understand the core business logic, refer to our detailed flow diagrams:
 
 | Login Flow                                                                                   | Register Flow                                                                                      | Invoice Lifecycle                                                                                  |
 |:--------------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------:|
-| [![Login](architechture/flows/login_flow.svg)](architechture/flows/login_flow.svg)           | [![Register](architechture/flows/register_flow.svg)](architechture/flows/register_flow.svg)        | [![Invoice](architechture/flows/invoice_flow.svg)](architechture/flows/invoice_flow.svg)           |
+| [![Login](architecture/flows/login_flow.svg)](architecture/flows/login_flow.svg)           | [![Register](architecture/flows/register_flow.svg)](architecture/flows/register_flow.svg)        | [![Invoice](architecture/flows/invoice_flow.svg)](architecture/flows/invoice_flow.svg)           |
 
 ---
 
