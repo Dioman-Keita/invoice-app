@@ -37,7 +37,7 @@
 
 See the application in action:
 
-<https://github.com/Dioman-Keita/invoice-app/blob/main/architechture/video/demo.mp4?raw=true>
+![Invoice App Demo](architechture/video/demo.mp4)
 
 ### Workflow Visualizations
 
