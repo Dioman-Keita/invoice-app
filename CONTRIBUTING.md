@@ -18,12 +18,12 @@ This project and everyone participating in it is governed by the [Invoice App Co
     cd invoice-app
     ```
 
-3. **Install dependencies** using the setup script or manually:
+3. **Install dependencies**:
 
     ```bash
-    # Ensure Docker is running first!
-    cd server && npm install
-    cd ../client && npm install
+    npm install
+    npm install --prefix client
+    npm install --prefix server
     ```
 
 4. **Configure Environment**:
@@ -33,11 +33,7 @@ This project and everyone participating in it is governed by the [Invoice App Co
 
 ### Reporting Bugs
 
-This section guides you through submitting a bug report.
-
-- **Use a clear and descriptive title** for the issue to identify the problem.
-- **Describe the exact steps to reproduce the problem** in as many details as possible.
-- **Provide specific examples** to demonstrate the steps (include screenshots if possible).
+See the [Bug Report Template](.github/ISSUE_TEMPLATE/bug_report.md) for details.
 
 ### Pull Requests
 
@@ -47,14 +43,8 @@ This section guides you through submitting a bug report.
     git checkout -b feature/amazing-feature
     ```
 
-2. **Commits**: Make sure your commit messages are clear. We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification (e.g., `feat: add user login`, `fix: correct invoice total`).
-3. **Code Style**:
-    - **Backend**: Strict TypeScript. Ensure no `any` types if possible.
-    - **Frontend**: React + Hooks. Use functional components.
-    - **Formatting**: The project uses Prettier/ESLint. Run `npm run lint` before committing.
-4. **Testing**:
-    - Ensure your changes do not break existing functionality.
-    - Test standard flows (Login -> Create Invoice -> Export).
+2. **Commits**: Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `chore:`, etc.
+3. **Code Style**: Follow ESLint rules. Run `npm run lint` before committing.
 
 ## 🛠 Development Workflow
 
@@ -62,38 +52,25 @@ This section guides you through submitting a bug report.
 
 - **`client/`**: React Frontend (Vite)
 - **`server/`**: Express Backend (TypeScript)
-- **`main.js`**: Electron entry point
+- **`main.js`**: Electron entry point / Stack Orchestrator
 
 ### Running Locally
 
-To run the full hybrid stack:
+You don't need to start services manually. The orchestrator handles everything:
 
-1. Start MySQL Database:
-
-    ```bash
-    cd server
-    ./manage-stack.bat # Windows
-    # or ./manage-stack.sh # Linux/Mac
-    ```
-
-2. Start Backend (Port 3000):
+1. **Build the server once**:
 
     ```bash
-    npm run dev
+    npm run build --prefix server
     ```
 
-3. Start Frontend (Port 5173):
-
-    ```bash
-    cd ../client
-    npm run dev
-    ```
-
-4. (Optional) Start Electron:
+2. **Start the hybrid stack**:
 
     ```bash
     npm run electron:dev
     ```
+
+This will automatically start Docker MySQL, the Vite dev server, and the Express backend forked process.
 
 ## 📝 License
 

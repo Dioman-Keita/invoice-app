@@ -181,10 +181,10 @@ class InvoiceDataValidator {
     // Validation des dates
     if (data.invoice_arrival_date && data.invoice_date) {
       try {
-        const invoiceDate = new Date(formatDate(data.invoice_arrival_date));
-        const invoiceArrivalDate = new Date(formatDate(data.invoice_date));
+        const invoiceDate = new Date(formatDate(data.invoice_date));
+        const invoiceArrivalDate = new Date(formatDate(data.invoice_arrival_date));
 
-        if (invoiceDate.getTime() > invoiceArrivalDate.getTime()) {
+        if (invoiceArrivalDate.getTime() < invoiceDate.getTime()) {
           errors.push({
             field: 'invoice_arrival_date',
             message: 'La date d\'arrivée de la facture ne peut pas être antérieure à la date réelle de la facture'

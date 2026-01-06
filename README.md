@@ -26,7 +26,7 @@
 
 **Unique Selling Point**: Unlike standard Electron apps, this project runs a **real Node.js/Express server** and a **Dockerized MySQL database** locally on the user's machine, packaged into a single `.exe`.
 
-> [!IMPORTANT]  
+> [!IMPORTANT]
 > This project depends on **Docker Desktop** (for the database) and **LibreOffice** (for PDF generation via Carbone.io). Both components must be installed and functional.
 
 ---
@@ -36,7 +36,8 @@
 ### Video Demonstration
 
 See the application in action:
-**[▶️ Watch the Demo Video](architechture/video/demo.mp4)**
+
+<video src="./architechture/video/demo.mp4" controls width="100%"></video>
 
 ### Workflow Visualizations
 
@@ -103,63 +104,58 @@ This project solves the "Client-Server on Desktop" challenge through a hybrid de
 
 ### Prerequisites
 
-* **Docker Desktop** (Must be running)
-* **LibreOffice** (Version 25.8 recommended for PDF generation)
-* Node.js 18+
+* **Docker Desktop**: Must be installed and running.
+* **LibreOffice**: Required for PDF generation (v24+ recommended).
+* **Node.js**: v18 or later.
 
 ### Quick Start (Development)
 
-Services must be started in this exact order:
-
-#### 1. Database Management (Docker)
+The application is designed to manage its own infrastructure. You don't need to manually start Docker containers or the backend server.
 
 ```bash
-cd server
-docker compose up -d    # Create and start containers
-docker compose start    # Start services (if already created)
-docker compose down     # Stop containers
-```
+# 1. Clone the repository
+git clone https://github.com/Dioman-Keita/invoice-app.git
+cd invoice-app
 
-##### 🛠️ Database Initialization (First Use)
+# 2. Install dependencies
+npm install
+npm install --prefix client
+npm install --prefix server
 
-If this is your first time using the app, you must manually create the database structure:
+# 3. Build the backend (CRITICAL)
+# This must be run every time you modify TypeScript code in the server folder
+npm run build --prefix server
 
-1. Open the file `server/mysql/db/db.sql` and copy its entire content (**Ctrl + A** then **Ctrl + C**).
-2. In your terminal, access the MySQL container:
-
-   ```bash
-   docker exec -it final_mysql mysql -u root -p
-   ```
-
-3. Enter the password (defined in your `.env`).
-4. Once in the MySQL prompt, run:
-
-   ```sql
-   use cmdt_invoice_db;
-   ```
-
-5. Paste the copied content directly into the terminal (**Ctrl + V**) to create all tables.
-
-#### 2. Start the Server (Backend)
-
-```bash
-cd server
-npm run dev
-```
-
-#### 3. Start the Interface (Vite + Electron)
-
-> [!IMPORTANT]
-> Run `npm run electron:dev` ONLY after starting Docker and the server.
-
-```bash
-# From the project root
+# 4. Start the application
 npm run electron:dev
 ```
 
+> [!CAUTION]
+> Unlike the frontend (Vite), the backend does **not** hot-reload inside Electron. You **must** re-run `npm run build --prefix server` (or `cd server && npm run build`) for your changes to be reflected in the app.
+
+> [!TIP]
+> `npm run electron:dev` will automatically:
+>
+> 1. Start the Docker MySQL container (via `docker compose up -d`).
+> 2. Spin up the Vite dev server for the frontend.
+> 3. Fork and launch the Express backend.
+
+#### 🛠️ Database Initialization (First Use)
+
+If this is your first time using the app:
+
+1. Run `npm run electron:dev` once to let Docker create the container.
+2. Open your terminal and access the MySQL container:
+
+    ```bash
+    docker exec -it final_mysql mysql -u root -p
+    ```
+
+3. Execute the schema located at `server/mysql/db/db.sql` to initialize tables.
+
 ### Build for Production (`.exe`)
 
-This command compiles the React app, the TS server, and bundles everything into an installer:
+This command compiles the entire stack into a single standalone installer:
 
 ```bash
 npm run dist
@@ -194,6 +190,10 @@ The embedded server exposes a full REST API at `http://localhost:3000/api`.
 * [x] **Phase 2**: Deep Linking & Asset Protection
 * [ ] **Phase 3**: Auto-updater
 * [ ] **Phase 4**: Multi-machine sync (Remote DB option)
+* [ ] **Phase 5**: Turborepo integration for better monorepo management (Planned)
+* [ ] **Phase 6**: Complete Frontend migration to TypeScript (TSX)
+* [ ] **Phase 7**: Comprehensive code reorganization and architectural refactoring (Client & Server)
+* [ ] **Phase 8**: Systematic Jest integration for comprehensive pre-launch testing
 
 ---
 
@@ -207,5 +207,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ---
 
-**Author**: Dioman Keita  
 **License**: MIT
