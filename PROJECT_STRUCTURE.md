@@ -19,7 +19,8 @@ Electron invoice management application for CMDT (Compagnie Malienne pour le Dé
 
 ```plaintext
 invoice-app/
-├── main.js                    # Electron Entry Point (1053 lines)
+├── main.js                    # Electron Entry Point (~350 lines)
+├── preload.js                 # Electron Preload Script (IPC Bridge)
 ├── package.json               # Root config + Electron Builder
 ├── package-lock.json
 ├── tsconfig.json              # Root TypeScript config
@@ -30,6 +31,7 @@ invoice-app/
 ├── CONTRIBUTING.md
 ├── SECURITY.md
 ├── ARCHITECTURE.md            # Detailed Architecture
+├── PROJECT_STRUCTURE.md       # This file
 │
 ├── client/                    # React Frontend Application
 ├── server/                    # Express/TypeScript Backend API
@@ -156,39 +158,110 @@ server/
 │   ├── database.ts           # MySQL Connection Pool
 │   └── carbone.config.ts     # Document Generation Config
 │
+├── core/                     # Core Business Logic
+│   ├── generators/           # ID Generators
+│   │   └── IdGenerator.ts    # Unique ID generation (INV-FY2025-...)
+│   ├── managers/             # Counter Managers
+│   │   ├── FiscalCounterManager.ts    # Base fiscal counter
+│   │   ├── InvoiceCounterManager.ts   # Invoice counter
+│   │   └── EmployeeCounterManager.ts  # Employee counter
+│   └── rules/                # Business Rules
+│       └── InvoiceNumberRule.ts       # Invoice numbering rules
+│
 ├── controllers/              # Controllers (Business Logic)
+│   ├── auth.controller.ts
 │   ├── invoice.controller.ts
-│   └── ...
+│   ├── supplier.controller.ts
+│   ├── users.controller.ts
+│   ├── stats.controller.ts
+│   ├── search.controller.ts
+│   ├── export.controller.ts
+│   ├── settings.controller.ts
+│   ├── migration.controller.ts
+│   └── system.controller.ts
 │
 ├── routes/                   # Express Routes
+│   ├── auth.route.ts
 │   ├── invoice.routes.ts
-│   └── ...
+│   ├── supplier.route.ts
+│   ├── users.route.ts
+│   ├── stats.route.ts
+│   ├── search.route.ts
+│   ├── export.route.ts
+│   ├── settings.route.ts
+│   ├── migration.route.ts
+│   └── system.route.ts
 │
 ├── middleware/               # Express Middlewares
-│   ├── authGuard.ts          # JWT Auth
-│   ├── roleGuard.ts          # Role Check
+│   ├── authGuard.ts          # JWT Authentication
+│   ├── roleGuard.ts          # Role-based Access Control
 │   ├── validator.ts          # Data Validation
-│   └── ...
+│   ├── autoTrackActivity.ts  # Activity Tracking
+│   ├── debugCookie.ts        # Cookie Debugging
+│   └── requestIdMiddleware.ts # Request ID Tracking
 │
 ├── models/                   # Data Models
-│   ├── User.ts
-│   ├── Invoice.ts
-│   └── Supplier.ts
+│   ├── User.ts               # User Model
+│   ├── Invoice.ts            # Invoice Model
+│   └── Supplier.ts           # Supplier Model
 │
 ├── services/                 # Business Services
-│   ├── emailService.ts       
-│   ├── userToken.ts          
+│   ├── emailService.ts       # Email Service (Gmail)
+│   ├── userToken.ts          # JWT Token Generation
+│   ├── notificationFactory.ts # Email Templates
 │   └── export/               # Data Export Service
+│       ├── dateRange.service.ts
+│       ├── enrichment.ts     # Data Enrichment
+│       ├── generator.ts      # Carbone PDF/ODT/XLSX
+│       ├── mappers.ts        # Data Mapping
+│       ├── providers.ts      # Data Providers
+│       ├── schemas.ts        # Export Schemas
+│       ├── templateRegistry.ts
+│       ├── types.ts
+│       └── validateExportMappings.ts
+│
+├── helpers/                  # Helper Functions
+│   ├── cmdtFormat.ts         # CMDT Number Formatting
+│   ├── databaseCreationDate.ts
+│   ├── fiscalYearCounter.ts  # Fiscal Year Counter
+│   ├── settings.ts           # Settings Helper
+│   └── statsDateRange.ts     # Stats Date Range
+│
+├── jobs/                     # Scheduled Jobs
+│   ├── cleanupLogs.ts        # Log Cleanup Job
+│   └── cleanupUnverified.ts  # Unverified Users Cleanup
 │
 ├── utils/                    # Utilities
-│   ├── Logger.ts             # Winston logger
-│   └── ...
+│   ├── Logger.ts             # Winston Logger
+│   ├── ApiResponder.ts       # API Response Formatter
+│   ├── ActivityTracker.ts    # User Activity Tracking
+│   ├── QueryBuilder.ts       # SQL Query Builder
+│   ├── PasswordHasher.ts     # Bcrypt Password Hashing
+│   └── auditLogger.ts        # Audit Trail Logger
+│
+├── types/                    # TypeScript Types
+│   ├── index.ts
+│   ├── dto/
+│   └── responses/
 │
 ├── mysql/                    # MySQL Configuration
 │   ├── conf/
+│   │   └── my.cnf
 │   └── db/
+│       └── db.sql            # Database Schema
 │
-├── templates/                # Export Templates
+├── templates/                # Export Templates (Carbone)
+│   ├── invoice_list.odt
+│   ├── invoice_overview.odt
+│   ├── supplier_list.odt
+│   └── ...
+│
+├── logs/                     # Application Logs
+│   └── app-*.log
+│
+├── docs/                     # API Documentation
+│   ├── API_ROUTES.md
+│   └── openapi.yaml
 │
 └── dist/                     # Compiled TypeScript Build
     └── server/
@@ -212,17 +285,49 @@ server/
 
 ## ⚡ Main.js (Electron Process)
 
-**Main File:** `main.js` (1053 lines)
+**Main File:** `main.js` (~350 lines)
 
 **Responsibilities:**
 
-- ✅ Single Instance Lock
+- ✅ Single Instance Lock (prevents multiple app instances)
+- ✅ Deep Linking (`invoice-app://` protocol handling)
 - ✅ Backend Start/Stop (Child Process fork)
-- ✅ Docker Management (docker compose up/down)
-- ✅ Window Creation
+- ✅ Docker Management (docker compose up/down) - **Production only**
+- ✅ Window Creation with Loading Screen
+- ✅ Server Health Check (waits for backend readiness)
 - ✅ Logging (electron-log)
+- ✅ Graceful Shutdown with Confirmation Modal
 - ✅ Error Handling
-- ✅ Application Lifecycle
+- ✅ Application Lifecycle Management
+
+**Key Features:**
+
+- **Cold Start**: Handles deep links when app is closed
+- **Warm Start**: Handles deep links when app is already running
+- **React Ready Detection**: Waits for React to hydrate before sending deep links
+- **Confirmation Modal**: Custom styled modal for quit confirmation (when React is ready)
+- **Fallback Dialog**: Native dialog for quit confirmation (during loading)
+
+---
+
+## 🔌 Preload.js (IPC Bridge)
+
+**Preload File:** `preload.js` (~20 lines)
+
+**Purpose:** Secure bridge between Electron main process and renderer (React)
+
+**Exposed APIs:**
+
+- **`window.electron.onDeepLink(callback)`**: Listen for deep link events
+  - Returns cleanup function to remove listener
+  - Handles `invoice-app://` protocol URLs
+  - Used for email verification and password reset flows
+
+**Security:**
+
+- Uses `contextBridge` for secure IPC communication
+- Prevents direct access to Node.js APIs from renderer
+- Only exposes necessary functionality to frontend
 
 ---
 
@@ -279,12 +384,17 @@ dist/                         # Compiled Builds
 ## 📝 Important Notes
 
 1. **Monorepo**: Client and server in the same repo
-2. **Electron**: Desktop wrapper for web app
-3. **Docker**: MySQL in container, managed automatically by Electron
+2. **Electron**: Desktop wrapper for web app with deep linking support
+3. **Docker**: MySQL in container
+   - **Dev mode**: Must be started manually with `docker compose up -d` in `server/`
+   - **Production**: Managed automatically by Electron (.exe)
 4. **Logging**: electron-log for main.js, Winston for backend
 5. **Build**: TypeScript → JavaScript in `dist/`
-6. **Authentication**: JWT via HttpOnly cookies
+6. **Authentication**: JWT via HttpOnly cookies with activity tracking
 7. **Validation**: Zod client-side and server-side
+8. **Deep Linking**: `invoice-app://` protocol for email verification and password reset
+9. **Internationalization**: UI and API responses in French, internal code comments in English
+10. **Fiscal Year Management**: Automatic or manual fiscal year switching with counter management
 
 ---
 

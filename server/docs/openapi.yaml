@@ -252,26 +252,10 @@ paths:
                 properties:
                   status: { type: string }
                   message: { type: string }
-  /protected:
-    get:
-      summary: Authentication test
-      responses:
-        '200':
-          description: Current user
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  user: { $ref: '#/components/schemas/User' }
-        '401':
-          description: Unauthenticated
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
   /auth/register:
     post:
       summary: User registration
+      security: []
       requestBody:
         required: true
         content:
@@ -283,6 +267,7 @@ paths:
   /auth/login:
     post:
       summary: Login
+      security: []
       requestBody:
         required: true
         content:
@@ -378,6 +363,190 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Invoice' }
+  /users:
+    get:
+      summary: List all users (Admin only)
+      responses:
+        '200':
+          description: Array of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/User' }
+        '403': { description: Access denied }
+  /users/{id}:
+    get:
+      summary: Get user details (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '403': { description: Access denied }
+        '404': { description: User not found }
+    put:
+      summary: Update user (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/User' }
+      responses:
+        '200': { description: User updated }
+        '403': { description: Access denied }
+    delete:
+      summary: Delete user (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: User deleted }
+        '403': { description: Access denied }
+  /users/{id}/disable:
+    post:
+      summary: Disable user account (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: User disabled }
+        '403': { description: Access denied }
+  /users/{id}/enable:
+    post:
+      summary: Enable user account (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: User enabled }
+        '403': { description: Access denied }
+  /system/logs:
+    get:
+      summary: Get system error logs (Admin only)
+      parameters:
+        - name: level
+          in: query
+          schema: { type: string, enum: [error, warn, info] }
+        - name: page
+          in: query
+          schema: { type: integer }
+        - name: limit
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Paginated error logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs: { type: array }
+                  total: { type: integer }
+        '403': { description: Access denied }
+    delete:
+      summary: Clear all system logs (Admin only)
+      responses:
+        '200': { description: Logs cleared }
+        '403': { description: Access denied }
+  /migration/request:
+    post:
+      summary: Submit role migration request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                targetRole: { type: string }
+                motivation: { type: string }
+      responses:
+        '200': { description: Request submitted }
+        '400': { description: Invalid request }
+  /migration/requests:
+    get:
+      summary: List all migration requests (Admin only)
+      responses:
+        '200':
+          description: Array of migration requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '403': { description: Access denied }
+  /migration/my-requests:
+    get:
+      summary: Get current user's migration requests
+      responses:
+        '200':
+          description: User's requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /migration/{id}/approve:
+    post:
+      summary: Approve migration request (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Request approved }
+        '403': { description: Access denied }
+  /migration/{id}/reject:
+    post:
+      summary: Reject migration request (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reviewNote: { type: string }
+      responses:
+        '200': { description: Request rejected }
+        '403': { description: Access denied }
+  /migration/stats:
+    get:
+      summary: Get migration statistics (Admin only)
+      responses:
+        '200':
+          description: Migration statistics
+          content:
+            application/json:
+              schema:
+                type: object
+        '403': { description: Access denied }
   /stats/dashboard/kpis:
     get:
       summary: Dashboard KPIs (Admin)

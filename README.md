@@ -110,7 +110,8 @@ This project solves the "Client-Server on Desktop" challenge through a hybrid de
 
 ### Quick Start (Development)
 
-The application is designed to manage its own infrastructure. You don't need to manually start Docker containers or the backend server.
+> [!IMPORTANT]
+> **In development mode**, you must manually start Docker. Only the production `.exe` can auto-start Docker containers.
 
 ```bash
 # 1. Clone the repository
@@ -122,11 +123,16 @@ npm install
 npm install --prefix client
 npm install --prefix server
 
-# 3. Build the backend (CRITICAL)
+# 3. Start Docker (REQUIRED for dev mode)
+cd server
+docker compose up -d
+cd ..
+
+# 4. Build the backend (CRITICAL)
 # This must be run every time you modify TypeScript code in the server folder
 npm run build --prefix server
 
-# 4. Start the application
+# 5. Start the application
 npm run electron:dev
 ```
 
@@ -136,11 +142,10 @@ npm run electron:dev
 ---
 
 > [!TIP]
-> `npm run electron:dev` will automatically:
+> **Development vs Production:**
 >
-> 1. Start the Docker MySQL container (via `docker compose up -d`).
-> 2. Spin up the Vite dev server for the frontend.
-> 3. Fork and launch the Express backend.
+> * **Dev mode** (`npm run electron:dev`): You must manually run `docker compose up -d` in the `server/` folder first.
+> * **Production** (`.exe`): The application automatically manages Docker containers on startup.
 
 #### 🛠️ Database Initialization (First Use)
 
@@ -192,10 +197,22 @@ The embedded server exposes a full REST API at `http://localhost:3000/api`.
 * [x] **Phase 2**: Deep Linking & Asset Protection
 * [ ] **Phase 3**: Auto-updater
 * [ ] **Phase 4**: Multi-machine sync (Remote DB option)
-* [ ] **Phase 5**: Turborepo integration for better monorepo management (Planned)
+* [ ] **Phase 5**: Turborepo integration for better monorepo management
 * [ ] **Phase 6**: Complete Frontend migration to TypeScript (TSX)
-* [ ] **Phase 7**: Comprehensive code reorganization and architectural refactoring (Client & Server)
-* [ ] **Phase 8**: Systematic Jest integration for comprehensive pre-launch testing
+* [ ] **Phase 7**: Frontend architecture migration to feature-based design
+  * Reorganize client code by features instead of technical layers
+  * Implement modular, scalable folder structure
+  * Improve code maintainability and developer experience
+* [ ] **Phase 8**: Backend model extraction and refactoring
+  * Extract business logic from controllers to dedicated model layer
+  * Separate data access logic from business rules
+  * Improve testability and code organization
+* [ ] **Phase 9**: Progressive migration to Prisma ORM
+  * Replace raw SQL queries with Prisma Client
+  * Implement type-safe database operations
+  * Leverage Prisma migrations for schema management
+* [ ] **Phase 10**: Comprehensive code reorganization and architectural refactoring
+* [ ] **Phase 11**: Systematic Jest integration for comprehensive pre-launch testing
 
 ---
 

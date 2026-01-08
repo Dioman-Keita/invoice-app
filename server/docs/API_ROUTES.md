@@ -276,13 +276,115 @@ http://localhost:3000/api
 - **Protection**: `authGuard` + `requireAdmin`
 - **Roles**: `admin`
 
-## 🛡️ **Test Routes**
+## 👥 **User Management**
 
-### **GET** `/protected`
+### **GET** `/users`
 
-- **Description**: Authentication test
-- **Response**: `{ user: req.user }`
+- **Description**: List all users
+- **Response**: Array of users
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
+
+### **GET** `/users/:id`
+
+- **Description**: Get specific user details
+- **Response**: User object
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
+
+### **PUT** `/users/:id`
+
+- **Description**: Update user information
+- **Body**: Updated user data
+- **Response**: Updated user
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
+
+### **DELETE** `/users/:id`
+
+- **Description**: Delete user
+- **Response**: Deletion confirmation
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
+
+### **POST** `/users/:id/disable`
+
+- **Description**: Disable user account
+- **Response**: Confirmation
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
+
+### **POST** `/users/:id/enable`
+
+- **Description**: Enable user account
+- **Response**: Confirmation
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
+
+## 🗂️ **System \& Logs**
+
+### **GET** `/system/logs`
+
+- **Description**: Get system error logs with filtering
+- **Query Params**: `level` (error, warn, info), `page`, `limit`
+- **Response**: Paginated error logs
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
+
+### **DELETE** `/system/logs`
+
+- **Description**: Clear all system error logs
+- **Response**: Deletion confirmation
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
+
+## 🔄 **Role Migration**
+
+### **POST** `/migration/request`
+
+- **Description**: Submit role migration request
+- **Body**: `{ targetRole: string, motivation: string }`
+- **Response**: Request confirmation
 - **Protection**: `authGuard`
+- **Roles**: All authenticated users
+
+### **GET** `/migration/requests`
+
+- **Description**: List all migration requests (admin view)
+- **Response**: Array of migration requests
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
+
+### **GET** `/migration/my-requests`
+
+- **Description**: Get current user's migration requests
+- **Response**: Array of user's requests
+- **Protection**: `authGuard`
+- **Roles**: All authenticated users
+
+### **POST** `/migration/:id/approve`
+
+- **Description**: Approve migration request
+- **Response**: Approval confirmation + email sent
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
+
+### **POST** `/migration/:id/reject`
+
+- **Description**: Reject migration request
+- **Body**: `{ reviewNote?: string }`
+- **Response**: Rejection confirmation + email sent
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
+
+### **GET** `/migration/stats`
+
+- **Description**: Get migration statistics
+- **Response**: Statistics object
+- **Protection**: `authGuard` + `requireAdmin`
+- **Roles**: `admin`
+
+## 🛡️ **Health Check**
 
 ### **GET** `/health`
 
@@ -371,3 +473,7 @@ const checkAuthStatus = async () => {
 6. **Activity Tracking**: All actions are logged in `user_activity`
 7. **Refresh**: Tokens renewed automatically before expiration
 8. **Validation**: React Hook Form + Zod on client, strict server validation
+9. **System Logs**: Admin-only access to error logs with filtering and clearing capabilities
+10. **Role Migration**: Users can request role changes, admins approve/reject with email notifications
+11. **User Management**: Complete CRUD operations for users (admin only)
+12. **Deep Linking**: Email verification and password reset use `invoice-app://` protocol
