@@ -26,7 +26,11 @@ export default function isValidateDate(dateStr, { allowedFutur = false } = {}) {
         date.getMonth() + 1 !== month ||
         date.getFullYear() !== year) return false;
 
-    return allowedFutur ? true : date <= now;
+    if (!allowedFutur) return date <= now;
+
+    const maxYearAllowed = now.getFullYear() + 2;
+    const maxDateAllowed = new Date(maxYearAllowed, 11, 31, 23, 59, 59, 999);
+    return date <= maxDateAllowed;
 }
 
 export function parseDate(dateStr) {
