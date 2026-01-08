@@ -33,6 +33,7 @@ If applicable, add screenshots to help explain your problem.
 - OS: [e.g. Windows 11, macOS Sonoma]
 - App Version: [e.g. 0.0.0]
 - Docker Version: [e.g. 4.28.0]
+- LibreOffice Version: [e.g 24.3.5]
 
 ## Electron Logs
 
