@@ -3,15 +3,15 @@ import { ExportFormat, ExportTemplateInfo, ExportType, ExportVariant } from './t
 
 export function getTemplateInfo(type: ExportType, variant: ExportVariant, format: ExportFormat): ExportTemplateInfo {
   const key = `${type}-${variant}_${format === 'pdf' ? 'odt' : format}` as const;
-  
-  // CORRECTION ICI :
-  // 1. Si la variable d'env existe (Mode Electron), on l'utilise.
-  // 2. Sinon (Mode Dev classique), on garde ton ancien calcul relatif.
-  const baseDir = process.env.SERVER_TEMPLATES_PATH 
-    ? process.env.SERVER_TEMPLATES_PATH 
+
+  // CORRECTION here :
+  // 1. If the env variable exists (Electron mode), we use it.
+  // 2. Otherwise (Classic dev mode), we keep your relative calculation.
+  const baseDir = process.env.SERVER_TEMPLATES_PATH
+    ? process.env.SERVER_TEMPLATES_PATH
     : path.resolve(__dirname, '..', '..', 'templates');
 
-  // Log pour le débogage (optionnel, s'affichera dans main.log)
+  // Log for debugging (optional, will be displayed in main.log)
   console.log(`[EXPORT] Looking for templates in: ${baseDir}`);
 
   const filename = (() => {
@@ -32,6 +32,6 @@ export function getTemplateInfo(type: ExportType, variant: ExportVariant, format
       default: return '';
     }
   })();
-  
+
   return { key, path: path.join(baseDir, filename) };
 }

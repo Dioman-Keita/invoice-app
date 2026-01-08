@@ -6,10 +6,10 @@ const CMDTNotification = ({ notification, onClose }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Animation d'apparition
+    // Apparition animation
     const showTimer = setTimeout(() => setIsVisible(true), 50);
-    
-    // Auto-fermeture
+
+    // Auto-close
     const timer = setTimeout(() => {
       setIsExiting(true);
       setTimeout(onClose, 300);
@@ -81,10 +81,10 @@ const CMDTNotification = ({ notification, onClose }) => {
         transform hover:scale-[1.02] transition-transform duration-200
         max-h-32
       `}>
-        {/* Effet de brillance subtil */}
+        {/* Subtle glow effect */}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 transform -translate-x-full animate-pulse"></div>
-        
-        {/* Effet de halo doux */}
+
+        {/* Soft halo effect */}
         <div className="absolute -inset-1 bg-gradient-to-r from-transparent via-white/10 to-transparent rounded-xl blur-sm"></div>
         <div className={`flex-shrink-0 mt-0.5 ${currentStyle.icon} relative z-10`}>
           {icons[notification.type]}

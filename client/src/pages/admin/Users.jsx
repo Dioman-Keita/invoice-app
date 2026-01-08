@@ -110,7 +110,7 @@ function Users({ requireAuth = false }) {
     setActionLoading({ active: false, label: '', seconds: 0 });
   };
 
-  // Gestion du focus pour la recherche - CORRIGÉ: useRef au lieu de useState
+  // Focus management for search - FIXED: useRef instead of useState
   const searchInputRef = useRef(null);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
@@ -172,7 +172,7 @@ function Users({ requireAuth = false }) {
   useEffect(() => {
     if (showUserModal) {
       if (selectedUser) {
-        // Pour la modification, email en read-only
+        // For editing, email is read-only
         reset({
           firstName: selectedUser.firstName || '',
           lastName: selectedUser.lastName || '',
@@ -186,7 +186,7 @@ function Users({ requireAuth = false }) {
           terms: true,
         });
       } else {
-        // Pour la création
+        // For creation
         reset({
           firstName: '',
           lastName: '',
@@ -220,7 +220,7 @@ function Users({ requireAuth = false }) {
   };
 
   const showCustomMessage = ({ type, title, message, detail, buttons = ['OK'] }) => {
-    // Correction du problème d'icône: créer les icônes sous forme de chaînes HTML
+    // Icon problem fix: create icons as HTML strings
     const icons = {
       warning: `
         <div class="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center">
@@ -587,12 +587,12 @@ function Users({ requireAuth = false }) {
   };
 
   const onSubmit = async (data) => {
-    // Vérification JS: mots de passe identiques
+    // JS check: matching passwords
     if (!selectedUser && data.password !== data.confirm_password) {
       setErrorMsg('Les mots de passe ne correspondent pas.');
       return;
     }
-    // En mode édition: si un nouveau mot de passe est saisi, la confirmation doit correspondre
+    // Edit mode: if a new password is entered, confirmation must match
     if (selectedUser && data.password) {
       if (data.password !== data.confirm_password) {
         setErrorMsg('Les mots de passe ne correspondent pas.');
@@ -605,9 +605,9 @@ function Users({ requireAuth = false }) {
     try {
       if (selectedUser) {
         // Pour la modification
-        // Avertissement si un changement de rôle est détecté
+        // Warning if a role change is detected
         if (data.role && data.role !== selectedUser.role) {
-          // Messages conditionnels selon le type de changement
+          // Conditional messages depending on the type of change
           let detailMessage = '';
 
           if (selectedUser.role === 'invoice_manager' && data.role === 'dfc_agent') {
@@ -615,7 +615,7 @@ function Users({ requireAuth = false }) {
               <div style="margin-top: 8px;">
                 <p style="margin-bottom: 12px; font-weight: 500;">Vous changez ${selectedUser.firstName} ${selectedUser.lastName} de <strong>Gestionnaire de factures</strong> à <strong>Agent DFC</strong>.</p>
                 
-                <p style="margin-bottom: 8px; font-weight: 500;">Conséquences :</p>
+                <p style="margin-bottom: 8px; font-weight: 500;">Consequences:</p>
                 <ul style="margin-left: 16px; margin-bottom: 12px;">
                   <li style="margin-bottom: 4px;">L'utilisateur ne pourra plus enregistrer de nouvelles factures</li>
                   <li style="margin-bottom: 4px;">Il pourra uniquement valider les factures existantes</li>
@@ -629,7 +629,7 @@ function Users({ requireAuth = false }) {
               <div style="margin-top: 8px;">
                 <p style="margin-bottom: 12px; font-weight: 500;">Vous changez ${selectedUser.firstName} ${selectedUser.lastName} de <strong>Agent DFC</strong> à <strong>Gestionnaire de factures</strong>.</p>
                 
-                <p style="margin-bottom: 8px; font-weight: 500;">Conséquences :</p>
+                <p style="margin-bottom: 8px; font-weight: 500;">Consequences:</p>
                 <ul style="margin-left: 16px; margin-bottom: 12px;">
                   <li style="margin-bottom: 4px;">L'utilisateur ne pourra plus valider de factures</li>
                   <li style="margin-bottom: 4px;">Il pourra uniquement enregistrer de nouvelles factures</li>
@@ -643,7 +643,7 @@ function Users({ requireAuth = false }) {
               <div style="margin-top: 8px;">
                 <p style="margin-bottom: 12px; font-weight: 500;">Vous changez ${selectedUser.firstName} ${selectedUser.lastName} de <strong>${getRoleDisplayName(selectedUser.role)}</strong> à <strong>${getRoleDisplayName(data.role)}</strong>.</p>
                 
-                <p style="margin-bottom: 8px; font-weight: 500;">Conséquences :</p>
+                <p style="margin-bottom: 8px; font-weight: 500;">Consequences:</p>
                 <ul style="margin-left: 16px; margin-bottom: 12px;">
                   <li style="margin-bottom: 4px;">Les actions précédentes garderont l'information historique</li>
                   <li style="margin-bottom: 4px;">Les nouvelles actions seront enregistrées avec le nouveau rôle</li>
@@ -675,7 +675,7 @@ function Users({ requireAuth = false }) {
         };
 
         if (data.password && data.password.trim().length > 0) {
-          payload.password = data.password; // envoyé au backend, hashé côté serveur
+          payload.password = data.password; // sent to backend, hashed on server side
         }
 
         await api.put(`/users/${selectedUser.id}`, payload, { timeout: 30000 });
@@ -688,7 +688,7 @@ function Users({ requireAuth = false }) {
         });
 
       } else {
-        // Pour la création
+        // For creation
         const payload = {
           firstName: data.firstName.trim(),
           lastName: data.lastName.trim(),
@@ -712,7 +712,7 @@ function Users({ requireAuth = false }) {
       }
 
       await fetchUsers();
-      // Nettoyer le formulaire après soumission (surtout en création)
+      // Clear the form after submission (especially for creation)
       if (!selectedUser) {
         reset({
           firstName: '',
@@ -916,7 +916,7 @@ function Users({ requireAuth = false }) {
                   }
                 }}
                 className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                ref={searchInputRef} // Référence corrigée
+                ref={searchInputRef} // Fixed reference
               />
               {searchTerm && (
                 <button
@@ -1177,8 +1177,8 @@ function Users({ requireAuth = false }) {
                       type="button"
                       onClick={() => setValue('role', key, { shouldValidate: true })}
                       className={`p-4 rounded-lg border transition-all duration-200 flex items-center gap-3 ${formRole === key
-                          ? 'border-blue-500 bg-blue-50 shadow-sm'
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                        ? 'border-blue-500 bg-blue-50 shadow-sm'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
                         }`}
                     >
                       <div className={`p-2 rounded-md ${formRole === key ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
@@ -1215,8 +1215,8 @@ function Users({ requireAuth = false }) {
                         onInput={handleFirstNameInput}
                         {...register("firstName")}
                         className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${errors['firstName']?.message
-                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
-                            : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                          ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
+                          : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
                           }`}
                         placeholder="Votre prénom"
                       />
@@ -1238,8 +1238,8 @@ function Users({ requireAuth = false }) {
                         onInput={handleLastNameInput}
                         {...register("lastName")}
                         className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${errors['lastName']?.message
-                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
-                            : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                          ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
+                          : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
                           }`}
                         placeholder="Votre nom"
                       />
@@ -1265,10 +1265,10 @@ function Users({ requireAuth = false }) {
                         {...register("email")}
                         readOnly={!!selectedUser} // Email en read-only pour la modification
                         className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${errors['email']?.message
-                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
-                            : selectedUser
-                              ? 'border-gray-300 bg-gray-50 text-gray-500 cursor-not-allowed'
-                              : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                          ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
+                          : selectedUser
+                            ? 'border-gray-300 bg-gray-50 text-gray-500 cursor-not-allowed'
+                            : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
                           }`}
                         placeholder="prenom.nom@cmdt.ml"
                         onInput={handleEmailInput}
@@ -1298,8 +1298,8 @@ function Users({ requireAuth = false }) {
                         id="employeeId"
                         {...register("employeeId")}
                         className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${errors.employeeId?.message
-                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
-                            : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                          ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
+                          : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
                           }`}
                         placeholder="Votre identifiant CMDT"
                       />
@@ -1330,8 +1330,8 @@ function Users({ requireAuth = false }) {
                         }}
                         {...register("phone")}
                         className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${errors.phone?.message
-                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
-                            : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                          ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
+                          : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
                           }`}
                         placeholder="+223 00 00 00 00"
                       />
@@ -1352,8 +1352,8 @@ function Users({ requireAuth = false }) {
                         id="department"
                         {...register("department")}
                         className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${errors.department?.message
-                            ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
-                            : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                          ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
+                          : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
                           }`}
                       >
                         <option value="">Sélectionnez un département</option>
@@ -1401,8 +1401,8 @@ function Users({ requireAuth = false }) {
                             id="password"
                             onInput={handlePasswordInput}
                             className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${errors.password?.message
-                                ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
-                                : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                              ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
+                              : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
                               }`}
                             placeholder="Mot de passe"
                             {...register("password")}
@@ -1438,8 +1438,8 @@ function Users({ requireAuth = false }) {
                             id="confirm_password"
                             onInput={handleConfirmPasswordInput}
                             className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${errors.confirm_password?.message
-                                ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
-                                : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                              ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
+                              : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
                               }`}
                             placeholder="Confirmez le mot de passe"
                             {...register("confirm_password")}
@@ -1486,8 +1486,8 @@ function Users({ requireAuth = false }) {
                             id="password"
                             onInput={handlePasswordInput}
                             className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${errors.password?.message
-                                ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
-                                : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                              ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
+                              : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
                               }`}
                             placeholder="Laisser vide pour ne pas changer"
                             {...register("password")}
@@ -1523,8 +1523,8 @@ function Users({ requireAuth = false }) {
                             id="confirm_password"
                             onInput={handleConfirmPasswordInput}
                             className={`w-full px-3 py-2.5 pr-12 border rounded-lg focus:outline-none transition-colors appearance-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${errors.confirm_password?.message
-                                ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
-                                : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                              ? 'border-red-300 focus:ring-2 focus:ring-red-200 focus:border-red-400'
+                              : 'border-gray-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
                               }`}
                             placeholder="Répétez le nouveau mot de passe"
                             {...register("confirm_password")}

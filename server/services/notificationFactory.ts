@@ -36,7 +36,7 @@ export class NotificationFactory {
 		}
 	}
 
-	// Logo SVG moderne inspiré Google
+	// Modern SVG logo inspired by Google
 	private static logoSVG(): string {
 		return `
 			<svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -49,13 +49,13 @@ export class NotificationFactory {
 		`;
 	}
 
-	// Helper : si token existe, l'ajoute en query param au lien
+	// Helper: if token exists, adds it as a query param to the link
 	private static attachTokenToLink(link: string, token?: string): string {
 		if (!token) return link;
 
-        // ✅ CORRECTION 1 : Si le lien contient déjà le token (ce qui est ton cas dans User.ts),
-        // on ne touche à rien, on retourne le lien complet directement.
-        if (link.includes('token=')) return link;
+		// ✅ CORRECTION 1: If the link already contains the token (which is the case in User.ts),
+		// do nothing, return the full link directly.
+		if (link.includes('token=')) return link;
 
 		try {
 			const url = new URL(link, 'http://localhost');
@@ -63,13 +63,13 @@ export class NotificationFactory {
 				url.searchParams.set('token', token);
 			}
 
-            // ✅ CORRECTION 2 : On autorise explicitement le protocole 'invoice-app'
-            // Ancienne regex : /^https?:\/\//i.test(link)
-            // Nouvelle regex : inclut invoice-app
+			// ✅ CORRECTION 2: Explicitly allow 'invoice-app' protocol
+			// Old regex: /^https?:\/\//i.test(link)
+			// New regex: includes invoice-app
 			if (/^(https?|invoice-app):\/\//i.test(link)) return url.toString();
-            
-            // Si c'est un autre protocole inconnu, on retourne quand même l'URL entière par sécurité
-            if (url.protocol && url.protocol !== 'http:' && url.protocol !== 'https:') return url.toString();
+
+			// If it's another unknown protocol, return the full URL anyway for safety
+			if (url.protocol && url.protocol !== 'http:' && url.protocol !== 'https:') return url.toString();
 
 			return url.pathname + url.search + url.hash;
 		} catch {
@@ -382,7 +382,7 @@ export class NotificationFactory {
 		return { subject, html, text };
 	}
 
-	// Helper pour formater les rôles en libellés lisibles
+	// Helper to format roles into readable labels
 	private static formatRole(role?: string): string {
 		if (!role) return 'Non défini';
 		switch (role) {
@@ -525,7 +525,7 @@ export class NotificationFactory {
 		return { subject, html, text: `Bonjour ${safeName}, votre demande a été refusée. ${review_note ? 'Motif: ' + review_note : ''}` };
 	}
 
-	// Helpers pour réduire la duplication code HTML
+	// Helpers to reduce HTML code duplication
 	private static getHeader(title: string): string {
 		return `<div style="display:none;font-size:1px;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${title}</div>`;
 	}

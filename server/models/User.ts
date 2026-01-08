@@ -30,7 +30,7 @@ export class UserModel {
 
     private async sendVerificationEmail(): Promise<{ success: boolean; error?: string }> {
         if (!this.email || !this.firstName || !this.lastName) {
-            logger.warn("Envoi email échoué : données manquantes", { email: this.email });
+            logger.warn("Email sending failed: missing data", { email: this.email });
             return { success: false, error: 'Données utilisateur manquantes' };
         }
 
@@ -54,14 +54,14 @@ export class UserModel {
         const sender = new GmailEmailSender();
 
         const MAX_ATTEMPTS = 3;
-        const RETRY_DELAY = 2000; // en ms
-        const TIMEOUT = 20000; // en ms
+        const RETRY_DELAY = 2000; // in ms
+        const TIMEOUT = 20000; // in ms
 
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
-                logger.info(`Tentative d'envoi d'email #${attempt}`, { email: this.email });
+                logger.info(`Email sending attempt #${attempt}`, { email: this.email });
 
-                // Timeout explicite avec message clair
+                // Explicit timeout with clear message
                 await Promise.race([
                     sender.send({ to: this.email, name: `${this.firstName} ${this.lastName}` }, template),
                     new Promise((_, reject) =>
@@ -69,13 +69,13 @@ export class UserModel {
                     )
                 ]);
 
-                logger.info('Email envoyé avec succès', { email: this.email, attempt });
+                logger.info('Email sent successfully', { email: this.email, attempt });
                 return { success: true };
 
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
 
-                // Messages user-friendly constants
+                // Error messages for user
                 let userFriendlyError = 'Échec de l’envoi de l’email';
                 if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('smtp')) {
                     userFriendlyError = 'Connexion réseau lente ou instable';
@@ -83,24 +83,24 @@ export class UserModel {
                     userFriendlyError = 'Délai d’attente dépassé pour l’email';
                 }
 
-                logger.warn(`Échec tentative #${attempt} d'envoi d'email`, {
+                logger.warn(`Failed attempt #${attempt} to send email`, {
                     email: this.email,
                     error: errorMessage,
                     attempt
                 });
 
                 if (attempt < MAX_ATTEMPTS) {
-                    // Attente progressive avant la prochaine tentative
+                    // Progressive wait before the next attempt
                     await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attempt));
                 } else {
-                    // Dernière tentative échouée → rejet clair
-                    logger.error('Échec définitif de l’envoi de l’email', { email: this.email });
+                    // Last attempt failed → clear rejection
+                    logger.error('Definitive failure to send email', { email: this.email });
                     return { success: false, error: userFriendlyError };
                 }
             }
         }
 
-        // Cas très improbable, mais couverture complète
+        // Very unlikely case, but full coverage
         return { success: false, error: 'Échec de l’envoi après plusieurs tentatives' };
     }
 
@@ -161,13 +161,13 @@ export class UserModel {
             this.id = await idGenerator.generateId(this.entity);
             this.hash = await BcryptHasher.hash(password);
 
-            // 1️⃣ Insertion dans pending_verification
+            // 1️⃣ Insertion into pending_verification
             await conn.execute(
                 "INSERT INTO pending_verification(id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department, fiscal_year) VALUES(?,?,?,?,?,?,?,?,?,?)",
                 [this.id, this.firstName, this.lastName, this.email, this.hash, this.employeeId, this.role, this.phone, this.department, fiscalYear]
             );
 
-            // 2️⃣ Envoi de l'email
+            // 2️⃣ Email sending
             const emailResult = await this.sendVerificationEmail();
             if (!emailResult.success) {
                 await conn.execute("DELETE FROM pending_verification WHERE id = ?", [this.id]);
@@ -175,7 +175,7 @@ export class UserModel {
                 return { success: false, message: `Échec de l'envoi de l'email: ${emailResult.error}`, field: "email" };
             }
 
-            // 3️⃣ Transfert vers employee
+            // 3️⃣ Transfer to employee
             await conn.execute(`
                 INSERT INTO employee(id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department, fiscal_year)
                 SELECT id, firstname, lastname, email, password, employee_cmdt_id, role, phone, department, fiscal_year
@@ -189,7 +189,7 @@ export class UserModel {
 
         } catch (error) {
             await conn.rollback();
-            logger.error("Erreur création utilisateur", { error });
+            logger.error("User creation error", { error });
             return { success: false, message: "Erreur interne. Veuillez réessayer plus tard." };
         } finally {
             conn.release();
@@ -214,7 +214,7 @@ export class UserModel {
             const result = await database.execute<User[] | User>(query, params);
             let userRows = (Array.isArray(result) ? result : (result ? [result] : [])) as User[];
 
-            // ✅ GARANTIR que c'est toujours un tableau
+            // ✅ GUARANTEE that it's always an array
             // userRows est déjà normalisé
             if (userRows.length > 0) {
                 await auditLog({
@@ -228,7 +228,7 @@ export class UserModel {
             return userRows;
 
         } catch (error) {
-            logger.error("Erreur dans findUser", {
+            logger.error("Error in findUser", {
                 target,
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
@@ -238,7 +238,7 @@ export class UserModel {
 
     async verifyCredentials(data: LoginCredentials): Promise<VerifyCredentialsResult> {
         try {
-            // Validation basique
+            // Basic validation
             if (!data.email || !data.password) {
                 return null;
             }
@@ -246,45 +246,45 @@ export class UserModel {
             if (!isValidEmail(data.email) || !isValidPasswordStrength(data.password)) {
                 return null;
             }
-            // Verification du statut de l'utilisateur
+            // User status verification
             const result = await database.execute<{ isActive: 0 | 1 | Array<{ isActive: 0 | 1 }> }>('SELECT isActive FROM employee WHERE LOWER(email) = LOWER(?) AND role = ? AND isVerified = 1 LIMIT 1', [data.email, data.role]);
             const isActive = Array.isArray(result) ? result[0].isActive : result.isActive;
             if (isActive === 0) {
                 return { error: "Vous avez été desactivé par un administrateur" }
             }
 
-            // Requête sécurisée - comparaison insensible à la casse
+            // Secure query - case-insensitive comparison
             const rows = await database.execute(
                 "SELECT id, email, password, role, isVerified FROM employee WHERE LOWER(email) = LOWER(?) AND isVerified = 1 AND isActive = 1 AND role = ? LIMIT 1",
                 [data.email.trim(), data.role]
             );
 
-            // Convertir l'objet en tableau si nécessaire
+            // Convert object to array if necessary
             let userRows = rows;
             if (!Array.isArray(rows)) {
                 if (rows && typeof rows === 'object') {
-                    userRows = [rows]; // Convertir l'objet en tableau
+                    userRows = [rows]; // parse object to array
                 } else {
                     userRows = [];
                 }
             }
 
-            // Vérification robuste des résultats
+            // Robust verification of results
             if (!Array.isArray(userRows) || userRows.length === 0) {
-                logger.warn("Tentative de connexion - utilisateur non trouvé", { email: data.email });
+                logger.warn("Connection attempt - user not found", { email: data.email });
                 return null;
             }
 
             const user = userRows[0];
 
             if (!user || typeof user !== 'object') {
-                logger.warn("Format de données utilisateur invalide", { email: data.email });
+                logger.warn("Invalid user data format", { email: data.email });
                 return null;
             }
 
-            // Vérification que tous les champs nécessaires existent
+            // Verification that all necessary fields exist
             if (!user.password || !user.id || !user.email || !user.role) {
-                logger.warn("Données utilisateur incomplètes", {
+                logger.warn("Incomplete user data", {
                     email: data.email,
                     hasPassword: !!user.password,
                     hasId: !!user.id,
@@ -294,33 +294,33 @@ export class UserModel {
                 return null;
             }
 
-            // Vérification du mot de passe
+            // Password verification
             const isPasswordValid = await BcryptHasher.verify(data.password, user.password);
             if (!isPasswordValid) {
-                logger.warn("Tentative de connexion - mot de passe incorrect", { email: data.email });
+                logger.warn("Login attempt - incorrect password", { email: data.email });
 
-                // Audit log avec l'ID utilisateur cette fois
+                // Audit log with user ID this time
                 await auditLog({
                     action: 'SELECT',
                     table_name: 'employee',
                     record_id: user.id, // Utilisez l'ID
                     performed_by: user.id, // Utilisez l'ID au lieu de l'email
-                    description: `Tentative de connexion avec mauvais mot de passe pour ${data.email}`
+                    description: `Login attempt with wrong password for ${data.email}`
                 });
 
                 return null;
             }
 
-            // Audit log de succès
+            // Success audit log
             await auditLog({
                 action: 'SELECT',
                 table_name: 'employee',
                 record_id: user.id,
                 performed_by: user.id, // Utilisez l'ID au lieu de l'email
-                description: `Connexion réussie pour ${data.email}`
+                description: `Successful login for ${data.email}`
             });
 
-            logger.info("Connexion réussie", { userId: user.id, email: user.email });
+            logger.info("Successful login", { userId: user.id, email: user.email });
             return {
                 id: user.id,
                 email: user.email,
@@ -335,20 +335,20 @@ export class UserModel {
             console.log('🔧 ERREUR - Message:', errorMessage);
             console.log('🔧 ERREUR - Code:', errorCode);
 
-            // Vérifier si c'est une erreur de connexion à la base de données
+            // Check if it's a database connection error
             if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT' ||
                 errorMessage.includes('ECONNREFUSED') || errorMessage.includes('ENOTFOUND') || errorMessage.includes('ETIMEDOUT')) {
-                console.log('🔧 ERREUR - Erreur de connexion DB détectée');
-                logger.error("Erreur de connexion à la base de données", {
+                console.log('🔧 ERROR - DB connection error detected');
+                logger.error("Database connection error", {
                     email: data.email,
                     error: errorMessage,
                     code: errorCode
                 });
-                // Retourner un objet spécial pour indiquer une erreur de connexion
+                // Return a special object to indicate a connection error
                 return { error: 'DATABASE_CONNECTION_ERROR' };
             }
 
-            logger.error("Erreur critique dans verifyCredentials", {
+            logger.error("Critical error in verifyCredentials", {
                 email: data.email,
                 error: errorMessage,
                 code: errorCode
@@ -366,13 +366,13 @@ export class UserModel {
             await auditLog({
                 table_name: 'employee',
                 action: 'UPDATE',
-                description: `Mise à jour du status de verification de l'utilisateur ${userId} à ${isVerified}`,
+                description: `Updating verification status of user ${userId} to ${isVerified}`,
                 record_id: userId,
                 performed_by: userId
             })
             return { success: true };
         } catch (error) {
-            logger.error("Erreur lors de la mise à jour du statut de vérification", { error });
+            logger.error("Error updating verification status", { error });
             return { success: false, error };
         }
     }

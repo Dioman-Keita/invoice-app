@@ -26,7 +26,7 @@ const SystemLogs = () => {
 
     const [logs, setLogs] = useState([]);
     const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
-    const [currentPage, setCurrentPage] = useState(1); // ✅ Ajout d'un state explicite pour la page courante
+    const [currentPage, setCurrentPage] = useState(1); // ✅ Added an explicit state for the current page
     const [loading, setLoading] = useState(true);
     const [filterLevel, setFilterLevel] = useState('all');
     const [selectedLog, setSelectedLog] = useState(null);
@@ -48,7 +48,7 @@ const SystemLogs = () => {
         }
     };
 
-    // ✅ Un seul useEffect qui écoute la page et le filtre
+    // ✅ A single useEffect that listens to the page and the filter
     useEffect(() => {
         fetchLogs(currentPage);
     }, [currentPage, filterLevel]);
@@ -66,7 +66,7 @@ const SystemLogs = () => {
             const response = await api.delete('/system/logs');
             if (response.success) {
                 toastSuccess('Logs réinitialisés');
-                setLogs([]); // Vider immédiatement
+                setLogs([]); // Clear immediately
                 if (currentPage === 1) {
                     fetchLogs(1);
                 } else {

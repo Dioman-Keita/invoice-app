@@ -58,7 +58,7 @@ export default function useInvoice() {
     }
   }, []);
 
-  // Appel initial
+  // Initial call
   useEffect(() => {
     if (location.pathname === '/facture') {
       getLastInvoiceNum();
@@ -73,10 +73,10 @@ export default function useInvoice() {
       if (response.success === true) {
         console.log(' Facture créée, mise à jour du numéro...');
 
-        // Attendre un peu pour que le backend ait le temps de traiter
+        // Wait a bit for the backend to process
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Recharger le dernier numéro
+        // Reload the last number
         const newNum = await getLastInvoiceNum(true);
         await getNextNumberExpected();
         console.log(' Numéro après création:', newNum);

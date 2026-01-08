@@ -5,7 +5,7 @@ import logger from '../utils/Logger';
 
 export class SystemController {
     /**
-     * Récupère les logs d'erreur système (Admin uniquement)
+     * Retrieves system error logs (Admin only)
      */
     static async getErrorLogs(req: Request, res: Response) {
         try {
@@ -25,7 +25,7 @@ export class SystemController {
             }
 
             query += ` ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
-            // params.push(limit, offset); // LIMIT/OFFSET injectés directement pour éviter bug mysql2 prep statements
+            // params.push(limit, offset); // LIMIT/OFFSET injected directly to avoid mysql2 prep statements bug
 
             const logs = await database.execute(query, params);
             const totalResult: any = await database.execute(countQuery, level && level !== 'all' ? [level] : []);
@@ -41,7 +41,7 @@ export class SystemController {
                 }
             }, 'Logs récupérés');
         } catch (error) {
-            logger.error('Erreur lors de la récupération des logs système', {
+            logger.error('Error retrieving system logs', {
                 error,
                 path: req.originalUrl,
                 userId: (req as any).user?.id
@@ -51,7 +51,7 @@ export class SystemController {
     }
 
     /**
-     * Supprime tous les logs (Admin uniquement)
+     * Deletes all logs (Admin only)
      */
     static async clearLogs(req: Request, res: Response) {
         try {

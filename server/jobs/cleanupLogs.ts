@@ -2,7 +2,7 @@ import database from "../config/database";
 import logger from "../utils/Logger";
 
 /**
- * Nombre de jours de rétention des logs (par défaut 30 jours)
+ * Number of days to keep logs (default 30 days)
  */
 function daysToKeep(): number {
     const v = Number(process.env.LOGS_RETENTION_DAYS);
@@ -10,37 +10,37 @@ function daysToKeep(): number {
 }
 
 /**
- * Démarre le job de nettoyage automatique des logs (Audit, Erreurs, Exports)
- * S'exécute une fois toutes les 24 heures.
+ * Start the automatic log cleanup job (Audit, Errors, Exports)
+ * Runs once every 24 hours.
  */
 export function startCleanupLogsJob(): void {
-    // Une fois toutes les 24h
+    // Once every 24h
     const intervalMs = 24 * 60 * 60 * 1000;
 
     const runCleanup = async () => {
         try {
             const days = daysToKeep();
-            logger.info(`🧹 Démarrage du nettoyage des logs (Rétention: ${days} jours)`);
+            logger.info(`🧹 Starting log cleanup (Retention: ${days} days)`);
 
-            // 1. Nettoyage des erreurs système
+            // 1. Clean system errors
             const errorResult: any = await database.execute(
                 "DELETE FROM system_error_log WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)",
                 [days]
             );
 
-            // 2. Nettoyage des logs d'audit
+            // 2. Clean audit logs
             const auditResult: any = await database.execute(
                 "DELETE FROM audit_log WHERE performed_at < DATE_SUB(NOW(), INTERVAL ? DAY)",
                 [days]
             );
 
-            // 3. Nettoyage des logs d'export
+            // 3. Clean export logs
             const exportResult: any = await database.execute(
                 "DELETE FROM export_log WHERE exported_at < DATE_SUB(NOW(), INTERVAL ? DAY)",
                 [days]
             );
 
-            logger.info("✅ Nettoyage des logs terminé avec succès", {
+            logger.info("✅ Log cleanup completed successfully", {
                 retentionDays: days,
                 deletedErrors: errorResult?.affectedRows || 0,
                 deletedAudit: auditResult?.affectedRows || 0,
@@ -48,13 +48,13 @@ export function startCleanupLogsJob(): void {
             });
 
         } catch (error) {
-            logger.error("❌ Échec du job de nettoyage des logs", { error });
+            logger.error("❌ Failed log cleanup job", { error });
         }
     };
 
-    // Premier lancement après 30 secondes pour ne pas surcharger le démarrage
+    // First launch after 30 seconds to avoid overloading the startup
     setTimeout(runCleanup, 30 * 1000);
 
-    // Puis toutes les 24h
+    // After every 24h
     setInterval(runCleanup, intervalMs);
 }

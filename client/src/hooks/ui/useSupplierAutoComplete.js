@@ -6,7 +6,7 @@ import {
     formatAccountCanonical
 } from "../../utils/formatAccountNumber";
 
-// Constantes pour éviter les magic strings
+// Constants to avoid magic strings
 const SEARCH_TYPES = {
     GLOBAL: 'supplier:global',
     ANY_FIELD: 'supplier:anyField',
@@ -44,16 +44,16 @@ export function useSupplierAutocomplete() {
     const [loading, setLoading] = useState(false);
     const searchRef = useRef(null);
 
-    // Fonction helper pour dédupliquer les fournisseurs
+    // Helper function to deduplicate suppliers
     const getUniqueConflictingSuppliers = (conflictData) => {
         const suppliersMap = new Map();
 
-        // Ajouter existingSupplier s'il existe
+        // Add existingSupplier if it exists
         if (conflictData.existingSupplier && conflictData.existingSupplier.id) {
             suppliersMap.set(conflictData.existingSupplier.id, conflictData.existingSupplier);
         }
 
-        // Ajouter conflictingSuppliers en évitant les doublons
+        // Add conflictingSuppliers while avoiding duplicates
         if (conflictData.conflictingSuppliers && Array.isArray(conflictData.conflictingSuppliers)) {
             conflictData.conflictingSuppliers.forEach(supplier => {
                 if (supplier.id && !suppliersMap.has(supplier.id)) {
@@ -92,12 +92,12 @@ export function useSupplierAutocomplete() {
         }
     };
 
-    // Helper pour formater les valeurs selon le field
+    // Helper to format values according to field
     const formatFieldValue = (field, value) => {
         return field === 'accountNumber' ? formatAccountCanonical(value) : value;
     };
 
-    // Helper pour gérer les états de loading et erreurs
+    // Helper to manage loading and error states
     const withLoading = async (asyncFn) => {
         setLoading(true);
         try {
@@ -199,7 +199,7 @@ export function useSupplierAutocomplete() {
         });
     }, []);
 
-    // Helper pour la configuration des conflits
+    // Helper for conflict configuration
     const setConflictData = (config) => {
         setSupplierConflictingData(prev => ({
             ...prev,

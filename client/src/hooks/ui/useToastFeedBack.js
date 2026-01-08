@@ -1,4 +1,3 @@
-// hooks/useToastFeedBack.js
 import { useNotification } from '../../context/useNotification.js';
 
 export default function useToastFeedback() {

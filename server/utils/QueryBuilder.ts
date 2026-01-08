@@ -63,7 +63,7 @@ export type SearchRelationalParams = Partial<{
   order_by: string;
   order_direction: string;
   search: string;
-  supplier_name: string;  // ✅ AJOUT : Support du filtre supplier_name
+  supplier_name: string;
   fiscal_year: string;
   invoice_type: string;
   invoice_nature: string;
@@ -81,8 +81,8 @@ export type SearchRelationalParams = Partial<{
   supplier_invoice_count_max: string | number;
   supplier_total_amount_min: string | number;
   supplier_total_amount_max: string | number;
-  supplier_avg_amount_min: string | number;  // ✅ AJOUT : Montant moyen min
-  supplier_avg_amount_max: string | number;  // ✅ AJOUT : Montant moyen max
+  supplier_avg_amount_min: string | number;
+  supplier_avg_amount_max: string | number;
 }>;
 
 export type RelationalGroupedRow = {
@@ -142,12 +142,11 @@ export class QueryBuilder {
 
     // Whitelisted order fields
     const allowedOrder = new Set([
-      'create_at','invoice_arr_date','amount','num_cmdt','num_invoice','supplier_name'
+      'create_at', 'invoice_arr_date', 'amount', 'num_cmdt', 'num_invoice', 'supplier_name'
     ]);
     const orderByCandidate = String(q.order_by || '').trim();
-    // ✅ MODIFICATION : Ne pas trier si order_by est vide
-    const orderBy = orderByCandidate && allowedOrder.has(orderByCandidate) 
-      ? orderByCandidate 
+    const orderBy = orderByCandidate && allowedOrder.has(orderByCandidate)
+      ? orderByCandidate
       : null;
     const orderDir = orderBy ? normalizeOrder(q.order_direction) : 'desc';
 
@@ -240,7 +239,7 @@ export class QueryBuilder {
       const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
       const baseQuery = `FROM invoice i ${leftJoins} ${whereClause}`;
-      // ✅ MODIFICATION : Ajouter ORDER BY seulement si orderBy existe
+      // ✅ MODIFICATION: Add ORDER BY only if orderBy exists
       const selectQuery = orderBy
         ? `SELECT ${selectParts.join(', ')} ${baseQuery} ORDER BY ${orderBy} ${orderDir} LIMIT ${limit} OFFSET ${offset}`
         : `SELECT ${selectParts.join(', ')} ${baseQuery} LIMIT ${limit} OFFSET ${offset}`;
@@ -269,11 +268,10 @@ export class QueryBuilder {
     const limit = toInt(q.limit, 10);
     const offset = (page - 1) * limit;
 
-    const allowedOrder = new Set(['create_at','name','account_number']);
+    const allowedOrder = new Set(['create_at', 'name', 'account_number']);
     const orderByCandidate = String(q.order_by || '').trim();
-    // ✅ MODIFICATION : Ne pas trier si order_by est vide
-    const orderBy = orderByCandidate && allowedOrder.has(orderByCandidate) 
-      ? orderByCandidate 
+    const orderBy = orderByCandidate && allowedOrder.has(orderByCandidate)
+      ? orderByCandidate
       : null;
     const orderDir = orderBy ? normalizeOrder(q.order_direction) : 'desc';
 
@@ -319,7 +317,6 @@ export class QueryBuilder {
       const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
       const base = `FROM supplier s ${joins} ${whereClause}`;
-      // ✅ MODIFICATION : Ajouter ORDER BY seulement si orderBy existe
       const select = orderBy
         ? `SELECT s.* ${base} GROUP BY s.id ORDER BY ${orderBy} ${orderDir} LIMIT ${limit} OFFSET ${offset}`
         : `SELECT s.* ${base} GROUP BY s.id LIMIT ${limit} OFFSET ${offset}`;
@@ -347,11 +344,10 @@ export class QueryBuilder {
     const limit = toInt(q.limit, 10);
     const offset = (page - 1) * limit;
 
-    const allowedOrder = new Set(['total_amount','invoice_count','last_invoice_date','supplier_name','avg_amount','supplier_account']);
+    const allowedOrder = new Set(['total_amount', 'invoice_count', 'last_invoice_date', 'supplier_name', 'avg_amount', 'supplier_account']);
     const orderByCandidate = String(q.order_by || '').trim();
-    // ✅ MODIFICATION : Ne pas trier si order_by est vide
-    const orderBy = orderByCandidate && allowedOrder.has(orderByCandidate) 
-      ? orderByCandidate 
+    const orderBy = orderByCandidate && allowedOrder.has(orderByCandidate)
+      ? orderByCandidate
       : null;
     const orderDir = orderBy ? normalizeOrder(q.order_direction) : 'desc';
 
@@ -368,16 +364,14 @@ export class QueryBuilder {
         const like = `%${term}%`;
         const orParts: string[] = [];
         const orParams: unknown[] = [];
-        // Placeholder: Fournisseur, montant, référence...
+
         if (isNumeric(term)) { orParts.push('CAST(i.amount AS DECIMAL(18,2)) = ?'); orParams.push(term.replace(',', '.')); }
         if (isInvoiceRef(term)) { orParts.push('i.num_invoice LIKE ?'); orParams.push(like); }
         if (isCmdt(term)) { orParts.push('i.num_cmdt LIKE ?'); orParams.push(like); }
-        // Always include supplier name
         orParts.push('s.name LIKE ?'); orParams.push(like);
         whereConditions.push(`(${orParts.join(' OR ')})`);
         whereParams.push(...orParams);
       }
-      // ✅ AJOUT : Support du filtre supplier_name
       if (q.supplier_name) {
         whereConditions.push('s.name LIKE ?');
         whereParams.push(`%${String(q.supplier_name).trim()}%`);
@@ -401,7 +395,6 @@ export class QueryBuilder {
         whereConditions.push('EXISTS (SELECT 1 FROM dfc_decision d WHERE d.invoice_id = i.id)');
       }
 
-      // ✅ MODIFICATION : Filtres d'agrégation dans HAVING (seulement quand groupé)
       if (groupBySupplier) {
         if (q.supplier_invoice_count_min) {
           havingConditions.push('COUNT(i.id) >= ?');
@@ -435,7 +428,6 @@ export class QueryBuilder {
 
       if (groupBySupplier) {
         const base = `FROM invoice i LEFT JOIN supplier s ON s.id = i.supplier_id ${where}`;
-        // ✅ MODIFICATION : Ajouter ORDER BY seulement si orderBy existe
         const select = orderBy
           ? `SELECT 
             s.id AS supplier_id,
@@ -464,8 +456,7 @@ export class QueryBuilder {
           GROUP BY s.id
           ${having}
           LIMIT ${limit} OFFSET ${offset}`;
-        // ✅ MODIFICATION : Compter les groupes qui passent le HAVING
-        const count = having 
+        const count = having
           ? `SELECT COUNT(*) AS cnt FROM (SELECT s.id ${base} GROUP BY s.id ${having}) AS grouped`
           : `SELECT COUNT(DISTINCT s.id) AS cnt ${base}`;
 
@@ -477,7 +468,6 @@ export class QueryBuilder {
         return { rows: (rows as RelationalGroupedRow[]) || [], meta: { total, page, limit } };
       } else {
         const base = `FROM invoice i LEFT JOIN supplier s ON s.id = i.supplier_id ${where}`;
-        // ✅ MODIFICATION : Ajouter ORDER BY seulement si orderBy existe
         const select = orderBy
           ? `SELECT 
             s.name AS supplier_name,

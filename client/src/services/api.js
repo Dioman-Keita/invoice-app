@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-    baseURL: '/api', // URL relative - le backend sert le frontend
+    baseURL: '/api', // Relative URL - frontend served by backend
     withCredentials: true,
     timeout: 10000,
 });

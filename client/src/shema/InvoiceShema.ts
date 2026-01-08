@@ -4,7 +4,7 @@ import { normalizeAccountNumber, isValidAccountNumber, formatAccountCanonical } 
 
 
 // ----------------------
-// Validation des dates, montants, etc.
+// Validation of dates, amounts, etc.
 // ----------------------
 
 const allowedDocument = [
@@ -14,7 +14,7 @@ const allowedDocument = [
 ] as const;
 
 export const supplierNameRegex = /^[\p{L}\d\s\-'&]+$/u;
-// Version moderne avec pipe()
+// Modern version with pipe()
 const numCmdtSchema = z.string()
     .min(1, "Champ requis")
     .pipe(
@@ -36,7 +36,7 @@ const numCmdtSchema = z.string()
     );
 
 // ----------------------
-// Schéma principal
+// Main schema
 // ----------------------
 export const invoiceSchema = z.object({
     invoice_num: z
@@ -75,10 +75,10 @@ export const invoiceSchema = z.object({
     invoice_amount: z
         .string()
         .min(1, "Le montant est requis")
-        // Autorise les chiffres, un seul point ou virgule, et max 3 décimales
+        // Allows digits, a single dot or comma, and max 3 decimals
         .regex(/^\d+([.,]\d{1,3})?$/, "Le montant est invalide (max 3 décimales)")
         .transform((val) => {
-            // Normalisation : remplace la virgule par un point pour le parseFloat
+            // Normalization: replaces comma with a dot for parseFloat
             const normalized = val.replace(',', '.');
             return parseFloat(normalized);
         })

@@ -30,18 +30,18 @@ export async function exportData(req: AuthenticatedRequest, res: Response): Prom
       return ApiResponder.badRequest(res, 'type, variant et format sont requis');
     }
 
-    // Exécuter la même recherche que le module Search
+    // Execute the same search as the Search module
     const result = await runSearch(type, search || {});
 
-    // Résoudre le range de dates manquant si la structure le requiert
+    // Resolve missing date range if structure requires it
     const dateFrom = search?.dateFrom || search?.supplier_created_from;
     const dateTo = search?.dateTo || search?.supplier_created_to;
     const dateRange = await resolveDateRange(type, dateFrom, dateTo);
 
-    // Fiscal year (racine) si nécessaire
+    // Fiscal year (root) if necessary
     const rootFiscalYear = await resolveRootFiscalYear();
 
-    // Mapper en structure JSON spécifique au template
+    // Map to template-specific JSON structure
     let payload: any;
     const isOdt = format === 'odt' || format === 'pdf';
     const norm = (d: any): string | undefined => {
@@ -99,7 +99,7 @@ export async function exportData(req: AuthenticatedRequest, res: Response): Prom
       if (!detail) return ApiResponder.notFound(res, 'Données relationnelles introuvables');
       payload = mapRelationalOverviewXlsx(detail, dateRange, rootFiscalYear);
     } else if (type === 'invoice' && variant === 'stats' && isOdt) {
-      // date format attendue: 'YYYY-MM-DD' (fallback: aujourd'hui)
+      // expected date format: 'YYYY-MM-DD' (fallback: today)
       const today = new Date();
       const y = today.getFullYear();
       const m = String(today.getMonth() + 1).padStart(2, '0');
@@ -131,11 +131,11 @@ export async function exportData(req: AuthenticatedRequest, res: Response): Prom
       return ApiResponder.badRequest(res, 'Cette combinaison type/variant/format n\'est pas encore implémentée');
     }
 
-    // Rendu via Carbone
+    // Rendering via Carbone
     const template = getTemplateInfo(type, variant, format);
     const { buffer, filename } = await renderWithCarbone(template, payload, format);
 
-    // Réponse HTTP
+    // HTTP Response
     const contentType = format === 'pdf' ? 'application/pdf' : (format === 'xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/vnd.oasis.opendocument.text');
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

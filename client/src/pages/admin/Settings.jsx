@@ -69,18 +69,18 @@ function Settings() {
 
                 const d = data.data || {};
 
-                // UTILISE DIRECTEMENT le warning du backend !
+                // USES backend warning DIRECTLY!
                 const shouldWarn = d.warningInfo?.warning || false;
 
-                console.log('✅ Utilisation warning backend:', {
+                console.log('✅ Usage of backend warning:', {
                     lastNumber: d.counter?.last_cmdt_number,
                     threshold: d.warningInfo?.threshold,
                     warningBackend: shouldWarn,
-                    logiqueBackend: 'last_cmdt_number >= threshold'
+                    backendLogic: 'last_cmdt_number >= threshold'
                 });
 
                 setWarningInfo({
-                    warning: shouldWarn, // ← Utilise la valeur du backend
+                    warning: shouldWarn, // ← Uses backend value
                     remaining: d.counter?.remaining,
                     threshold: d.warningInfo?.threshold,
                     max: d.counter?.max,
@@ -225,13 +225,13 @@ function Settings() {
         }
     };
 
-    // Formatage des nombres avec séparateurs
+    // Number formatting with separators
     const formatNumber = (num) => {
         if (!num && num !== 0) return '-';
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     };
 
-    // MODALES DÉTAILLÉES (conservées de l'ancienne version)
+    // DETAILED MODALS (kept from old version)
     const AutoSwitchActivationModal = () => (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl max-w-md w-full p-6 mx-2">
@@ -549,7 +549,7 @@ function Settings() {
                 <div className="max-w-7xl mx-auto">
                     <Navbar />
 
-                    {/* Header épuré */}
+                    {/* Clean header */}
                     <div className="mb-8 text-center">
                         <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mb-4 shadow-lg">
                             <Cog6ToothIcon className="w-8 h-8 text-white" />
@@ -561,9 +561,9 @@ function Settings() {
                     </div>
 
                     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
-                        {/* Colonne principale - Gestion Fiscale */}
+                        {/* Main column - Fiscal Management */}
                         <div className="xl:col-span-2 space-y-6">
-                            {/* Carte Auto-switch avec infobulles */}
+                            {/* Auto-switch card with tooltips */}
                             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                                 <div className="flex items-center gap-3 mb-6">
                                     <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -577,8 +577,8 @@ function Settings() {
 
                                 <div className="space-y-4">
                                     <div className={`p-4 rounded-xl border-2 transition-all duration-200 ${prefs.autoYearSwitch
-                                            ? 'border-green-200 bg-green-50'
-                                            : 'border-red-200 bg-red-50'
+                                        ? 'border-green-200 bg-green-50'
+                                        : 'border-red-200 bg-red-50'
                                         }`}>
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
@@ -641,7 +641,7 @@ function Settings() {
                                         </div>
                                     </div>
 
-                                    {/* Transition manuelle avec infobulle */}
+                                    {/* Manual transition with tooltip */}
                                     <div className="p-4 rounded-xl border border-orange-200 bg-orange-50">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
@@ -673,8 +673,8 @@ function Settings() {
                                                     onClick={() => openModal('yearSwitch')}
                                                     disabled={prefs.autoYearSwitch}
                                                     className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${prefs.autoYearSwitch
-                                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                            : 'bg-orange-500 text-white hover:bg-orange-600 shadow-sm'
+                                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                        : 'bg-orange-500 text-white hover:bg-orange-600 shadow-sm'
                                                         }`}
                                                 >
                                                     <CalendarDaysIcon className="w-4 h-4" />
@@ -692,7 +692,7 @@ function Settings() {
                                 </div>
                             </div>
 
-                            {/* Carte Préférences */}
+                            {/* Preferences card */}
                             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                                 <div className="flex items-center gap-3 mb-6">
                                     <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
@@ -708,8 +708,8 @@ function Settings() {
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-4">
                                             <div className={`p-3 rounded-xl transition-all duration-300 ${prefs.prefersDark
-                                                    ? 'bg-gray-800 text-gray-200'
-                                                    : 'bg-amber-100 text-amber-600'
+                                                ? 'bg-gray-800 text-gray-200'
+                                                : 'bg-amber-100 text-amber-600'
                                                 }`}>
                                                 {prefs.prefersDark ? (
                                                     <MoonIcon className="w-6 h-6" />
@@ -728,8 +728,8 @@ function Settings() {
                                         <button
                                             onClick={() => setPrefs(p => ({ ...p, prefersDark: !p.prefersDark }))}
                                             className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${prefs.prefersDark
-                                                    ? 'bg-gray-700 text-white hover:bg-gray-800'
-                                                    : 'bg-amber-500 text-white hover:bg-amber-600'
+                                                ? 'bg-gray-700 text-white hover:bg-gray-800'
+                                                : 'bg-amber-500 text-white hover:bg-amber-600'
                                                 }`}
                                         >
                                             {prefs.prefersDark ? 'Mode sombre' : 'Mode clair'}
@@ -739,9 +739,9 @@ function Settings() {
                             </div>
                         </div>
 
-                        {/* Colonne latérale - Informations */}
+                        {/* Sidebar column - Information */}
                         <div className="space-y-6">
-                            {/* Carte Configuration */}
+                            {/* Configuration card */}
                             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                                 <div className="flex items-center gap-3 mb-6">
                                     <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
@@ -795,12 +795,10 @@ function Settings() {
                                 </div>
                             </div>
 
-                            {/* Carte Compteur CMDT - Version corrigée */}
+                            {/* CMDT Counter card - Corrected version */}
                             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                                 <div className="flex items-center gap-3 mb-4">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                                        // CORRECTION: Vérifiez directement la condition
-                                        warningInfo?.remaining <= warningInfo?.threshold ? 'bg-red-100' : 'bg-green-100'
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${warningInfo?.remaining <= warningInfo?.threshold ? 'bg-red-100' : 'bg-green-100'
                                         }`}>
                                         <ExclamationTriangleIcon className={`w-5 h-5 ${warningInfo?.remaining <= warningInfo?.threshold ? 'text-red-600' : 'text-green-600'
                                             }`} />
@@ -808,13 +806,12 @@ function Settings() {
                                     <div>
                                         <h2 className="text-xl font-semibold text-gray-900">État du Compteur CMDT</h2>
                                         <p className="text-gray-600 text-sm">
-                                            {/* CORRECTION: Même condition ici */}
                                             {warningInfo?.warning && warningInfo.remaining > 0 ? 'Seuil critique approche' : warningInfo?.warning && warningInfo.remaining === 0 ? 'Limite annuelle atteinte' : 'Situation normale'}
                                         </p>
                                     </div>
                                 </div>
 
-                                {/* Indicateur visuel simple */}
+                                {/* Visual indicator */}
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-center">
                                         <span className="text-sm font-medium text-gray-700">Progression</span>
@@ -822,7 +819,7 @@ function Settings() {
                                             {formatNumber(warningInfo?.lastNumber || 0)} / {formatNumber(warningInfo?.max || 0)}
                                         </span>
                                     </div>
-                                    {/* Barre de progression avec infobulle */}
+                                    {/* Progress bar */}
                                     <div className="relative group">
                                         <div className="w-full bg-gray-200 rounded-full h-3">
                                             <div
@@ -835,7 +832,7 @@ function Settings() {
                                             ></div>
                                         </div>
 
-                                        {/* Infobulle détaillée au hover */}
+                                        {/* Detailed tooltip on hover */}
                                         <div className="absolute bottom-full left-0 right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 pointer-events-none shadow-lg">
                                             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                                                 <span className="text-gray-300">Dernier numéro:</span>
@@ -876,7 +873,7 @@ function Settings() {
                                         </span>
                                     </div>
 
-                                    {/* CORRECTION: Même condition pour l'alerte */}
+                                    {/* Alert */}
                                     {warningInfo?.warning && (
                                         <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                                             <div className="flex items-center gap-2">

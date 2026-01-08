@@ -18,20 +18,20 @@ export class ActivityTracker implements UserActivity {
     private database: DatabaseInstance = database;
 
     public constructor(
-        inactivityThreshold: number | undefined = undefined, 
+        inactivityThreshold: number | undefined = undefined,
         rememberMe: boolean = false
     ) {
         this.rememberMe = rememberMe;
-        this.inactivityThreshold = inactivityThreshold !== undefined 
-            ? inactivityThreshold 
-            : this.rememberMe 
+        this.inactivityThreshold = inactivityThreshold !== undefined
+            ? inactivityThreshold
+            : this.rememberMe
                 ? 30 * 60 * 1000  // 30 minutes
                 : 5 * 60 * 1000;  // 5 minutes
     }
 
     async track(activityName: ActivityType, userId: string): Promise<boolean> {
         const now = Date.now();
-        
+
         try {
             await this.database.execute(
                 "INSERT INTO user_activity (user_id, name, created_at) VALUES (?, ?, ?)",
@@ -43,19 +43,19 @@ export class ActivityTracker implements UserActivity {
                 action: 'INSERT',
                 record_id: userId,
                 performed_by: userId,
-                description: `Activité ${activityName} enregistrée pour l'utilisateur ${userId}`
+                description: `Activity ${activityName} recorded for user ${userId}`
             });
 
-            logger.debug(`Activité trackée avec succès`, {
+            logger.debug(`Activity tracked successfully`, {
                 userId,
                 activity: activityName,
                 timestamp: now
             });
 
             return true;
-            
+
         } catch (error) {
-            logger.error(`Erreur lors de l'enregistrement de l'activité`, {
+            logger.error(`Error recording activity`, {
                 userId,
                 activity: activityName,
                 error: error instanceof Error ? error.message : 'unknown',
@@ -71,17 +71,17 @@ export class ActivityTracker implements UserActivity {
                 "SELECT created_at FROM user_activity WHERE user_id = ? ORDER BY created_at DESC LIMIT 1",
                 [userId]
             );
-            
+
             if (Array.isArray(result) && result.length > 0 && result[0].created_at) {
                 return result[0].created_at as ActivityTimeType;
             }
             return null;
-            
+
         } catch (error) {
-            logger.error('Erreur récupération dernière activité', { 
-                userId, 
+            logger.error('Error retrieving last activity', {
+                userId,
                 error: error instanceof Error ? error.message : 'unknown',
-                stack: error instanceof Error ? error.stack : 'unknown stack' 
+                stack: error instanceof Error ? error.stack : 'unknown stack'
             });
             return null;
         }
@@ -101,13 +101,13 @@ export class ActivityTracker implements UserActivity {
             if (timeSinceLastActivity > this.inactivityThreshold) {
                 return 0;
             }
-            
+
             return this.inactivityThreshold - timeSinceLastActivity;
-            
+
         } catch (error) {
-            logger.error('Erreur calcul temps expiration', { 
-                userId, 
-                error: error instanceof Error ? error.message : 'unknown' 
+            logger.error('Error calculating expiration time', {
+                userId,
+                error: error instanceof Error ? error.message : 'unknown'
             });
             return null;
         }
@@ -119,19 +119,19 @@ export class ActivityTracker implements UserActivity {
                 "DELETE FROM user_activity WHERE user_id = ?",
                 [userId]
             );
-            
+
             await auditLog({
                 table_name: 'user_activity',
                 action: 'DELETE',
                 record_id: userId,
                 performed_by: userId,
-                description: `Suppression de l'activité de l'utilisateur ${userId}`
+                description: `Deletion of activity for user ${userId}`
             });
-            
+
             return true;
-            
+
         } catch (error) {
-            logger.error(`Erreur suppression activité utilisateur`, {
+            logger.error(`Error deleting user activity`, {
                 userId,
                 error: error instanceof Error ? error.message : 'unknown'
             });
@@ -140,6 +140,6 @@ export class ActivityTracker implements UserActivity {
     }
 }
 
-// Instance par défaut
+// Default instance
 const activityTracker = new ActivityTracker();
 export default activityTracker;

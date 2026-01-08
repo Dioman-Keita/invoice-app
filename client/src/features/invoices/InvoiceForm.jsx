@@ -47,13 +47,13 @@ function InvoiceForm() {
   const { success, error } = useToastFeedback();
   const { validateDateOrder } = useDateValidation();
 
-  // Effet pour la validation croisée des dates
+  // Effect for cross-date validation
   useEffect(() => {
     if (invoiceDate && arrivalDate) {
-      // Laisser Zod faire sa validation
+      // Let Zod handle validation
       trigger("invoice_arrival_date");
 
-      // Ajouter un warning discret pour l'incohérence des dates
+      // Add a discrete warning for date inconsistency
       validateDateOrder(invoiceDate, arrivalDate, {
         showWarning: true,
         cooldownMs: 5000,
@@ -70,7 +70,7 @@ function InvoiceForm() {
     setLoading(true);
     try {
       await new Promise(res => setTimeout(res, 2000));
-      console.log('📦 Données à envoyer:', data); // ⚠️ Debug
+      console.log('📦 Data to send:', data); // ⚠️ Debug
 
       const result = await saveInvoice(data);
 
@@ -80,7 +80,7 @@ function InvoiceForm() {
           success(`Alerte: seuil annuel proche. Restant: ${result.warningInfo.remaining}`);
         }
         setResetTrigger(prev => prev + 1);
-        console.log('✅ Succès:', data);
+        console.log('✅ Success:', data);
         methods.reset();
       } else {
         error(result.message || 'Erreur lors de l\'enregistrement');

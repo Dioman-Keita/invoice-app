@@ -18,27 +18,27 @@ export async function createInvoice(
   const requestId = req.headers['x-request-id'] || 'unknown';
 
   try {
-    // Récupérer l'utilisateur connecté depuis req.user
+    // Get connected user from req.user
     const user = (req as AuthenticatedRequest).user;
 
     if (!user) {
-      logger.warn(`[${requestId}] Tentative de création de facture sans utilisateur authentifié`);
+      logger.warn(`[${requestId}] Attempt to create invoice without authenticated user`);
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     }
 
-    logger.info(`[${requestId}] Début de la création de la facture`);
+    logger.info(`[${requestId}] Starting invoice creation`);
     const data = req.body;
 
-    // Validation complète des données
+    // Full data validation
     const validationResult = await InvoiceValidatorData.validateInvoiceData(data, user);
 
     if (!validationResult.isValid) {
-      logger.warn(`[${requestId}] Validation des données échouée`, {
+      logger.warn(`[${requestId}] Data validation failed`, {
         errors: validationResult.errors,
         userId: user.sup
       });
 
-      // Retourner la première erreur (ou toutes selon votre préférence)
+      // Return the first error (or all depending on preference)
       const firstError = validationResult.errors[0];
       return ApiResponder.badRequest(
         res,
@@ -46,16 +46,16 @@ export async function createInvoice(
         {
           field: firstError.field,
           suggestion: firstError.suggestion,
-          allErrors: validationResult.errors // Optionnel: retourner toutes les erreurs
+          allErrors: validationResult.errors // Optional: return all errors
         }
       );
     }
 
-    // Création de la facture avec les données validées
+    // Create invoice with validated data
     const result = await Invoice.create(validationResult.validatedData!);
 
     if (!result.success) {
-      logger.error(`[${requestId}] Erreur lors de la création de la facture dans le modèle`, {
+      logger.error(`[${requestId}] Error during invoice creation in model`, {
         userId: user.sup,
         error: result.data
       });
@@ -69,24 +69,24 @@ export async function createInvoice(
       supplierId: validationResult.validatedData!.supplier_id
     });
 
-    // tracking de l'utilisateur
+    // User tracking
     const userActivity = new ActivityTracker();
     const trackingResult = await userActivity.track('SUBMIT_INVOICE', user.sup);
 
     if (!trackingResult) {
-      logger.warn(`Echec du tracking de l'utilisateur ${user.sup} lors de la soumission du formulaire de facture`, {
+      logger.warn(`User tracking failed for user ${user.sup} during invoice form submission`, {
         role: user.role,
         email: user.email
       });
     }
 
-    // Vérifier les alertes de fin d'année
+    // Check year-end alerts
     const warningInfo = await InvoiceLastNumberValidator.checkYearEndThresholdWarning();
 
     return ApiResponder.created(res, result.data, 'Facture créée avec succès 🎯', { warningInfo });
   } catch (err) {
-    logger.error(`[${requestId}] Erreur lors de la création de facture`, {
-      errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',
+    logger.error(`[${requestId}] Error during invoice creation`, {
+      errorMessage: err instanceof Error ? err.message : 'Unknown error',
       stack: err instanceof Error ? err.stack : 'unknown stack',
       body: req.body
     });
@@ -104,7 +104,7 @@ export async function getInvoice(
     const user = (req as AuthenticatedRequest).user;
 
     if (!user) {
-      logger.warn(`[${requestId}] Tentative d'accès à une facture sans utilisateur authentifié`);
+      logger.warn(`[${requestId}] Attempt to access invoice without authenticated user`);
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     }
 
@@ -125,11 +125,11 @@ export async function getInvoice(
       return ApiResponder.notFound(res, 'Facture introuvable');
     }
 
-    // Vérifier que l'utilisateur peut accéder à cette facture
+    // Check if user can access this invoice
     const invoiceData = invoices[0];
 
     if (!canAccessInvoice(user, invoiceData.created_by)) {
-      logger.warn(`[${requestId}] Tentative d'accès non autorisé à une facture`, {
+      logger.warn(`[${requestId}] Unauthorized access attempt to an invoice`, {
         invoiceId: id,
         userId: user.sup,
         invoiceOwner: invoiceData.created_by
@@ -137,7 +137,7 @@ export async function getInvoice(
       return ApiResponder.forbidden(res, 'Accès refusé à cette facture');
     }
 
-    logger.info(`[${requestId}] Facture récupérée`, {
+    logger.info(`[${requestId}] Invoice retrieved`, {
       invoiceId: id,
       userId: user.sup,
       role: user.role
@@ -145,8 +145,8 @@ export async function getInvoice(
 
     return ApiResponder.success(res, invoiceData);
   } catch (err) {
-    logger.error(`[${requestId}] Erreur lors de la récupération de facture`, {
-      errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',
+    logger.error(`[${requestId}] Error during invoice retrieval`, {
+      errorMessage: err instanceof Error ? err.message : 'Unknown error',
       stack: err instanceof Error ? err.stack : 'unknown stack',
       invoiceId: req.params.id
     });
@@ -164,7 +164,7 @@ export async function getUserInvoices(
     const user = (req as AuthenticatedRequest).user;
 
     if (!user) {
-      logger.warn(`[${requestId}] Tentative de récupération des factures sans utilisateur authentifié`);
+      logger.warn(`[${requestId}] Attempt to retrieve invoices without authenticated user`);
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     }
 
@@ -172,7 +172,7 @@ export async function getUserInvoices(
 
     let invoices: InvoiceRecord[] = [];
 
-    // Si c'est un admin, on peut chercher par différents critères
+    // If it's an admin, search by various criteria
     if (user.role === 'admin') {
       if (supplier_id) {
         invoices = await Invoice.findInvoice(supplier_id, {
@@ -196,13 +196,13 @@ export async function getUserInvoices(
           fiscalYear: fiscal_year || await getSetting('fiscal_year')
         });
       } else if (created_by) {
-        // Recherche par créateur (pour les admins)
+        // Search by creator (for admins)
         invoices = await searchInvoicesByCreator(created_by, limit ? parseInt(limit) : undefined, orderBy, fiscal_year || await getSetting('fiscal_year'));
       } else if (search) {
-        // Recherche global (pour les admins)
+        // Global search (for admins)
         invoices = await globalSearchInvoices(search, limit ? parseInt(limit) : undefined, orderBy, fiscal_year || await getSetting('fiscal_year'));
       } else {
-        // Toutes les factures pour les admins
+        // All invoices for admins
         invoices = await Invoice.findInvoice('', {
           findBy: 'all',
           limit: limit ? parseInt(limit) : null,
@@ -211,16 +211,16 @@ export async function getUserInvoices(
         });
       }
     } else {
-      // Pour les non-admins, seulement leurs propres factures
+      // For non-admins, only their own invoices
       invoices = await searchInvoicesByCreator(user.sup, limit ? parseInt(limit) : undefined, orderBy, fiscal_year || await getSetting('fiscal_year'));
     }
 
-    // Filtrer par statut si spécifié
+    // Filter by status if specified
     if (status && invoices.length > 0) {
       invoices = invoices.filter(invoice => invoice.status === status);
     }
 
-    logger.info(`[${requestId}] Factures récupérées`, {
+    logger.info(`[${requestId}] Invoices retrieved`, {
       userId: user.sup,
       role: user.role,
       count: invoices.length,
@@ -229,8 +229,8 @@ export async function getUserInvoices(
 
     return ApiResponder.success(res, invoices, `${invoices.length} facture(s) trouvée(s)`);
   } catch (err) {
-    logger.error(`[${requestId}] Erreur lors de la récupération des factures`, {
-      errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',
+    logger.error(`[${requestId}] Error during invoice retrieval`, {
+      errorMessage: err instanceof Error ? err.message : 'Unknown error',
       stack: err instanceof Error ? err.stack : 'unknown stack'
     });
     return ApiResponder.error(res, err);
@@ -252,9 +252,9 @@ export async function searchInvoices(
 
     const { supplier_id, account_number, phone, status, limit, orderBy, fiscal_year } = req.query;
 
-    // Vérifier les permissions pour la recherche avancée
+    // Check permissions for advanced search
     if (user.role !== 'admin' && (supplier_id || account_number || phone)) {
-      logger.warn(`[${requestId}] Tentative de recherche avancée sans permissions admin`, {
+      logger.warn(`[${requestId}] Advanced search attempt without admin permissions`, {
         userId: user.sup,
         role: user.role,
         query: req.query
@@ -290,10 +290,10 @@ export async function searchInvoices(
         fiscalYear: fiscal_year || await getSetting('fiscal_year')
       });
     } else {
-      return ApiResponder.badRequest(res, 'Critère de recherche requis (supplier_id, account_number, phone)');
+      return ApiResponder.badRequest(res, 'Critères de recherche requis (supplier_id, account_number, phone)');
     }
 
-    // Filtrer par statut si spécifié
+    // Filter by status if specified
     if (status && invoices.length > 0) {
       invoices = invoices.filter(invoice => invoice.status === status);
     }
@@ -302,7 +302,7 @@ export async function searchInvoices(
       return ApiResponder.notFound(res, `Aucune facture trouvée avec les critères de recherche (${searchType})`);
     }
 
-    logger.info(`[${requestId}] Recherche de factures effectuée`, {
+    logger.info(`[${requestId}] Invoice search performed`, {
       userId: user.sup,
       role: user.role,
       searchType,
@@ -311,8 +311,8 @@ export async function searchInvoices(
 
     return ApiResponder.success(res, invoices, `${invoices.length} facture(s) trouvée(s) par ${searchType}`);
   } catch (err) {
-    logger.error(`[${requestId}] Erreur lors de la recherche des factures`, {
-      errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',
+    logger.error(`[${requestId}] Error during invoice search`, {
+      errorMessage: err instanceof Error ? err.message : 'Unknown error',
       stack: err instanceof Error ? err.stack : 'unknown stack',
       query: req.query
     });
@@ -340,7 +340,7 @@ export async function updateInvoice(
       return ApiResponder.badRequest(res, 'ID de la facture requis');
     }
 
-    // Vérifier que la facture existe et que l'utilisateur y a accès
+
     const existingInvoices = await Invoice.findInvoice(id, {
       findBy: 'id',
       limit: 1,
@@ -357,7 +357,7 @@ export async function updateInvoice(
       return ApiResponder.forbidden(res, 'Accès refusé à cette facture');
     }
 
-    // Préparer les données de mise à jour (mapper correctement les champs requis)
+    // Prepare update data (correctly map required fields)
     const updateInvoiceData: UpdateInvoiceDto = {
       id: existingInvoice.id,
       invoice_num: updateData.invoice_num ?? existingInvoice.num_invoice,
@@ -384,7 +384,7 @@ export async function updateInvoice(
       return ApiResponder.error(res, 'Erreur lors de la mise à jour de la facture');
     }
 
-    logger.info(`[${requestId}] Facture mise à jour`, {
+    logger.info(`[${requestId}] Invoice updated`, {
       invoiceId: id,
       userId: user.sup,
       role: user.role
@@ -392,8 +392,8 @@ export async function updateInvoice(
 
     return ApiResponder.success(res, null, 'Facture mise à jour avec succès');
   } catch (err) {
-    logger.error(`[${requestId}] Erreur lors de la mise à jour de la facture`, {
-      errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',
+    logger.error(`[${requestId}] Error during invoice update`, {
+      errorMessage: err instanceof Error ? err.message : 'Unknown error',
       stack: err instanceof Error ? err.stack : 'unknown stack',
       invoiceId: req.params.id,
       body: req.body
@@ -421,7 +421,7 @@ export async function deleteInvoice(
       return ApiResponder.badRequest(res, 'ID de la facture requis');
     }
 
-    // Vérifier que la facture existe et que l'utilisateur y a accès
+    // Check that the invoice exists and that the user has access to it
     const existingInvoices = await Invoice.findInvoice(id, {
       findBy: 'id',
       limit: 1,
@@ -449,7 +449,7 @@ export async function deleteInvoice(
       return ApiResponder.error(res, 'Erreur lors de la suppression de la facture');
     }
 
-    logger.info(`[${requestId}] Facture supprimée`, {
+    logger.info(`[${requestId}] Invoice deleted`, {
       invoiceId: id,
       userId: user.sup,
       role: user.role
@@ -457,8 +457,8 @@ export async function deleteInvoice(
 
     return ApiResponder.success(res, null, 'Facture supprimée avec succès');
   } catch (err) {
-    logger.error(`[${requestId}] Erreur lors de la suppression de la facture`, {
-      errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',
+    logger.error(`[${requestId}] Error during invoice deletion`, {
+      errorMessage: err instanceof Error ? err.message : 'Unknown error',
       stack: err instanceof Error ? err.stack : 'unknown stack',
       invoiceId: req.params.id
     });
@@ -466,10 +466,10 @@ export async function deleteInvoice(
   }
 }
 
-// Fonctions utilitaires pour la recherche avancée
+// Utility functions for advanced search
 
 /**
- * Recherche des factures par créateur
+ * Search invoices by creator
  */
 async function searchInvoicesByCreator(
   createdBy: string,
@@ -492,7 +492,7 @@ async function searchInvoicesByCreator(
     }
     return result || [];
   } catch (error) {
-    logger.error('Erreur lors de la recherche des factures par créateur', {
+    logger.error('Error during invoice search by creator', {
       errorMessage: error instanceof Error ? error.message : 'unknown error',
       createdBy
     });
@@ -501,7 +501,7 @@ async function searchInvoicesByCreator(
 }
 
 /**
- * Recherche global dans les factures
+ * Global search in invoices
  */
 async function globalSearchInvoices(
   searchTerm: string,
@@ -536,7 +536,7 @@ async function globalSearchInvoices(
     }
     return result || [];
   } catch (error) {
-    logger.error('Erreur lors de la recherche global des factures', {
+    logger.error('Error during global invoice search', {
       errorMessage: error instanceof Error ? error.message : 'unknown error',
       searchTerm
     });
@@ -550,34 +550,34 @@ export async function getLastInvoiceNumber(req: AuthenticatedRequest, res: Respo
   try {
     const user = req.user;
     if (!user || !user.sup) {
-      logger.warn(`[${requestId}] Tentative d'accès aux ressources par un utilisateur non authentifié`);
-      return ApiResponder.unauthorized(res, 'Accès interdit');
+      logger.warn(`[${requestId}] Attempt to access resources by unauthenticated user`);
+      return ApiResponder.unauthorized(res, 'Accès refusé');
     }
 
-    logger.info(`[${requestId}] Début de la recherche du dernier numéro de facture utilisé`);
+    logger.info(`[${requestId}] Starting search for the last used invoice number`);
 
-    // ✅ CORRECTION : Récupérer le compteur actuel, pas le prochain numéro
+    // ✅ FIX: Get current counter, not next number
     const counter = await InvoiceLastNumberValidator.getCurrentFiscalYearCounter();
     const config = await getSetting('cmdt_format');
 
-    // Formater le dernier numéro utilisé (pas le prochain)
+    // Format last used number (not the next one)
     const lastInvoiceNumber = counter.last_cmdt_number.toString().padStart(config.padding, '0');
 
-    logger.info(`[${requestId}] Dernier numéro de facture récupéré avec succès: ${lastInvoiceNumber} pour l'année ${counter.fiscal_year}`);
+    logger.info(`[${requestId}] Last invoice number retrieved successfully: ${lastInvoiceNumber} for year ${counter.fiscal_year}`);
 
     return ApiResponder.success(res, {
       lastInvoiceNum: lastInvoiceNumber,
       fiscalYear: counter.fiscal_year,
-      rawLastNumber: counter.last_cmdt_number // Optionnel : pour debug
+      rawLastNumber: counter.last_cmdt_number // Optional: for debug
     }, 'Dernier numéro de facture récupéré avec succès');
 
   } catch (error) {
-    logger.error(`[${requestId}] Erreur lors de la récupération du dernier numéro de facture`, {
+    logger.error(`[${requestId}] Error during last invoice number retrieval`, {
       errorMsg: error instanceof Error ? error.message : 'Unknown error',
       errorStack: error instanceof Error ? error.stack : 'Unknown stack'
     });
 
-    // Fallback sécurisé
+    // Safe fallback
     return ApiResponder.success(res, {
       lastInvoiceNum: '0000',
       fiscalYear: new Date().getFullYear().toString()
@@ -591,13 +591,13 @@ export async function getNextInvoiceNumber(req: AuthenticatedRequest, res: Respo
   try {
     const user = req.user;
     if (!user || !user.sup) {
-      logger.warn(`[${requestId}] Tentative d'accès aux ressources par un utilisateur non authentifié`);
-      return ApiResponder.unauthorized(res, 'Accès interdit');
+      logger.warn(`[${requestId}] Attempt to access resources by unauthenticated user`);
+      return ApiResponder.unauthorized(res, 'Accès refusé');
     }
 
-    logger.info(`[${requestId}] Calcul du prochain numéro de facture attendu`);
+    logger.info(`[${requestId}] Calculating next expected invoice number`);
 
-    // ✅ Pour le prochain numéro, utiliser calculateNextNumberExpected()
+    // ✅ For next number, use calculateNextNumberExpected()
     const result = await InvoiceLastNumberValidator.calculateNextNumberExpected();
 
     if (result.success) {
@@ -616,7 +616,7 @@ export async function getNextInvoiceNumber(req: AuthenticatedRequest, res: Respo
       }, 'Calcul du prochain numéro impossible, utilisation de la valeur par défaut');
     }
   } catch (error) {
-    logger.error(`[${requestId}] Erreur lors du calcul du prochain numéro de facture`, {
+    logger.error(`[${requestId}] Error during next invoice number calculation`, {
       errorMsg: error instanceof Error ? error.message : 'Unknown error',
       errorStack: error instanceof Error ? error.stack : 'Unknown stack'
     });
@@ -628,7 +628,7 @@ export async function getNextInvoiceNumber(req: AuthenticatedRequest, res: Respo
   }
 }
 
-// Liste des factures DFC en attente pour l'année fiscale courante
+// List of pending DFC invoices for the current fiscal year
 export async function getDfcPendingInvoices(
   req: Request<unknown, unknown, unknown, { limit?: string }>,
   res: Response
@@ -637,7 +637,7 @@ export async function getDfcPendingInvoices(
   try {
     const user = (req as AuthenticatedRequest).user;
     if (!user) {
-      logger.warn(`[${requestId}] Tentative d'accès aux factures DFC sans utilisateur authentifié`);
+      logger.warn(`[${requestId}] Attempt to access DFC invoices without authenticated user`);
       return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
     }
 
@@ -645,7 +645,7 @@ export async function getDfcPendingInvoices(
     const invoices = await Invoice.findDfcPendingCurrentFiscalYear(limit);
     const fiscalYear = await getSetting('fiscal_year');
 
-    logger.info(`[${requestId}] Factures DFC en attente récupérées`, {
+    logger.info(`[${requestId}] Pending DFC invoices retrieved`, {
       userId: user.sup,
       role: user.role,
       count: invoices.length
@@ -653,15 +653,15 @@ export async function getDfcPendingInvoices(
 
     return ApiResponder.success(res, invoices, `${invoices.length} facture(s) DFC en attente`, { fiscalYear });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur lors de la récupération des factures DFC en attente`, {
-      errorMessage: error instanceof Error ? error.message : 'Erreur inconnue',
+    logger.error(`[${requestId}] Error during pending DFC invoices retrieval`, {
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : 'unknown stack'
     });
     return ApiResponder.error(res, error);
   }
 }
 
-// Approuver une facture DFC (année fiscale courante uniquement)
+// Approve a DFC invoice (current fiscal year only)
 export async function approveDfcInvoice(
   req: Request<{ id: string }>,
   res: Response
@@ -688,14 +688,14 @@ export async function approveDfcInvoice(
     logger.info(`[${requestId}] Facture DFC approuvée`, { invoiceId: id, userId: user.sup, role: user.role });
     return ApiResponder.success(res, null, 'Facture approuvée avec succès');
   } catch (error) {
-    logger.error(`[${requestId}] Erreur lors de l'approbation DFC`, {
-      errorMessage: error instanceof Error ? error.message : 'Erreur inconnue'
+    logger.error(`[${requestId}] Error during DFC approval`, {
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
     });
     return ApiResponder.error(res, error);
   }
 }
 
-// Rejeter une facture DFC (année fiscale courante uniquement)
+// Reject a DFC invoice (current fiscal year only)
 export async function rejectDfcInvoice(
   req: Request<{ id: string }>,
   res: Response
@@ -720,16 +720,16 @@ export async function rejectDfcInvoice(
     );
 
     logger.info(`[${requestId}] Facture DFC rejetée`, { invoiceId: id, userId: user.sup, role: user.role });
-    return ApiResponder.success(res, null, 'Facture rejetée avec succès');
+    return ApiResponder.success(res, null, 'Facture mise à jour avec succès');
   } catch (error) {
-    logger.error(`[${requestId}] Erreur lors du rejet DFC`, {
-      errorMessage: error instanceof Error ? error.message : 'Erreur inconnue'
+    logger.error(`[${requestId}] Error during DFC rejection`, {
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
     });
     return ApiResponder.error(res, error);
   }
 }
 
-// ✅ NOUVEAU : Récupérer les attachments d'une facture
+// ✅ NEW: Get invoice attachments
 export async function getInvoiceAttachments(
   req: Request<{ id: string }>,
   res: Response
@@ -752,13 +752,13 @@ export async function getInvoiceAttachments(
     const result = await Invoice.getInvoiceAttachments(id);
 
     if (!result.success) {
-      return ApiResponder.error(res, new Error('Erreur lors de la récupération des attachments'));
+      return ApiResponder.error(res, new Error('Erreur lors de la récupération des pièces jointes'));
     }
 
     return ApiResponder.success(res, { documents: result.documents });
   } catch (err) {
-    logger.error(`[${requestId}] Erreur lors de la récupération des attachments`, {
-      errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',
+    logger.error(`[${requestId}] Error during attachments retrieval`, {
+      errorMessage: err instanceof Error ? err.message : 'Unknown error',
       stack: err instanceof Error ? err.stack : 'unknown stack',
       invoiceId: req.params.id
     });
@@ -766,7 +766,7 @@ export async function getInvoiceAttachments(
   }
 }
 
-// ✅ NOUVEAU : Mettre à jour les attachments d'une facture
+// ✅ NEW: Update invoice attachments
 export async function updateInvoiceAttachments(
   req: Request<{ id: string }, unknown, { documents: string[] }>,
   res: Response
@@ -788,16 +788,16 @@ export async function updateInvoiceAttachments(
     }
 
     if (!Array.isArray(documents)) {
-      return ApiResponder.badRequest(res, 'documents doit être un tableau');
+      return ApiResponder.badRequest(res, 'Les documents doivent être un tableau');
     }
 
     const result = await Invoice.updateInvoiceAttachments(id, documents, user.sup || 'unknown');
 
     if (!result.success) {
-      return ApiResponder.error(res, new Error('Erreur lors de la mise à jour des attachments'));
+      return ApiResponder.error(res, new Error('Erreur lors de la mise à jour des pièces jointes'));
     }
 
-    return ApiResponder.success(res, { message: 'Attachments mis à jour avec succès' });
+    return ApiResponder.success(res, { message: 'Pièces jointes mises à jour avec succès' });
   } catch (err) {
     logger.error(`[${requestId}] Erreur lors de la mise à jour des attachments`, {
       errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',
@@ -808,7 +808,7 @@ export async function updateInvoiceAttachments(
   }
 }
 
-// ✅ NOUVEAU : Supprimer les attachments d'une facture
+// ✅ NEW: Delete invoice attachments
 export async function deleteInvoiceAttachments(
   req: Request<{ id: string }>,
   res: Response
@@ -831,10 +831,10 @@ export async function deleteInvoiceAttachments(
     const result = await Invoice.deleteInvoiceAttachments(id, user.sup || 'unknown');
 
     if (!result.success) {
-      return ApiResponder.error(res, new Error('Erreur lors de la suppression des attachments'));
+      return ApiResponder.error(res, new Error('Erreur lors de la suppression des pièces jointes'));
     }
 
-    return ApiResponder.success(res, { message: 'Attachments supprimés avec succès' });
+    return ApiResponder.success(res, { message: 'Pièces jointes supprimées avec succès' });
   } catch (err) {
     logger.error(`[${requestId}] Erreur lors de la suppression des attachments`, {
       errorMessage: err instanceof Error ? err.message : 'Erreur inconnue',

@@ -10,23 +10,23 @@ export interface DBErrorLogParams {
 }
 
 /**
- * Service pour persister les logs d'erreur en base de données
+ * Service to persist error logs in the database
  */
 export class DBLogger {
     /**
-     * Enregistre une erreur dans la table system_error_log
+     * Logs an error in the system_error_log table
      */
     static async log(message: string, meta?: any): Promise<void> {
         try {
             const level = meta?.level || 'ERROR';
             const stack = meta?.error instanceof Error ? meta.error.stack : (meta?.stack || null);
 
-            // On extrait d'éventuels champs contextuels du meta
+            // Extract contextual fields from meta
             const context = { ...meta };
             const path = meta?.path || meta?.url || null;
             const user_id = meta?.userId || meta?.user_id || null;
 
-            // Supprimer les gros objets du contexte pour éviter de saturer la DB
+            // Remove large objects from context to avoid saturating the DB
             if (context.error) delete context.error;
             if (context.stack) delete context.stack;
 
@@ -42,8 +42,8 @@ export class DBLogger {
                 ]
             );
         } catch (dbError) {
-            // On utilise console.error au lieu de logger.error pour éviter une boucle infinie
-            console.error('❌ Échec de la persistance du log en DB:', dbError);
+            // Use console.error instead of logger.error to avoid infinite loop
+            console.error('❌ Failed to persist log in DB:', dbError);
         }
     }
 }

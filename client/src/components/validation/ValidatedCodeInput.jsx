@@ -24,14 +24,14 @@ function ValidatedCodeInput({
     const initializedRef = useRef(false);
     const previousResetTriggerRef = useRef(resetTrigger);
 
-    // Déterminer le format en fonction de la valeur
+    // Determine format based on value
     const determineFormat = (value) => {
         const num = parseInt(value, 10);
         if (isNaN(num)) return "auto";
         return num <= 999 ? "small" : "large";
     };
 
-    // Formater la valeur selon le mode
+    // Format value based on mode
     const formatValue = (rawValue, mode) => {
         if (!rawValue) return "";
 
@@ -39,15 +39,15 @@ function ValidatedCodeInput({
         if (isNaN(num)) return rawValue;
 
         if (mode === "small" || (mode === "auto" && num <= 999)) {
-            // Format 4 chiffres pour les petits nombres
+            // Format 4 digits for small numbers
             return num.toString().padStart(4, '0');
         } else {
-            // Format libre pour les grands nombres (sans leading zeros)
+            // Free format for large numbers (no leading zeros)
             return num.toString();
         }
     };
 
-    // Préremplir avec la valeur initiale
+    // Pre-fill with initial value
     useEffect(() => {
         if (initialValue) {
             const initialFormat = determineFormat(initialValue);
@@ -72,26 +72,26 @@ function ValidatedCodeInput({
     const handleInput = (e) => {
         const raw = e.target.value.replace(/[^\d]/g, "");
 
-        // Détecter le format en temps réel
+        // Detect real-time format
         const currentFormat = determineFormat(raw);
         setFormatMode(currentFormat);
 
-        // Formater automatiquement
+        // Automatically format
         const formatted = formatValue(raw, currentFormat);
 
-        // Détecter une incohérence
+        // Detect inconsistency
         if (initialValue && formatted !== formatValue(initialValue, determineFormat(initialValue))) {
             setHasIncoherence(true);
         } else {
             setHasIncoherence(false);
         }
 
-        // Validation du pattern
+        // Pattern validation
         if (e.target.value !== raw) {
             validatePattern(raw, /^\d*$/, "Code", "Le code ne peut contenir que des chiffres");
         }
 
-        // Validation de la longueur adaptative
+        // Adaptive length validation
         const targetLength = currentFormat === "small" ? 4 : maxLength;
         const lengthValidation = validateLength(raw, targetLength, "Code", {
             warningThreshold: 1.0,
@@ -116,7 +116,7 @@ function ValidatedCodeInput({
         const num = parseInt(currentValue, 10);
 
         if (currentValue.length > 0) {
-            // Validation pour petits nombres (format strict 4 chiffres)
+            // Validation for small numbers (strict 4 digits format)
             if (num <= 999 && currentValue.length !== 4) {
                 return {
                     type: "error",
@@ -124,7 +124,7 @@ function ValidatedCodeInput({
                 };
             }
 
-            // Validation pour grands nombres (1-12 chiffres)
+            // Validation for large numbers (1-12 digits)
             if (num > 999 && (currentValue.length < 1 || currentValue.length > 12)) {
                 return {
                     type: "error",
@@ -132,7 +132,7 @@ function ValidatedCodeInput({
                 };
             }
 
-            // Vérification limite maximale
+            // Verification limit maximum
             if (num > 999999999999) {
                 return {
                     type: "error",
@@ -141,7 +141,7 @@ function ValidatedCodeInput({
             }
         }
 
-        // Si le code est complet et valide
+        // If the code is complete and valid
         if (currentValue.length > 0 && !errors[name]) {
             if (hasIncoherence) {
                 return {
@@ -157,7 +157,7 @@ function ValidatedCodeInput({
 
     const valueStatus = getValueStatus();
 
-    // Fonction pour rétablir la valeur du serveur
+    // Function to reset to server value
     const resetToServerValue = () => {
         if (!initialValue) return;
 
@@ -193,29 +193,29 @@ function ValidatedCodeInput({
                 id={name}
                 onInput={handleInput}
                 className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none transition-colors ${errors[name]
-                        ? "focus:ring-red-500 focus:border-red-700 border-red-500"
-                        : valueStatus?.type === "warning"
-                            ? "border-yellow-500 focus:border-yellow-500 focus:ring-yellow-500"
-                            : valueStatus?.type === "error"
-                                ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                                : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                    ? "focus:ring-red-500 focus:border-red-700 border-red-500"
+                    : valueStatus?.type === "warning"
+                        ? "border-yellow-500 focus:border-yellow-500 focus:ring-yellow-500"
+                        : valueStatus?.type === "error"
+                            ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                            : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                     }`}
             />
 
-            {/* Messages d'état */}
+            {/* Status messages */}
             <div className="min-h-[1.75rem] mt-1 space-y-0.5 transition-opacity duration-300">
                 {errors[name]?.message ? (
                     <span className="text-red-600 text-xs block">{errors[name].message}</span>
                 ) : valueStatus ? (
                     <span className={`text-xs block ${valueStatus.type === "success" ? "text-green-600" :
-                            valueStatus.type === "warning" ? "text-yellow-700" :
-                                "text-red-600"
+                        valueStatus.type === "warning" ? "text-yellow-700" :
+                            "text-red-600"
                         }`}>
                         {valueStatus.message}
                     </span>
                 ) : null}
 
-                {/* Info format dynamique */}
+                {/* Dynamic format info */}
                 <span className="text-gray-500 text-xs block">
                     {formatMode === "small"
                         ? "Format: 4 chiffres (0001-0999)"
@@ -223,7 +223,7 @@ function ValidatedCodeInput({
                 </span>
             </div>
 
-            {/* Bouton de correction */}
+            {/* Correction button */}
             {hasIncoherence && initialValue && (
                 <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
                     <div className="text-yellow-700 mb-1">

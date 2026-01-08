@@ -9,30 +9,30 @@ class InvoiceNumberRule {
     private invoiceCounter = new InvoiceCounterManager();
     private employeeCounter = new EmployeeCounterManager();
 
-    async checkAndUpdateFiscalYear(): Promise<{changed: boolean, newYear?: string}> {
+    async checkAndUpdateFiscalYear(): Promise<{ changed: boolean, newYear?: string }> {
         try {
             const currentYear = new Date().getFullYear().toString();
             const currentFiscalYear = await getSetting('fiscal_year');
             const autoSwitch = await getSetting('auto_year_switch');
 
             if (currentYear !== currentFiscalYear && Boolean(autoSwitch)) {
-                // Mettre à jour l'année fiscale
+                // Update fiscal year
                 await database.execute(
                     "UPDATE app_settings SET setting_value = ? WHERE setting_key = 'fiscal_year'",
                     [JSON.stringify(currentYear)]
                 );
 
-                // Initialiser les compteurs pour la nouvelle année
+                // Initialize fiscal year counters
                 await this.initializeFiscalYearCounter(currentYear);
 
-                logger.info(`🔄 Changement automatique d'année fiscale: ${currentFiscalYear} -> ${currentYear}`);
+                logger.info(`🔄 Automatic fiscal year change: ${currentFiscalYear} -> ${currentYear}`);
 
                 return { changed: true, newYear: currentYear };
             }
 
             return { changed: false };
         } catch (error) {
-            logger.error('❌ Erreur lors de la vérification de l\'année fiscale', {
+            logger.error('❌ Error checking fiscal year', {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 stack: error instanceof Error ? error.stack : 'Unknown stack'
             });
@@ -42,13 +42,13 @@ class InvoiceNumberRule {
 
     async initializeFiscalYearCounter(fiscalYear: string): Promise<void> {
         try {
-            // Initialiser les deux compteurs
+            // Initialize fiscal year counters
             await this.invoiceCounter.initializeFiscalCounter(fiscalYear);
             await this.employeeCounter.initializeFiscalCounter(fiscalYear);
 
-            logger.info(`✅ Compteurs fiscaux initialisés pour l'année ${fiscalYear}`);
+            logger.info(`✅ Fiscal year counters initialized for ${fiscalYear}`);
         } catch (error) {
-            logger.error(`❌ Erreur lors de l'initialisation des compteurs fiscaux pour ${fiscalYear}`, {
+            logger.error(`❌ Error initializing fiscal year counters for ${fiscalYear}`, {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 stack: error instanceof Error ? error.stack : 'Unknown stack'
             });
@@ -66,7 +66,7 @@ class InvoiceNumberRule {
                 last_cmdt_number: lastNumber
             };
         } catch (error) {
-            logger.error("❌ Erreur lors de la récupération du compteur fiscal", {
+            logger.error("❌ Error retrieving fiscal year counter", {
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
             throw error;
@@ -93,7 +93,7 @@ class InvoiceNumberRule {
 
             return { success: true, nextNumber: nextNumberStr };
         } catch (error) {
-            logger.error('❌ Erreur lors de la génération du prochain numéro CMDT', {
+            logger.error('❌ Error generating next CMDT number', {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 stack: error instanceof Error ? error.stack : undefined
             });
@@ -111,9 +111,9 @@ class InvoiceNumberRule {
             }
 
             await this.invoiceCounter.updateCounter(fiscalYear, numberValue);
-            logger.info(`✅ Compteur CMDT mis à jour: ${invoiceNumber} pour l'année ${fiscalYear}`);
+            logger.info(`✅ Compteur CMDT updated: ${invoiceNumber} for fiscal year ${fiscalYear}`);
         } catch (error) {
-            logger.error('❌ Erreur lors de la mise à jour du compteur CMDT', {
+            logger.error('❌ Error updating CMDT counter', {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 stack: error instanceof Error ? error.stack : 'Unknown stack'
             });
@@ -137,7 +137,7 @@ class InvoiceNumberRule {
                 nextNumberExpected: result.nextNumber
             };
         } catch (error) {
-            logger.error(`❌ Erreur lors du calcul du prochain numéro attendu`, {
+            logger.error(`❌ Error calculating next number expected`, {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 stack: error instanceof Error ? error.stack : undefined
             });
@@ -159,7 +159,7 @@ class InvoiceNumberRule {
             if (!result.success) {
                 return {
                     isValid: false,
-                    errorMessage: result.errorMessage || 'Erreur lors du calcul du prochain numéro CMDT',
+                    errorMessage: result.errorMessage || 'Error calculating next number expected',
                     nextNumberExpected: '0000',
                     fiscalYear
                 };
@@ -187,7 +187,7 @@ class InvoiceNumberRule {
                 }
             }
 
-            // Vérifier l'unicité
+            // Check for uniqueness
             const isInvoiceNumberExist = await database.execute(
                 `SELECT id FROM invoice WHERE num_cmdt = ? AND fiscal_year = ?`,
                 [invoiceNumber, fiscalYear]
@@ -218,7 +218,7 @@ class InvoiceNumberRule {
             };
 
         } catch (error) {
-            logger.error(`❌ Erreur lors de la validation du numéro de facture`, {
+            logger.error(`❌ Error validating invoice number`, {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 stack: error instanceof Error ? error.stack : undefined
             });
@@ -244,7 +244,7 @@ class InvoiceNumberRule {
             const warning = counter.last_cmdt_number >= threshold;
 
             if (warning) {
-                logger.warn(`⚠️ Seuil d'alerte atteint pour ${fiscalYear}: ${counter.last_cmdt_number}/${config.max}. Reste: ${remaining}`);
+                logger.warn(`⚠️ Warning threshold reached for ${fiscalYear}: ${counter.last_cmdt_number}/${config.max}. Remaining: ${remaining}`);
             }
 
             return {
@@ -256,7 +256,7 @@ class InvoiceNumberRule {
                 fiscalYear
             };
         } catch (error) {
-            logger.error("❌ Erreur lors du contrôle du seuil de fin d'année", {
+            logger.error("❌ Error checking year end threshold warning", {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 stack: error instanceof Error ? error.stack : undefined
             });
@@ -299,10 +299,10 @@ class InvoiceNumberRule {
                 };
             }
 
-            // Initialiser les compteurs pour la nouvelle année
+            // Initialize fiscal year counters
             await this.initializeFiscalYearCounter(newYear);
 
-            // Mettre à jour l'année fiscale
+            // Update fiscal year
             await database.execute(
                 "UPDATE app_settings SET setting_value = ? WHERE setting_key = 'fiscal_year'",
                 [JSON.stringify(newYear)]
@@ -314,8 +314,8 @@ class InvoiceNumberRule {
                 message: `Année fiscale changée vers ${newYear}. Compteurs initialisés.`
             };
 
-        } catch(error) {
-            logger.error('❌ Erreur lors du changement manuel d\'année fiscale', {
+        } catch (error) {
+            logger.error('❌ Error changing fiscal year', {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 newYear,
                 stack: error instanceof Error ? error.stack : 'Unknown stack'
@@ -331,7 +331,7 @@ class InvoiceNumberRule {
         return await this.invoiceCounter.getCounterHistory();
     }
 
-    async getEmployeeCounterHistory(): Promise<Array<{fiscal_year: string; last_number: number}>> {
+    async getEmployeeCounterHistory(): Promise<Array<{ fiscal_year: string; last_number: number }>> {
         return await this.employeeCounter.getCounterHistory();
     }
 
@@ -373,7 +373,7 @@ class InvoiceNumberRule {
         }
     }
 
-    async validateInvoiceNumberUniqueness(invoiceNum: string): Promise<{success: boolean, errorMessage?: string}> {
+    async validateInvoiceNumberUniqueness(invoiceNum: string): Promise<{ success: boolean, errorMessage?: string }> {
         try {
             if (invoiceNum === '0' || invoiceNum === '' || invoiceNum === '0'.repeat(12)) {
                 return {
@@ -383,7 +383,7 @@ class InvoiceNumberRule {
             }
 
             const regex = /^(?!^0$)\d{1,12}$/;
-            if(!regex.test(invoiceNum)) {
+            if (!regex.test(invoiceNum)) {
                 return {
                     success: false,
                     errorMessage: 'Format invalide. 1 à 12 chiffres (0 au début autorisé)'

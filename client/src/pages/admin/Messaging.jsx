@@ -26,16 +26,16 @@ import useTitle from '../../hooks/ui/useTitle.js';
 
 function Messaging() {
   useTitle('CMDT - Messagerie Admin');
-  // 1. Amélioration Auth : Récupération du loading si disponible, sinon on gère manuellement
+  // 1. Auth improvement : Get loading if available, otherwise handle manually
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  // États de l'interface
+  // Interface states
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [elapsedTime, setElapsedTime] = useState(0); // Timer pour le bouton
+  const [elapsedTime, setElapsedTime] = useState(0); // Timer for button
 
-  // 2. Amélioration Connexion : État pour la détection réseau
+  // 2. Connection improvement : State for network detection
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   const [filter, setFilter] = useState('all');
@@ -43,7 +43,7 @@ function Messaging() {
   const [selected, setSelected] = useState(null);
   const { success, error, warning } = useToastFeedback();
 
-  // Données
+  // Data
   const [requests, setRequests] = useState([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -61,12 +61,12 @@ function Messaging() {
   const [rejectId, setRejectId] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
 
-  // Timer Ref pour le nettoyage
+  // Timer Ref for cleanup
   const timerRef = useRef(null);
 
-  // --- Gestion Connexion & Timer ---
+  // --- Connection & Timer Management ---
 
-  // Écouteurs pour l'état de la connexion
+  // Online status listeners
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -80,7 +80,7 @@ function Messaging() {
     };
   }, []);
 
-  // Gestion du timer visuel pendant le chargement d'une action
+  // Timer management during action loading
   useEffect(() => {
     if (actionLoading) {
       setElapsedTime(0);
@@ -112,14 +112,14 @@ function Messaging() {
 
   // Fetch requests and stats
   useEffect(() => {
-    // On attend que l'auth soit résolue avant de fetcher
+    // Wait for auth to resolve before fetching
     if (!authLoading && user?.role === 'admin' && isOnline) {
       fetchRequests();
       fetchStats();
     }
   }, [user, authLoading, filter, search, currentPage, isOnline]);
 
-  // Reset page quand filtre change
+  // Reset page when filter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [filter, search]);
@@ -182,7 +182,7 @@ function Messaging() {
 
     } catch (err) {
       console.error("Failed to fetch requests", err);
-      // Éviter de spammer les toasts si c'est juste une erreur réseau temporaire
+      // Avoid spamming toasts if it's just a temporary network error
       if (isOnline) error('Erreur chargement demandes');
     } finally {
       setLoading(false);
@@ -196,14 +196,14 @@ function Messaging() {
       warning('Pas de connexion internet');
       return;
     }
-    if (actionLoading) return; // Sécurité double clic
+    if (actionLoading) return; // Security against double click
 
     setActionLoading(true);
     try {
       await api.post(`/migration/requests/${id}/approve`);
       success('Demande approuvée avec succès');
 
-      // Mise à jour optimiste locale pour réactivité immédiate
+      // Optimistic update for immediate reactivity
       if (selected?.id === id) {
         setSelected(prev => ({ ...prev, status: 'approved' }));
       }
@@ -225,7 +225,7 @@ function Messaging() {
   };
 
   const closeRejectModal = () => {
-    if (actionLoading) return; // Empêcher la fermeture pendant la soumission
+    if (actionLoading) return; // Prevent closing during submission
     setIsRejectModalOpen(false);
     setRejectId(null);
     setRejectReason('');
@@ -247,7 +247,7 @@ function Messaging() {
         setSelected(prev => ({ ...prev, status: 'rejected' }));
       }
 
-      // On ferme d'abord la modale
+      // Close modal first
       setIsRejectModalOpen(false);
       setRejectId(null);
       setRejectReason('');
@@ -262,9 +262,9 @@ function Messaging() {
     }
   };
 
-  // --- Rendu conditionnel Auth ---
+  // --- Conditional rendering Auth ---
 
-  // 1. État de chargement global de l'auth
+  // 1. Global auth loading state
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -273,7 +273,7 @@ function Messaging() {
     );
   }
 
-  // 2. Non connecté
+  // 2. Not connected
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
@@ -294,7 +294,7 @@ function Messaging() {
     );
   }
 
-  // 3. Mauvais rôle
+  // 3. Wrong role
   if (user.role !== 'admin') {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
@@ -322,7 +322,7 @@ function Messaging() {
 
       <div className="container mx-auto px-4 py-6">
 
-        {/* Alerte Connexion Perdue */}
+        {/* Offline alert */}
         {!isOnline && (
           <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r shadow-sm flex items-center justify-between animate-pulse">
             <div className="flex items-center">
@@ -408,12 +408,12 @@ function Messaging() {
           </div>
         </div>
 
-        {/* Contenu principal */}
+        {/* Main content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Liste gauche */}
+          {/* Left list */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-              {/* Barre outils */}
+              {/* Tools bar */}
               <div className="p-4 border-b border-gray-200 bg-gray-50">
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="relative flex-1">
@@ -449,7 +449,7 @@ function Messaging() {
                 </div>
               </div>
 
-              {/* Liste */}
+              {/* List */}
               <div className="divide-y divide-gray-200 max-h-[600px] overflow-y-auto custom-scrollbar">
                 {loading && requests.length === 0 ? (
                   <div className="p-12 text-center">
@@ -477,7 +477,7 @@ function Messaging() {
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            {/* Ligne 1: Nom + Statut */}
+                            {/* Line 1: Name + Status */}
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
                                 <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold uppercase shadow-sm">
@@ -497,7 +497,7 @@ function Messaging() {
                               </span>
                             </div>
 
-                            {/* Ligne 2: Migration */}
+                            {/* Line 2: Migration */}
                             <div className="flex items-center gap-2 bg-gray-50/80 rounded-lg p-2 mb-2 border border-gray-100">
                               <div className="flex-1 min-w-0">
                                 <p className="text-[10px] text-gray-400 uppercase tracking-wide">Actuel</p>
@@ -510,7 +510,7 @@ function Messaging() {
                               </div>
                             </div>
 
-                            {/* Ligne 3: Métadonnées */}
+                            {/* Line 3: Metadata */}
                             <div className="flex items-center justify-between text-xs text-gray-500">
                               <div className="flex items-center gap-1.5">
                                 <BuildingOfficeIcon className="w-3.5 h-3.5" />
@@ -552,7 +552,7 @@ function Messaging() {
             </div>
           </div>
 
-          {/* Détails droite */}
+          {/* Right details */}
           <div>
             {selected ? (
               <div className="bg-white rounded-lg shadow-lg border border-gray-200 sticky top-6 animate-in slide-in-from-right-4 duration-300">
@@ -566,7 +566,7 @@ function Messaging() {
                 </div>
 
                 <div className="p-5 space-y-5">
-                  {/* Info utilisateur */}
+                  {/* User info */}
                   <div className="flex items-start gap-4">
                     <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xl shadow-sm">
                       {selected.name.substring(0, 1)}
@@ -590,7 +590,7 @@ function Messaging() {
                   <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-4 rounded-xl border border-blue-100">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 text-center">Changement de rôle demandé</p>
                     <div className="flex items-center justify-between relative">
-                      {/* Ligne connecteur */}
+                      {/* Connector line */}
                       <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-gray-300 -z-10"></div>
 
                       <div className="bg-white p-2 rounded-lg border border-gray-200 shadow-sm z-10 w-5/12 text-center">
@@ -620,7 +620,7 @@ function Messaging() {
                     </div>
                   </div>
 
-                  {/* Dates & Statut Grid */}
+                  {/* Dates & Status Grid */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
                       <p className="text-xs text-gray-500 mb-1">Date soumission</p>
@@ -638,7 +638,7 @@ function Messaging() {
                     </div>
                   </div>
 
-                  {/* Réponse admin si existante */}
+                  {/* Admin response if exists */}
                   {selected.response && (
                     <div className="border-t pt-4">
                       <p className="text-xs font-bold text-gray-500 mb-2">NOTE DE RÉVISION</p>
@@ -651,7 +651,7 @@ function Messaging() {
                     </div>
                   )}
 
-                  {/* Boutons d'action avec Timer */}
+                  {/* Action buttons with timer */}
                   {selected.status === 'pending' && (
                     <div className="pt-4 border-t border-gray-200">
                       <div className="grid grid-cols-2 gap-3">
@@ -702,7 +702,7 @@ function Messaging() {
         </div>
       </div>
 
-      {/* Modal Rejet avec Timer */}
+      {/* Reject modal with timer */}
       {isRejectModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100">

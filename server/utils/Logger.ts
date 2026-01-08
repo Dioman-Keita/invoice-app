@@ -26,7 +26,7 @@ class Logger {
                 fs.mkdirSync(this.logDirectory, { recursive: true });
             }
         } catch (error) {
-            console.error('Impossible de créer le répertoire de logs:', error);
+            console.error('Unable to create log directory:', error);
         }
     }
 
@@ -57,15 +57,15 @@ class Logger {
         try {
             fs.appendFileSync(this.getLogFilePath(), line + "\n", { encoding: 'utf8' });
         } catch (error) {
-            console.error('Erreur lors de l\'écriture du log dans le fichier:', error);
+            console.error('Error while writing log to file:', error);
         }
     }
 
     private dbLogger: ((message: string, meta?: any) => void) | null = null;
 
     /**
-     * Permet d'attacher un logger de base de données à l'instance
-     * Utilisé pour éviter les dépendances circulaires
+     * Allows you to attach a database logger to the instance.
+     * Used to avoid circular dependencies.
      */
     public setDBLogger(loggerFunc: (message: string, meta?: any) => void) {
         this.dbLogger = loggerFunc;
@@ -75,9 +75,9 @@ class Logger {
         const line = this.formatLine(level, message, meta);
         this.writeToFile(line);
 
-        // Si c'est une erreur, on essaye de persister en DB via le callback enregistré
+        // If it's an error, try to persist to DB via registered callback
         if (level === 'ERROR' && this.dbLogger) {
-            // On ne veut pas que l'erreur de log DB bloque le flux principal
+            // Error logging shouldn't block main flow
             this.dbLogger(message, meta);
         }
 

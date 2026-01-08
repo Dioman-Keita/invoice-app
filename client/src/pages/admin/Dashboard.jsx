@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/auth/useAuth.js';
 import api from '../../services/api.js';
-import { formatAmountSmart } from '../../utils/formatAmount.js';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/global/Header.jsx';
 import Navbar from '../../components/navbar/Navbar.jsx';
@@ -18,7 +17,7 @@ import {
 import Chart from 'chart.js/auto';
 import useTitle from '../../hooks/ui/useTitle.js';
 
-// Données de fallback minimales
+// Minimal fallback data
 const FALLBACK_DATA = null;
 
 function Dashboard({ requireAuth = false }) {
@@ -31,7 +30,7 @@ function Dashboard({ requireAuth = false }) {
   const [loading, setLoading] = useState(true);
   const [chartReady, setChartReady] = useState(false);
 
-  // Un seul useEffect pour tout gérer
+  // Single useEffect to handle everything
   useEffect(() => {
     if (requireAuth && (!user || user.role !== 'admin')) {
       navigate('/unauthorized');
@@ -43,7 +42,7 @@ function Dashboard({ requireAuth = false }) {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        // On ne reset pas dashboardData à null ici pour éviter le saut (saccade)
+        // Reset dashboardData to null to avoid jarring (stutter)
         // setDashboardData(null); 
 
         const response = await api.get('/stats/dashboard/kpis');
@@ -63,7 +62,7 @@ function Dashboard({ requireAuth = false }) {
 
           setDashboardData(newData);
 
-          // Mettre à jour le graphique après un petit délai
+          // Update the chart after a small delay
           setTimeout(() => {
             if (isMounted && chartRef.current) {
               createChart(newData);
@@ -72,8 +71,8 @@ function Dashboard({ requireAuth = false }) {
           }, 50);
         }
       } catch (error) {
-        console.error('Erreur lors du chargement des données:', error);
-        // En cas d'erreur on peut set null ou garder l'ancien état + toast
+        console.error('Error loading data:', error);
+        // In case of error, we can set null or keep the old state + toast
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -91,11 +90,6 @@ function Dashboard({ requireAuth = false }) {
     };
   }, [user, navigate, requireAuth]);
 
-  // ... (createChart stays same)
-
-  // ... helpers stay same
-
-
   const createChart = (data) => {
     if (chartInstance.current) {
       chartInstance.current.destroy();
@@ -105,22 +99,9 @@ function Dashboard({ requireAuth = false }) {
 
     const labels = ['Utilisateurs', 'Factures', "Chiffre d'affaires", 'En attente DFC'];
 
-    const maxValue = Math.max(data.totalUsers, data.totalInvoices, data.pendingInvoices, 1);
-    // Normalisation pour l'affichage (éviter qu'une barre écrase les autres)
-    // On normalise le CA par rapport à la valeur max des autres métriques pour qu'il soit visible mais pas démesuré
-    const revenueNormalized = data.totalRevenue > 0 ? (maxValue * 1.5) : 0;
-
-    // NOTE: Pour le graphique, on utilise des valeurs réelles pour les barres simples,
-    // et une valeur ajustée pour le CA si nécessaire, ou on utilise une échelle log.
-    // Ici on garde simple : on affiche les valeurs brutes mais le CA risque d'écraser le reste.
-    // Solution : utiliser deux axes Y ou normaliser. 
-    // Pour l'instant, on va tricher visuellement pour le CA dans le dataset, mais afficher la vraie valeur dans le tooltip.
-
     const dataValues = [
       data.totalUsers,
       data.totalInvoices,
-      // On réduit artificiellement le CA pour le graphique pour qu'il soit comparable visuellement
-      // C'est juste pour la hauteur de la barre
       data.totalUsers + data.totalInvoices + data.pendingInvoices > 0 ? Math.max(data.totalUsers, data.totalInvoices) * 1.2 : 10,
       data.pendingInvoices
     ];
@@ -199,17 +180,17 @@ function Dashboard({ requireAuth = false }) {
                 let value;
 
                 switch (index) {
-                  case 0: // Utilisateurs
-                    value = `${formatNumber(data.totalUsers)} utilisateurs`;
+                  case 0: // Users
+                    value = `${formatNumber(data.totalUsers)} users`;
                     break;
-                  case 1: // Factures
-                    value = `${formatNumber(data.totalInvoices)} factures`;
+                  case 1: // Invoices
+                    value = `${formatNumber(data.totalInvoices)} invoices`;
                     break;
-                  case 2: // Chiffre d'affaires
+                  case 2: // Business amount
                     value = formatCurrencyExact(data.totalRevenue);
                     break;
-                  case 3: // En attente DFC
-                    value = `${formatNumber(data.pendingInvoices)} en attente`;
+                  case 3: // Pending invoices
+                    value = `${formatNumber(data.pendingInvoices)} pending`;
                     break;
                   default:
                     value = formatNumber(context.raw);
@@ -272,7 +253,7 @@ function Dashboard({ requireAuth = false }) {
     });
   };
 
-  // Format M/k pour le KPI
+  // Format M/k for KPI
   const formatCurrencyKPI = (amount) => {
     if (amount >= 1000000) {
       return (amount / 1000000).toFixed(1) + ' M';
@@ -285,7 +266,7 @@ function Dashboard({ requireAuth = false }) {
     }).format(amount);
   };
 
-  // Format exact pour le tooltip
+  // Format exact for tooltip
   const formatCurrencyExact = (amount) => {
     return new Intl.NumberFormat('fr-FR').format(amount) + ' F CFA';
   };
@@ -294,7 +275,7 @@ function Dashboard({ requireAuth = false }) {
     return new Intl.NumberFormat('fr-FR').format(number);
   };
 
-  // Format de date français
+  // Format date French
   const formatDateFrench = (dateString) => {
     if (!dateString) return '';
 
@@ -319,13 +300,13 @@ function Dashboard({ requireAuth = false }) {
     }
   };
 
-  // Helper pour vérifier si les données sont vides
+  // Helper to check if the data is empty
   const isDashboardEmpty = () => {
     if (!dashboardData) return true;
     return dashboardData.totalUsers === 0 && dashboardData.totalInvoices === 0 && dashboardData.totalRevenue === 0;
   };
 
-  // Composant Skeleton pour les cards
+  // Skeleton component for cards
   const KPISkeleton = () => (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-pulse">
       <div className="flex flex-col items-center justify-center space-y-3">
@@ -341,7 +322,7 @@ function Dashboard({ requireAuth = false }) {
       <Header />
       <Navbar />
       <div className="container mx-auto px-4 py-8">
-        {/* En-tête avec période */}
+        {/* Header with period */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -373,7 +354,7 @@ function Dashboard({ requireAuth = false }) {
           </div>
         )}
 
-        {/* Indicateur de chargement discret lors du refresh */}
+        {/* Loading indicator during refresh */}
         {loading && dashboardData && (
           <div className="fixed top-20 right-4 z-50">
             <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm animate-pulse shadow-lg flex items-center">
@@ -394,7 +375,7 @@ function Dashboard({ requireAuth = false }) {
           </div>
         ) : (
           <>
-            {/* Statistiques principales */}
+            {/* Main statistics */}
             {dashboardData && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl shadow-sm border border-blue-100 text-center hover:shadow-md transition-shadow">
@@ -469,9 +450,9 @@ function Dashboard({ requireAuth = false }) {
           </>
         )}
 
-        {/* Actions rapides */}
+        {/* Quick actions */}
         <div className="mt-8 bg-gradient-to-br from-gray-50 to-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions rapides</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick actions</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               onClick={() => navigate('/users')}

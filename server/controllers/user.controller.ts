@@ -16,24 +16,24 @@ import { BcryptHasher } from "../utils/PasswordHasher";
 import { AuthenticatedRequest } from "../types/express/request";
 import { CookieOptions } from "express";
 
-// --- HELPER DE CONFIGURATION COOKIE POUR ELECTRON ---
+// --- COOKIE CONFIGURATION HELPER FOR ELECTRON ---
 const getCookieOptions = (): CookieOptions => {
-    // Détection: Est-ce qu'on tourne dans Electron ou via le main.js ?
+    // Detection: Are we running in Electron or via main.js?
     const isElectron = !!process.env.CLIENT_DIST_PATH || !!process.env.ELECTRON_RUN_AS_NODE;
     const isProduction = process.env.NODE_ENV === 'production';
 
-    // Sécurité: False en Electron (car HTTP), True en Prod Web (HTTPS)
+    // Security: False in Electron (HTTP), True in Prod Web (HTTPS)
     const secure = isElectron ? false : isProduction;
 
     return {
         httpOnly: true,
         secure: secure,
-        // 'lax' est le meilleur compromis pour une auth locale stable
+        // 'lax' is the best compromise for stable local auth
         sameSite: 'lax',
         path: '/',
-        // 🛑 IMPORTANT : On ne définit JAMAIS le domaine en mode Electron/Local.
-        // On laisse le navigateur gérer ça (HostOnly Cookie).
-        // On ne met le domaine que si on est en VRAIE prod web (pas electron)
+        // 🛑 IMPORTANT: NEVER define the domain in Electron/Local mode.
+        // Let the browser handle it (HostOnly Cookie).
+        // Only set the domain for real web production (not electron)
         ...((!isElectron && isProduction && process.env.COOKIE_DOMAIN) ? { domain: process.env.COOKIE_DOMAIN } : {})
     };
 };
@@ -102,7 +102,7 @@ export async function createUser(
     }
 }
 
-// Renvoi d'email de vérification d'inscription
+// Resend registration verification email
 export async function resendVerificationEmail(req: Request, res: Response): Promise<Response> {
     const requestId = req.headers['x-request-id'] || 'unknown';
     const { email } = req.body as { email?: string };
@@ -149,14 +149,14 @@ export async function resendVerificationEmail(req: Request, res: Response): Prom
 
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
-                logger.info(`Tentative d'envoi d'email #${attempt}`, { email: user.email });
+                logger.info(`Attempting to send email #${attempt}`, { email: user.email });
 
                 await Promise.race([
                     sender.send({ to: user.email as string, name: `${(user as any).firstName ?? ''} ${(user as any).lastName ?? ''}`.trim() }, template),
                     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout_email')), TIMEOUT))
                 ]);
 
-                logger.info('Email envoyé avec succès', { email: user.email, attempt });
+                logger.info('Email sent successfully', { email: user.email, attempt });
                 return ApiResponder.success(res, { email: user.email }, "Un nouvel email de vérification a été envoyé");
 
             } catch (error) {
@@ -168,7 +168,7 @@ export async function resendVerificationEmail(req: Request, res: Response): Prom
                     userFriendlyError = 'Délai d’attente dépassé pour l’email';
                 }
 
-                logger.warn(`Échec tentative #${attempt} d'envoi d'email`, {
+                logger.warn(`Failed attempt #${attempt} to send email`, {
                     email: user.email,
                     error: errorMessage,
                     attempt
@@ -177,15 +177,15 @@ export async function resendVerificationEmail(req: Request, res: Response): Prom
                 if (attempt < MAX_ATTEMPTS) {
                     await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attempt));
                 } else {
-                    logger.error('Échec définitif de l’envoi de l’email', { email: user.email });
+                    logger.error('Final failure to send email', { email: user.email });
                     return ApiResponder.badRequest(res, `Impossible d'envoyer l'email de vérification. ${userFriendlyError}. Veuillez réessayer plus tard.`);
                 }
             }
         }
-        // Fallback (ne devrait pas être atteint)
+        // Fallback (should not be reached)
         return ApiResponder.badRequest(res, "Impossible d'envoyer l'email de vérification. Veuillez réessayer plus tard.");
     } catch (error) {
-        logger.error(`[${requestId}] Échec du renvoi d'email de vérification`, {
+        logger.error(`[${requestId}] Failed to resend verification email`, {
             email,
             error: error instanceof Error ? error.message : 'Erreur inconnue'
         });
@@ -198,13 +198,13 @@ export async function login(req: Request<unknown, unknown, LoginDto>, res: Respo
     const { email, rememberMe } = req.body;
 
     try {
-        logger.info(`[${requestId}] Tentative de connexion`, { email });
+        logger.info(`[${requestId}] Login attempt`, { email });
 
-        // Validation des données de connexion
+        // Validate login data
         const validationResult = await UserDataValidator.validateLogin(req.body);
 
         if (!validationResult.isValid) {
-            logger.warn(`[${requestId}] Validation des données de connexion échouée`, {
+            logger.warn(`[${requestId}] Login data validation failed`, {
                 errors: validationResult.errors,
                 email
             });
@@ -221,9 +221,9 @@ export async function login(req: Request<unknown, unknown, LoginDto>, res: Respo
             role: req.body.role
         });
 
-        // Vérifier si c'est une erreur de connexion à la base de données
+        // Check if it's a database connection error
         if (authUser && typeof authUser === 'object' && 'error' in authUser && authUser.error === 'DATABASE_CONNECTION_ERROR') {
-            logger.error(`[${requestId}] Erreur de connexion à la base de données`, { email });
+            logger.error(`[${requestId}] Database connection error`, { email });
             return ApiResponder.error(res, null, "Service temporairement indisponible. Veuillez réessayer plus tard.");
         } else if (authUser && typeof authUser === 'object' && 'error' in authUser && authUser.error !== 'DATABASE_CONNECTION_ERROR') {
             return ApiResponder.error(res, null, authUser.error);

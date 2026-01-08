@@ -19,8 +19,8 @@ export type ExportLogParams = {
 
 export async function auditLog(params: AuditLogParams): Promise<void> {
     const { action, table_name, record_id, description = null } = params;
-    // La table audit_log a une contrainte FK sur employee(id). 
-    // 'system' ou d'autres chaînes non-ID provoquent une erreur.
+    // The audit_log table has a FK constraint on employee(id). 
+    // 'system' or other non-ID strings will cause an error.
     let performed_by = params.performed_by;
     if (performed_by === 'system' || !performed_by) {
         performed_by = null;
@@ -31,9 +31,9 @@ export async function auditLog(params: AuditLogParams): Promise<void> {
             "INSERT INTO audit_log(action, table_name, record_id, description, performed_by) VALUES(?,?,?,?,?)",
             [action, table_name, record_id, description, performed_by]
         );
-        logger.info('Audit log enregistré', { action, table_name, record_id, performed_by });
+        logger.info('Audit log saved', { action, table_name, record_id, performed_by });
     } catch (error) {
-        logger.error('Echec de l\'enregistrement de l\'audit_log', {
+        logger.error('Failed to save audit log', {
             error,
             params,
             user_id: performed_by
@@ -48,9 +48,9 @@ export async function exportLog(params: ExportLogParams): Promise<void> {
             "INSERT INTO export_log(invoice_id, format, exported_by) VALUES(?,?,?)",
             [invoice_id, format, exported_by]
         );
-        logger.info('Export log enregistré', { invoice_id, format, exported_by });
+        logger.info('Export log saved', { invoice_id, format, exported_by });
     } catch (error) {
-        logger.error('Echec de l\'enregistrement de l\'export_log', {
+        logger.error('Failed to save export log', {
             error,
             params,
             user_id: exported_by

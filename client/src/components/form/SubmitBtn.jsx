@@ -1,15 +1,15 @@
 function SubmitBtn({
-                       label = "Envoyer",
-                       loadingLabel = "Envoie en cours...",
-                       loading = false,
-                       icon = true,
-                       className = "",
-                       variant = "default",
-                       customClassName = "",
-                       fullWidth = false,
-                       size = "default"
-                   }) {
-    // Styles par défaut
+    label = "Envoyer",
+    loadingLabel = "Envoie en cours...",
+    loading = false,
+    icon = true,
+    className = "",
+    variant = "default",
+    customClassName = "",
+    fullWidth = false,
+    size = "default"
+}) {
+    // Default styles
     const defaultStyles = `w-full md:w-[48%] px-6 py-2 font-semibold rounded-md transition duration-300 ease-in-out flex items-center justify-center gap-2
         ${loading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-700 hover:bg-blue-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"} ${className}`;
 

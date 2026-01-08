@@ -10,13 +10,13 @@ import { useAuth } from '../../hooks/auth/useAuth.js';
 function Home() {
   useTitle('CMDT - Accueil');
   useBackground('bg-home', 'body');
-  
+
   // Récupération sécurisée de l'état d'authentification
   const { isAuthenticated, isLoading, isInitialized } = useAuth();
-  
+
   // État local pour gérer l'affichage
   const [showContent, setShowContent] = useState(false);
-  
+
   const [stats, setStats] = useState([
     { value: 0, target: 200, label: "Producteurs accompagnés", suffix: "k+" },
     { value: 0, target: 600, label: "Production annuelle", suffix: "k tonnes" },
@@ -34,16 +34,16 @@ function Home() {
   // Animation des compteurs
   useEffect(() => {
     if (!showContent) return; // Ne pas démarrer l'animation si le contenu n'est pas prêt
-    
+
     const interval = setInterval(() => {
-      setStats(prevStats => 
+      setStats(prevStats =>
         prevStats.map(stat => ({
           ...stat,
           value: stat.value < stat.target ? Math.min(stat.value + Math.ceil(stat.target / 20), stat.target) : stat.target
         }))
       );
     }, 100);
-    
+
     return () => clearInterval(interval);
   }, [showContent]);
 
@@ -68,7 +68,7 @@ function Home() {
       <Navbar />
 
       {/* Header avec bannière */}
-      <Banner isConnected={isAuthenticated}/>
+      <Banner isConnected={isAuthenticated} />
 
       {/* Contenu principal */}
       <main className="flex-1 px-4 sm:px-6 lg:px-8 py-12 space-y-16">
@@ -81,8 +81,8 @@ function Home() {
           </div>
           <h2 className="text-4xl font-bold mb-6 text-green-800">Bienvenue à la CMDT</h2>
           <p className="text-xl text-gray-900 leading-relaxed">
-            La Compagnie Malienne pour le Développement des Textiles accompagne les producteurs de coton, 
-            soutient l'agriculture durable et contribue au développement économique du Mali grâce à 
+            La Compagnie Malienne pour le Développement des Textiles accompagne les producteurs de coton,
+            soutient l'agriculture durable et contribue au développement économique du Mali grâce à
             une expertise de plus de 45 ans dans la filière cotonnière.
           </p>
         </section>

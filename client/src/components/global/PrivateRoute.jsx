@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/auth/useAuth.js';
 import { useLocation, Navigate } from 'react-router-dom';
 
-// ✅ Déplacer les fonctions helpers en dehors du composant
 const getFrenchRoleName = (role) => {
     const roleNames = {
         'admin': 'Administrateur',
@@ -15,11 +14,11 @@ const getFrenchRoleName = (role) => {
 const getRoleSpecificMessage = (requiredRole) => {
     const roleNames = {
         'admin': 'administrateur',
-        'invoice_manager': 'gestionnaire de factures', 
+        'invoice_manager': 'gestionnaire de factures',
         'dfc_agent': 'agent DFC'
     };
 
-    switch(requiredRole) {
+    switch (requiredRole) {
         case 'admin':
             return "Accès réservé aux administrateurs uniquement";
         case 'invoice_manager':
@@ -48,8 +47,8 @@ const getGenericRoleMessage = (requiredRoles) => {
     }
 };
 
-export default function PrivateRoute({ 
-    children, 
+export default function PrivateRoute({
+    children,
     requiredRoles = [],
     requireAuth = true,
     redirectTo = '/login',
@@ -61,35 +60,35 @@ export default function PrivateRoute({
     const [accessState, setAccessState] = useState('checking');
     const [message, setMessage] = useState('');
 
-    // Normaliser requiredRoles pour toujours avoir un tableau
-    const normalizedRequiredRoles = Array.isArray(requiredRoles) 
-        ? requiredRoles 
+    // Normalize requiredRoles to always be an array
+    const normalizedRequiredRoles = Array.isArray(requiredRoles)
+        ? requiredRoles
         : [requiredRoles].filter(Boolean);
 
     useEffect(() => {
         if (!isLoading && isInitialized) {
             let hasAccess = true;
 
-            // Vérifier l'authentification
+            // Verify authentication
             if (requireAuth && !isAuthenticated) {
                 hasAccess = false;
                 setMessage('Veuillez vous connecter pour accéder à cette page');
-            } 
-            // Vérifier les rôles si nécessaire
+            }
+            // Verify roles if necessary
             else if (isAuthenticated && normalizedRequiredRoles.length > 0) {
                 const userRole = user?.role;
                 if (!userRole || !normalizedRequiredRoles.includes(userRole)) {
                     hasAccess = false;
-                    
-                    // ✅ Messages personnalisés selon le rôle requis
+
+                    // Custom messages based on required role
                     if (customMessage) {
                         setMessage(customMessage);
                     } else if (normalizedRequiredRoles.length === 1) {
-                        // Message spécifique pour un seul rôle requis
+                        // Specific message for a single required role
                         const requiredRole = normalizedRequiredRoles[0];
                         setMessage(getRoleSpecificMessage(requiredRole, userRole));
                     } else {
-                        // Message générique pour multiple rôles
+                        // Generic message for multiple roles
                         setMessage(getGenericRoleMessage(normalizedRequiredRoles, userRole));
                     }
                 }
@@ -104,7 +103,7 @@ export default function PrivateRoute({
         }
     }, [isAuthenticated, isLoading, isInitialized, user, normalizedRequiredRoles, requireAuth, customMessage]);
 
-    // États d'affichage
+    // Display states
     const states = {
         checking: (
             <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-gray-50">
@@ -127,17 +126,17 @@ export default function PrivateRoute({
                             </svg>
                         </div>
                     </div>
-                    
+
                     <h1 className="text-2xl font-bold text-red-800 mb-3">Accès Restreint</h1>
                     <p className="text-gray-700 mb-4 text-lg font-medium">{message}</p>
-                    
+
                     <div className="bg-white rounded-lg p-4 shadow-sm border border-red-100 mb-4">
                         <div className="grid grid-cols-2 gap-2 text-sm">
                             <span className="text-gray-600 text-right">Votre rôle:</span>
                             <span className="font-medium text-blue-600 text-left">
                                 {user?.role ? getFrenchRoleName(user.role) : 'Non connecté'}
                             </span>
-                            
+
                             <span className="text-gray-600 text-right">Rôle(s) requis:</span>
                             <span className="font-medium text-green-600 text-left">
                                 {normalizedRequiredRoles.map(getFrenchRoleName).join(', ')}
@@ -151,15 +150,15 @@ export default function PrivateRoute({
         ),
 
         redirecting: (
-            <Navigate 
-                to={isAuthenticated ? unauthorizedRedirect : redirectTo} 
-                state={{ 
+            <Navigate
+                to={isAuthenticated ? unauthorizedRedirect : redirectTo}
+                state={{
                     from: location,
                     message: message,
                     requiredRoles: normalizedRequiredRoles,
                     currentRole: user?.role
-                }} 
-                replace 
+                }}
+                replace
             />
         ),
 

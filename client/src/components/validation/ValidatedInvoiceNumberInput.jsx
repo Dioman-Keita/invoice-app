@@ -12,7 +12,7 @@ function ValidatedInvoiceNumberInput({ name, label = "Numéro de la facture", pl
       validatePattern(raw, /^\d*$/, "Numéro", "Le numéro ne peut contenir que des chiffres");
     }
 
-    // 1 à 12 chiffres (zéros en tête autorisés)
+    // 1 to 12 digits (leading zeros allowed)
     const lengthValidation = validateLength(raw, 12, "Numéro", {
       warningThreshold: 1.0,
       infoThreshold: 0.75,
@@ -42,9 +42,8 @@ function ValidatedInvoiceNumberInput({ name, label = "Numéro de la facture", pl
         {...register(name)}
         id={name}
         onInput={handleInput}
-        className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none ${
-          errors[name] ? "focus:ring-red-500 focus:border-red-700 border-red-500" : "focus:ring-blue-500 focus:border-blue-500"
-        }`}
+        className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none ${errors[name] ? "focus:ring-red-500 focus:border-red-700 border-red-500" : "focus:ring-blue-500 focus:border-blue-500"
+          }`}
       />
       <div className="min-h-[1.25rem] mt-1 text-sm transition-opacity duration-300">
         {errors[name]?.message ? (

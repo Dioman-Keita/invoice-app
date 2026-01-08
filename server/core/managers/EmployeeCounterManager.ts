@@ -1,4 +1,3 @@
-// core/managers/EmployeeCounterManager.ts
 import { FiscalCounterManager } from "./FiscalCounterManager";
 
 export class EmployeeCounterManager extends FiscalCounterManager {
@@ -15,7 +14,7 @@ export class EmployeeCounterManager extends FiscalCounterManager {
     }
 
     /**
-     * Récupère le dernier numéro d'employé utilisé pour une année fiscale
+     * Retrieves the last employee number used for a fiscal year
      */
     async getLastEmployeeNumber(fiscalYear: string): Promise<number> {
         return this.getCurrentCounter(fiscalYear);

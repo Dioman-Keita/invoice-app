@@ -1,6 +1,6 @@
 /**
- * Configuration pour Carbone (npm package local)
- * Gestion centralisée des paramètres d'export
+ * Carbone configuration (npm package local)
+ * Centralized export parameters management
  */
 
 export interface CarboneConfig {
@@ -18,13 +18,13 @@ export const carboneConfig: CarboneConfig = {
 };
 
 /**
- * Validation de la configuration Carbone
+ * Carbone configuration validation
  */
 export function validateCarboneConfig(): void {
   if (carboneConfig.timeout < 1000) {
     throw new Error('CARBONE_TIMEOUT must be at least 1000ms');
   }
-  
+
   if (carboneConfig.maxRecords < 1) {
     throw new Error('EXPORT_MAX_RECORDS must be at least 1');
   }

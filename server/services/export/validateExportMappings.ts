@@ -29,7 +29,7 @@ async function main() {
     { name: 'supplier-list_odt', key: 'supplier-list_odt', payload: mapSupplierListOdt(rows, dateRange) },
     { name: 'relational-list_odt', key: 'relational-list_odt', payload: mapRelationalListOdt(rows, dateRange) },
 
-    // LIST - XLSX (controller ajoute dateFrom/dateTo, mais schéma les rend optionnels)
+    // LIST - XLSX (controller adds dateFrom/dateTo, but schema makes them optional)
     { name: 'invoice-list_xlsx', key: 'invoice-list_xlsx', payload: { ...mapInvoiceListXlsx(rows, undefined), dateFrom: dateRange.dateFrom, dateTo: dateRange.dateTo } },
     { name: 'supplier-list_xlsx', key: 'supplier-list_xlsx', payload: { ...mapSupplierListXlsx(rows, undefined), dateFrom: dateRange.dateFrom, dateTo: dateRange.dateTo } },
     { name: 'relational-list_xlsx', key: 'relational-list_xlsx', payload: { ...mapRelationalListXlsx(rows, undefined), dateFrom: dateRange.dateFrom, dateTo: dateRange.dateTo } },

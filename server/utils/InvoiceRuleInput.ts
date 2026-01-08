@@ -47,23 +47,23 @@ class InvoiceDataValidator {
   ): Promise<ValidationResult> {
     const errors: Array<{ field: string; message: string; suggestion?: string }> = [];
 
-    // Validation des champs obligatoires
+    // Required fields validation
     this.validateRequiredFields(data, errors);
 
-    // Validation des formats
+    // Format validation
     await this.validateFormats(data, errors);
 
-    // Validation de la logique métier
+    // Business logic validation
     this.validateBusinessLogic(data, errors);
 
-    // Validation du fournisseur
+    // Supplier validation
     const supplierResult = await this.validateSupplier(data, user, errors);
 
     if (errors.length > 0) {
       return { isValid: false, errors };
     }
 
-    // Préparer les données validées
+    // Prepare validated data
     const validatedData = this.prepareValidatedData(data, supplierResult.supplierId!, user);
 
     return {
@@ -102,7 +102,7 @@ class InvoiceDataValidator {
     data: InvoiceValidationInput,
     errors: Array<{ field: string; message: string; suggestion?: string }>
   ): Promise<void> {
-    // Validation du numéro de facture
+    // Invoice number validation
     if (data.invoice_num) {
       const validationResult = await InvoiceLastNumberValidator.validateInvoiceNumberUniqueness(data.invoice_num);
       if (!validationResult.success) {
@@ -113,7 +113,7 @@ class InvoiceDataValidator {
       }
     }
 
-    // Validation du numéro CMDT
+    // CMDT number validation
     if (data.num_cmdt) {
       const validationResult = await InvoiceLastNumberValidator.validateInvoiceNumberExpected(data.num_cmdt);
       if (!validationResult.isValid) {
@@ -137,7 +137,7 @@ class InvoiceDataValidator {
       }
     }
 
-    // Validation du montant
+    // Amount validation
     if (data.invoice_amount) {
       const val = String(data.invoice_amount);
       const sanitizedAmount = val.includes(',')
@@ -150,7 +150,7 @@ class InvoiceDataValidator {
           message: 'Le montant doit être compris entre 1 et 100 000 000 000'
         });
       } else {
-        // Mettre à jour avec la version nettoyée pour la suite du traitement
+        // Update with cleaned version for further processing
         data.invoice_amount = sanitizedAmount;
       }
     }
@@ -160,7 +160,7 @@ class InvoiceDataValidator {
     data: InvoiceValidationInput,
     errors: Array<{ field: string; message: string; suggestion?: string }>
   ): void {
-    // Validation des enumérations
+    // Enums validation
     const validEnums = {
       invoice_nature: ['Paiement', 'Acompte', 'Avoir'],
       folio: ['1 copie', 'Orig + 1 copie', 'Orig + 2 copies', 'Orig + 3 copies'],
@@ -178,7 +178,7 @@ class InvoiceDataValidator {
       }
     });
 
-    // Validation des dates
+    // Dates validation
     if (data.invoice_arrival_date && data.invoice_date) {
       try {
         const invoiceDate = new Date(formatDate(data.invoice_date));

@@ -33,7 +33,7 @@ class Supplier implements SupplierModel {
         try {
             const { supplier_name, supplier_account_number, supplier_phone, created_by, created_by_role, created_by_email } = supplierData;
 
-            // Validation du numéro de compte
+            // Account number validation
             if (!isValidAccountNumber(normalizeAccountNumber(supplier_account_number))) {
                 throw new Error('Le numéro de compte est invalide (6–34 caractères alphanumériques)');
             }
@@ -46,11 +46,11 @@ class Supplier implements SupplierModel {
             const connection = await database.getConnection();
             const result = await connection.execute<ResultSetHeader>(query, params);
 
-            // Récupérer l'ID auto-généré (selon l'implémentation de votre base de données)
+            // Retrieve auto-generated ID (depending on database implementation)
             const generatedId = result[0].insertId
 
             if (!generatedId || generatedId === 0) {
-                throw new Error('Aucun ID généré lors de la création du fournisseur');
+                throw new Error('Failed to generate ID where supplier was created');
             }
 
             await auditLog({
@@ -58,10 +58,10 @@ class Supplier implements SupplierModel {
                 action: 'INSERT',
                 record_id: generatedId.toString(),
                 performed_by: generatedId.toString(),
-                description: `Création du fournisseur ${supplier_name} (${supplier_account_number})`
+                description: `Creation of supplier ${supplier_name} (${supplier_account_number})`
             });
 
-            logger.debug(`Fournisseur ${generatedId} créé avec succès`, {
+            logger.debug(`Supplier ${generatedId} created successfully`, {
                 supplierId: generatedId,
                 supplierName: supplier_name,
                 accountNumber: supplier_account_number
@@ -74,7 +74,7 @@ class Supplier implements SupplierModel {
             };
 
         } catch (error) {
-            logger.error('Erreur lors de la création du fournisseur', {
+            logger.error('Error during supplier creation', {
                 errorMessage: error instanceof Error ? error.message : 'Erreur inconnue',
                 stack: error instanceof Error ? error.stack : 'unknown stack',
                 supplierData: {
@@ -102,7 +102,7 @@ class Supplier implements SupplierModel {
 
             switch (config.findBy) {
                 case 'id':
-                    // Conversion en number pour l'ID
+                    // Conversion to number for ID
                     const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
                     if (isNaN(numericId)) {
                         return [];
@@ -135,7 +135,7 @@ class Supplier implements SupplierModel {
 
             const rows = await database.execute<SupplierRecord[] | SupplierRecord>(query, params);
 
-            // Normaliser le résultat en tableau
+            // Normalize result to array
             const result = Array.isArray(rows) ? rows : (rows ? [rows] : []);
 
 
@@ -145,14 +145,14 @@ class Supplier implements SupplierModel {
                     action: 'SELECT',
                     record_id: config.findBy === 'all' ? 'all' : id.toString(),
                     performed_by: null,
-                    description: `Recherche de fournisseur par ${config.findBy}`
+                    description: `Supplier search by ${config.findBy}`
                 });
             }
 
             return result;
 
         } catch (error) {
-            logger.error(`Erreur lors de la recherche du fournisseur`, {
+            logger.error(`Error during supplier search`, {
                 errorMessage: error instanceof Error ? error.message : 'unknown error',
                 stack: error instanceof Error ? error.stack : 'unknown stack',
                 findType: config.findBy,
@@ -181,7 +181,7 @@ class Supplier implements SupplierModel {
 
             return Array.isArray(rows) ? rows : (rows ? [rows] : []);
         } catch (error) {
-            logger.error(`Erreur lors de la recherche exacte fournisseur`, {
+            logger.error(`Error during exact supplier search`, {
                 errorMessage: error instanceof Error ? error.message : 'unknowns error',
                 accountNumber,
                 name
@@ -196,12 +196,12 @@ class Supplier implements SupplierModel {
         conflictingSuppliers: SupplierRecord[];
     }> {
         try {
-            // Construire la query dynamiquement selon les paramètres fournis
+            // Build query dynamically based on provided parameters
             let query = 'SELECT * FROM supplier WHERE ';
             const params = [];
             const conditions = [];
 
-            // Ajouter seulement les conditions pour les paramètres non vides
+            // Add conditions only for non-empty parameters
             if (accountNumber && accountNumber !== '') {
                 conditions.push('account_number = ?');
                 params.push(accountNumber);
@@ -212,7 +212,7 @@ class Supplier implements SupplierModel {
                 params.push(phone);
             }
 
-            // Si aucun paramètre fourni, retourner aucun conflit
+            // If no parameter provided, return no conflict
             if (conditions.length === 0) {
                 return {
                     hasAccountConflict: false,
@@ -221,13 +221,13 @@ class Supplier implements SupplierModel {
                 };
             }
 
-            // Joindre les conditions avec OR
+            // Join conditions with OR
             query += conditions.join(' OR ');
 
             const rows = await database.execute<SupplierRecord[] | SupplierRecord>(query, params);
             const suppliers = Array.isArray(rows) ? rows : (rows ? [rows] : []);
 
-            // Vérifier les conflits seulement pour les paramètres fournis
+            // Check conflicts only for provided parameters
             const hasAccountConflict = accountNumber && accountNumber !== ''
                 ? suppliers.some(s => s.account_number === accountNumber)
                 : false;
@@ -243,7 +243,7 @@ class Supplier implements SupplierModel {
             };
 
         } catch (error) {
-            logger.error('Erreur lors de la recherche de conflits fournisseur', {
+            logger.error('Error during supplier conflict search', {
                 errorMessage: error instanceof Error ? error.message : 'unknown error',
                 accountNumber,
                 phone
@@ -253,7 +253,7 @@ class Supplier implements SupplierModel {
     }
     async deleteSupplier(id: number): Promise<{ success: boolean }> {
         try {
-            // Vérifier d'abord si le fournisseur existe
+            // Check first if supplier exists
             const existingSupplier = await this.findSupplier(id, {
                 findBy: 'id',
                 limit: 1,
@@ -261,7 +261,7 @@ class Supplier implements SupplierModel {
             });
 
             if (!existingSupplier || existingSupplier.length === 0) {
-                logger.warn(`Tentative de suppression d'un fournisseur inexistant: ${id}`);
+                logger.warn(`Attempt to delete non-existent supplier: ${id}`);
                 return { success: false };
             }
 
@@ -273,14 +273,14 @@ class Supplier implements SupplierModel {
                 action: 'DELETE',
                 record_id: id.toString(),
                 performed_by: 'system',
-                description: `Suppression du fournisseur ${id}`
+                description: `Deletion of supplier ${id}`
             });
 
-            logger.debug(`Fournisseur ${id} supprimé avec succès`);
+            logger.debug(`Supplier ${id} deleted successfully`);
             return { success: true };
 
         } catch (error) {
-            logger.error(`Erreur lors de la suppression du fournisseur ${id}`, {
+            logger.error(`Error during deletion of supplier ${id}`, {
                 errorMessage: error instanceof Error ? error.message : 'unknown error',
                 stack: error instanceof Error ? error.stack : 'unknown stack'
             });
@@ -290,12 +290,12 @@ class Supplier implements SupplierModel {
 
     async updateSupplier(data: UpdateSupplierData): Promise<{ success: boolean }> {
         try {
-            // Validation du numéro de compte
+            // Account number validation
             if (!isValidAccountNumber(String(data.account_number))) {
                 throw new Error('Le numéro de compte est invalide (6–34 caractères alphanumériques)');
             }
 
-            // Validation du nom
+            // Name validation
             if (!data.name || data.name.trim().length === 0) {
                 throw new Error('Le nom du fournisseur est obligatoire');
             }
@@ -320,10 +320,10 @@ class Supplier implements SupplierModel {
                 action: 'UPDATE',
                 record_id: data.id.toString(),
                 performed_by: 'system',
-                description: `Mise à jour du fournisseur ${data.name} (${data.account_number})`
+                description: `Update of supplier ${data.name} (${data.account_number})`
             });
 
-            logger.debug(`Fournisseur ${data.id} mis à jour avec succès`, {
+            logger.debug(`Supplier ${data.id} updated successfully`, {
                 supplierId: data.id,
                 supplierName: data.name,
                 accountNumber: data.account_number
@@ -332,7 +332,7 @@ class Supplier implements SupplierModel {
             return { success: true };
 
         } catch (error) {
-            logger.error(`Erreur lors de la mise à jour du fournisseur ${data.id}`, {
+            logger.error(`Error during update of supplier ${data.id}`, {
                 errorMessage: error instanceof Error ? error.message : 'unknown error',
                 stack: error instanceof Error ? error.stack : 'unknown stack',
                 supplierData: {
@@ -345,12 +345,12 @@ class Supplier implements SupplierModel {
         }
     }
 
-    // Méthode utilitaire pour la recherche par téléphone
+    // Utility method for phone search
     async findSupplierByPhone(phone: string): Promise<SupplierRecord[]> {
         return this.findSupplier(phone, { findBy: 'phone', limit: 1 });
     }
 
-    // Méthode utilitaire pour obtenir tous les fournisseurs
+    // Utility method to get all suppliers
     async getAllSupplier(limit?: number, orderBy: 'desc' | 'asc' = 'asc'): Promise<SupplierRecord[]> {
         return this.findSupplier('', { findBy: 'all', limit, orderBy });
     }
@@ -381,7 +381,7 @@ class Supplier implements SupplierModel {
             const rows = await database.execute<SupplierRecord[] | SupplierRecord>(query, params);
             return Array.isArray(rows) ? rows : (rows ? [rows] : []);
         } catch (error) {
-            logger.error('Erreur lors de la recherche de fournisseurs par nom', {
+            logger.error('Error during search of suppliers by name', {
                 errorMessage: error instanceof Error ? error.message : 'unknown error',
                 name,
                 limit
@@ -421,7 +421,7 @@ class Supplier implements SupplierModel {
             const result = Array.isArray(rows) ? rows : (rows ? [rows] : []);
             return result.length > 0 ? result[0] : null;
         } catch (error) {
-            logger.error('Erreur lors de la recherche de fournisseur par champs multiples', {
+            logger.error('Error during search of supplier by multiple fields', {
                 errorMessage: error instanceof Error ? error.message : 'unknown error',
                 filters,
                 stack: error instanceof Error ? error.stack : 'unknown stack'
@@ -431,6 +431,6 @@ class Supplier implements SupplierModel {
     }
 }
 
-// Export en tant qu'instance singleton
+// Export as singleton instance
 const supplier = new Supplier();
 export default supplier;

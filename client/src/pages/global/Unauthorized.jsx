@@ -41,12 +41,12 @@ export default function UnauthorizedPage() {
     const redirectPath = getRedirectPath();
     const pageName = getPageName();
 
-    // ✅ Gestionnaire de déconnexion
+    // ✅ Logout handler
     const handleLogout = () => {
         logout();
     };
 
-    // ✅ Gestionnaire de retour
+    // ✅ Back handler
     const handleGoBack = () => {
         window.history.back();
     };
@@ -54,7 +54,7 @@ export default function UnauthorizedPage() {
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-6">
             <div className="max-w-lg w-full">
-                {/* En-tête simple */}
+                {/* Simple header */}
                 <div className="text-center mb-8">
                     <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,7 +83,7 @@ export default function UnauthorizedPage() {
                     </div>
                 </div>
 
-                {/* ✅ Actions avec styles améliorés */}
+                {/* ✅ Actions with improved styles */}
                 <div className="space-y-3">
                     {/* Bouton principal */}
                     <Link
@@ -113,7 +113,7 @@ export default function UnauthorizedPage() {
                                 </Link>
                             )}
 
-                            {/* Retour */}
+                            {/* Go back */}
                             <button
                                 onClick={handleGoBack}
                                 className="w-full border border-gray-300 text-gray-700 text-center py-3 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:bg-gray-50 focus:border-gray-400 focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 focus:outline-none transition-all duration-200 font-medium cursor-pointer transform hover:scale-105 focus:scale-105 active:scale-95"
@@ -121,7 +121,7 @@ export default function UnauthorizedPage() {
                                 Retour
                             </button>
 
-                            {/* Déconnexion */}
+                            {/* Logout */}
                             <button
                                 onClick={handleLogout}
                                 className="w-full border border-red-300 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 hover:border-red-400 focus:bg-red-50 focus:border-red-400 focus:ring-2 focus:ring-red-300 focus:ring-offset-2 focus:outline-none transition-all duration-200 font-medium cursor-pointer transform hover:scale-105 focus:scale-105 active:scale-95"
@@ -131,7 +131,7 @@ export default function UnauthorizedPage() {
                         </>
                     ) : (
                         <>
-                            {/* Créer un compte */}
+                            {/* Register */}
                             <Link
                                 to="/register"
                                 className="block w-full border border-green-300 text-green-600 text-center py-3 rounded-lg hover:bg-green-50 hover:border-green-400 focus:bg-green-50 focus:border-green-400 focus:ring-2 focus:ring-green-300 focus:ring-offset-2 focus:outline-none transition-all duration-200 font-medium cursor-pointer transform hover:scale-105 focus:scale-105 active:scale-95"
@@ -139,7 +139,7 @@ export default function UnauthorizedPage() {
                                 Créer un compte
                             </Link>
 
-                            {/* Accueil */}
+                            {/* Home */}
                             <Link
                                 to="/"
                                 className="block w-full border border-gray-300 text-gray-700 text-center py-3 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:bg-gray-50 focus:border-gray-400 focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 focus:outline-none transition-all duration-200 font-medium cursor-pointer transform hover:scale-105 focus:scale-105 active:scale-95"

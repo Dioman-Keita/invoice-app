@@ -51,13 +51,13 @@ export async function createRoleMigrationRequest(req: AuthenticatedRequest, res:
       return ApiResponder.badRequest(res, 'Département invalide pour le rôle Gestionnaire de Factures');
     }
 
-    // Insérer la demande
+    // Insert request
     const sql = `INSERT INTO role_migration_request 
       (requester_id, from_role, to_role, department, motivation) 
       VALUES (?, ?, ?, ?, ?)`;
     await database.execute(sql, [user.sup, user.role, targetRole, department, motivation ?? null]);
 
-    // Récupérer l'ID de la demande
+    // Fetch request ID
     const [row] = await database.execute<Array<{ id: number }>>(
       'SELECT id FROM role_migration_request WHERE requester_id = ? ORDER BY id DESC LIMIT 1',
       [user.sup]
@@ -72,10 +72,10 @@ export async function createRoleMigrationRequest(req: AuthenticatedRequest, res:
         [requestIdDb, 'submitted', JSON.stringify({ department, motivation, from: user.role, to: targetRole }), user.sup]
       );
     } catch (e) {
-      logger.warn(`[${requestId}] Échec log event submitted`, { error: e });
+      logger.warn(`[${requestId}] Failed to log event submitted`, { error: e });
     }
 
-    // Email de confirmation au demandeur
+    // Confirmation email to requester
     try {
       const userRows = await User.findUser(user.sup, 'id');
       const userDetails = userRows[0];
@@ -98,12 +98,12 @@ export async function createRoleMigrationRequest(req: AuthenticatedRequest, res:
         );
       }
     } catch (e) {
-      logger.warn(`[${requestId}] Échec envoi email submission`, { error: e });
+      logger.warn(`[${requestId}] Failed to send submission email`, { error: e });
     }
 
     return ApiResponder.success(res, { id: requestIdDb }, 'Demande soumise avec succès.');
   } catch (error) {
-    logger.error(`[${requestId}] Erreur createRoleMigrationRequest`, { error });
+    logger.error(`[${requestId}] Error createRoleMigrationRequest`, { error });
     return ApiResponder.error(res, error);
   }
 }
@@ -141,10 +141,10 @@ export async function listRoleMigrationRequests(req: AuthenticatedRequest, res: 
     );
 
     const data = Array.isArray(rows) ? rows : [];
-    logger.info(`[${requestId}] Liste des demandes de migration de rôle`, { count: data.length });
+    logger.info(`[${requestId}] List of role migration requests`, { count: data.length });
     return ApiResponder.success(res, { requests: data });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur listRoleMigrationRequests`, { error });
+    logger.error(`[${requestId}] Error listRoleMigrationRequests`, { error });
     return ApiResponder.error(res, error);
   }
 }
@@ -194,31 +194,31 @@ export async function approveRoleMigrationRequest(req: AuthenticatedRequest, res
   try {
     if (!admin) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
 
-    // Charger la demande
+    // Load request
     const rows = await database.execute<Array<any>>('SELECT * FROM role_migration_request WHERE id = ? LIMIT 1', [id]);
     const reqRow = Array.isArray(rows) && rows.length ? rows[0] : null;
     if (!reqRow) return ApiResponder.notFound(res, 'Demande introuvable');
     if (reqRow.status !== 'pending') return ApiResponder.badRequest(res, 'Demande déjà traitée');
 
-    // Approuver + tracer
+    // Approve + trace
     await database.execute(
       'UPDATE role_migration_request SET status = \'approved\', review_note = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?'
       , [review_note ?? null, admin.sup, id]
     );
 
-    // Mise à jour du rôle de l'utilisateur
+    // Update user role
     const oldRole = reqRow.from_role as string;
     const newRole = reqRow.to_role as string;
     await database.execute('UPDATE employee SET role = ? WHERE id = ?', [newRole, reqRow.requester_id]);
 
-    // Journal user_role_migration
+    // user_role_migration log
     try {
       await database.execute(
         'INSERT INTO user_role_migration (user_id, old_role, new_role, reason, approved_by, request_id) VALUES (?, ?, ?, ?, ?, ?)',
         [reqRow.requester_id, oldRole, newRole, 'user_requested', admin.sup, id]
       );
     } catch (e) {
-      logger.warn(`[${requestId}] Échec d\'enregistrement user_role_migration`, { error: e });
+      logger.warn(`[${requestId}] Failed to register user_role_migration`, { error: e });
     }
 
     // Events & Email
@@ -228,8 +228,8 @@ export async function approveRoleMigrationRequest(req: AuthenticatedRequest, res
       await database.execute('INSERT INTO role_migration_event (request_id, event, metadata, performed_by) VALUES (?, ?, ?, ?)',
         [id, 'user_role_updated', JSON.stringify({ from: oldRole, to: newRole }), admin.sup]);
 
-      // Récupérer email demandeur
-      // Récupérer email demandeur
+      // Fetch requester email
+      // Fetch requester email
       const userRows = await User.findUser(reqRow.requester_id, 'id');
       const user = userRows[0];
 
@@ -247,12 +247,12 @@ export async function approveRoleMigrationRequest(req: AuthenticatedRequest, res
           [id, 'email_sent', JSON.stringify({ kind: 'approval_notice' }), admin.sup]);
       }
     } catch (e) {
-      logger.warn(`[${requestId}] Échec log events/email approval`, { error: e });
+      logger.warn(`[${requestId}] Failed to log events/email approval`, { error: e });
     }
 
     return ApiResponder.success(res, null, 'Demande approuvée et rôle mis à jour.');
   } catch (error) {
-    logger.error(`[${requestId}] Erreur approveRoleMigrationRequest`, { error, id });
+    logger.error(`[${requestId}] Error approveRoleMigrationRequest`, { error, id });
     return ApiResponder.error(res, error);
   }
 }
@@ -280,8 +280,8 @@ export async function rejectRoleMigrationRequest(req: AuthenticatedRequest, res:
       await database.execute('INSERT INTO role_migration_event (request_id, event, metadata, performed_by) VALUES (?, ?, ?, ?)',
         [id, 'rejected', JSON.stringify({ review_note }), admin.sup]);
 
-      // Récupérer email demandeur
-      // Récupérer email demandeur
+      // Fetch requester email
+      // Fetch requester email
       const userRows = await User.findUser(reqRow.requester_id, 'id');
       const user = userRows[0];
 
@@ -299,12 +299,12 @@ export async function rejectRoleMigrationRequest(req: AuthenticatedRequest, res:
           [id, 'email_sent', JSON.stringify({ kind: 'rejection_notice' }), admin.sup]);
       }
     } catch (e) {
-      logger.warn(`[${requestId}] Échec log events/email rejection`, { error: e });
+      logger.warn(`[${requestId}] Failed to log events/email rejection`, { error: e });
     }
 
     return ApiResponder.success(res, null, 'Demande rejetée.');
   } catch (error) {
-    logger.error(`[${requestId}] Erreur rejectRoleMigrationRequest`, { error, id });
+    logger.error(`[${requestId}] Error rejectRoleMigrationRequest`, { error, id });
     return ApiResponder.error(res, error);
   }
 }

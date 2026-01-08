@@ -29,7 +29,7 @@ export async function listUsers(req: Request, res: Response): Promise<Response> 
       params.push(role);
     }
     if (status) {
-      // status dérivé: pending => isVerified=0, active => isActive=1 AND isVerified=1, inactive => isActive=0
+      // derived status: pending => isVerified=0, active => isActive=1 AND isVerified=1, inactive => isActive=0
       if (status === 'pending') {
         filters.push('isVerified = 0');
       } else if (status === 'active') {
@@ -80,10 +80,10 @@ export async function listUsers(req: Request, res: Response): Promise<Response> 
       createdAt: u.created_at,
     }));
 
-    logger.info(`[${requestId}] Liste des utilisateurs retournée`, { count: data.length });
+    logger.info(`[${requestId}] User list returned`, { count: data.length });
     return ApiResponder.success(res, { users: data });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur listUsers`, { error });
+    logger.error(`[${requestId}] Error listUsers`, { error });
     return ApiResponder.error(res, error);
   }
 }
@@ -132,10 +132,10 @@ export async function getUser(req: Request, res: Response): Promise<Response> {
       createdAt: user.created_at,
     };
 
-    logger.info(`[${requestId}] Détail utilisateur`, { id });
+    logger.info(`[${requestId}] User details`, { id });
     return ApiResponder.success(res, { user: data });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getUser`, { error, id });
+    logger.error(`[${requestId}] Error getUser`, { error, id });
     return ApiResponder.error(res, error);
   }
 }
@@ -152,13 +152,13 @@ export async function updateUser(req: AuthenticatedRequest, res: Response): Prom
     const fields: string[] = [];
     const params: unknown[] = [];
 
-    // Récupérer l'état actuel pour détecter une migration de rôle
+    // Fetch current state to detect role migration
     const currentRows = await database.execute<Array<{ role: string }>>('SELECT role FROM employee WHERE id = ? LIMIT 1', [id]);
     const currentRole = Array.isArray(currentRows) && currentRows.length ? currentRows[0].role : undefined;
 
     if (payload.firstName !== undefined) { fields.push('firstname = ?'); params.push(String(payload.firstName)); }
     if (payload.lastName !== undefined) { fields.push('lastname = ?'); params.push(String(payload.lastName)); }
-    // Email immuable: refuser toute tentative de modification
+    // Immutable email: reject any modification attempt
     if (payload.email !== undefined) {
       return ApiResponder.badRequest(res, "L'email de l'utilisateur est immuable et ne peut pas être modifié.");
     }
@@ -167,7 +167,7 @@ export async function updateUser(req: AuthenticatedRequest, res: Response): Prom
     if (payload.department !== undefined) { fields.push('department = ?'); params.push(String(payload.department)); }
     if (payload.employeeId !== undefined) { fields.push('employee_cmdt_id = ?'); params.push(String(payload.employeeId)); }
 
-    // Mot de passe optionnel: si fourni, vérifier robustesse et hasher
+    // Optional password: if provided, check strength and hash
     if (payload.password !== undefined) {
       const raw = String(payload.password);
       if (!isValidPasswordStrength(raw)) {
@@ -196,7 +196,7 @@ export async function updateUser(req: AuthenticatedRequest, res: Response): Prom
     const sql = `UPDATE employee SET ${fields.join(', ')} WHERE id = ?`;
     params.push(id);
 
-    // Si un changement de rôle est demandé, journaliser la migration avant de répondre
+    // If role change is requested, log migration before responding
     const isRoleChange = payload.role !== undefined && currentRole !== undefined && String(payload.role) !== String(currentRole);
 
     await database.execute(sql, params);
@@ -207,16 +207,16 @@ export async function updateUser(req: AuthenticatedRequest, res: Response): Prom
           'INSERT INTO user_role_migration (user_id, old_role, new_role, reason, approved_by) VALUES (?, ?, ?, ?, ?)',
           [id, String(currentRole), String(payload.role), 'admin_initiated', admin ? admin.sup : null]
         );
-        logger.info(`[${requestId}] Migration de rôle enregistrée`, { id, from: currentRole, to: payload.role });
+        logger.info(`[${requestId}] Role migration registered`, { id, from: currentRole, to: payload.role });
       } catch (e) {
-        logger.error(`[${requestId}] Échec d'enregistrement migration de rôle`, { id, error: e });
+        logger.error(`[${requestId}] Failed to register role migration`, { id, error: e });
       }
     }
 
-    logger.info(`[${requestId}] Utilisateur mis à jour`, { id });
+    logger.info(`[${requestId}] User updated`, { id });
     return ApiResponder.success(res, null, 'Utilisateur mis à jour avec succès.');
   } catch (error) {
-    logger.error(`[${requestId}] Erreur updateUser`, { error, id });
+    logger.error(`[${requestId}] Error updateUser`, { error, id });
     return ApiResponder.error(res, error);
   }
 }
@@ -225,7 +225,7 @@ export async function deleteUser(req: Request, res: Response): Promise<Response>
   const requestId = (req.headers['x-request-id'] as string) || 'unknown';
   const { id } = req.params;
   try {
-    // Vérifier les dépendances bloquantes CRITIQUES (Données métier)
+    // Check CRITICAL blocking dependencies (Business data)
     const [inv] = await database.execute<Array<{ cnt: number }>>('SELECT COUNT(*) AS cnt FROM invoice WHERE created_by = ?', [id]);
     const [sup] = await database.execute<Array<{ cnt: number }>>('SELECT COUNT(*) AS cnt FROM supplier WHERE created_by = ?', [id]);
     const [dec] = await database.execute<Array<{ cnt: number }>>('SELECT COUNT(*) AS cnt FROM dfc_decision WHERE decided_by = ?', [id]);
@@ -239,17 +239,17 @@ export async function deleteUser(req: Request, res: Response): Promise<Response>
       return ApiResponder.error(res, details, "Impossible de supprimer cet utilisateur : il a créé des factures, fournisseurs ou pris des décisions DFC.", 409);
     }
 
-    // Nettoyage des données "accessoires" (logs, activités, tokens) avant suppression
-    // On suppose que si l'utilisateur n'a pas données métier, on peut supprimer ses traces techniques
+    // Cleanup of "ancillary" data (logs, activities, tokens) before deletion
+    // Assuming if user has no business data, we can remove technical traces
     await database.execute('DELETE FROM audit_log WHERE performed_by = ?', [id]);
     await database.execute('DELETE FROM user_activity WHERE user_id = ?', [id]);
     await database.execute('DELETE FROM auth_token WHERE employee_id = ?', [id]);
     await database.execute('DELETE FROM employee WHERE id = ?', [id]);
 
-    logger.info(`[${requestId}] Utilisateur supprimé (avec nettoyage logs/activités)`, { id });
+    logger.info(`[${requestId}] User deleted (with logs/activities cleanup)`, { id });
     return ApiResponder.success(res, null, 'Utilisateur supprimé avec succès.');
   } catch (error) {
-    logger.error(`[${requestId}] Erreur deleteUser`, { error, id });
+    logger.error(`[${requestId}] Error deleteUser`, { error, id });
     return ApiResponder.error(res, error);
   }
 }
@@ -258,7 +258,7 @@ export async function disableUser(req: Request, res: Response): Promise<Response
   const requestId = (req.headers['x-request-id'] as string) || 'unknown';
   const { id } = req.params;
   try {
-    // Empêcher la désactivation des admins
+    // Prevent admin disabling
     const roleRows = await database.execute<Array<{ role: string }>>('SELECT role FROM employee WHERE id = ? LIMIT 1', [id]);
     const role = Array.isArray(roleRows) && roleRows.length ? roleRows[0].role : null;
     if (!role) return ApiResponder.notFound(res, 'Utilisateur introuvable');
@@ -267,10 +267,10 @@ export async function disableUser(req: Request, res: Response): Promise<Response
     }
 
     await database.execute('UPDATE employee SET isActive = 0 WHERE id = ?', [id]);
-    logger.info(`[${requestId}] Utilisateur désactivé`, { id });
+    logger.info(`[${requestId}] User disabled`, { id });
     return ApiResponder.success(res, null, 'Utilisateur désactivé avec succès.');
   } catch (error) {
-    logger.error(`[${requestId}] Erreur disableUser`, { error, id });
+    logger.error(`[${requestId}] Error disableUser`, { error, id });
     return ApiResponder.error(res, error);
   }
 }
@@ -280,10 +280,10 @@ export async function enableUser(req: Request, res: Response): Promise<Response>
   const { id } = req.params;
   try {
     await database.execute('UPDATE employee SET isActive = 1 WHERE id = ?', [id]);
-    logger.info(`[${requestId}] Utilisateur réactivé`, { id });
+    logger.info(`[${requestId}] User reactivated`, { id });
     return ApiResponder.success(res, null, 'Utilisateur réactivé avec succès.');
   } catch (error) {
-    logger.error(`[${requestId}] Erreur enableUser`, { error, id });
+    logger.error(`[${requestId}] Error enableUser`, { error, id });
     return ApiResponder.error(res, error);
   }
 }
@@ -299,10 +299,10 @@ export async function verifyUserEmail(req: Request, res: Response): Promise<Resp
       return ApiResponder.success(res, null, 'Le compte est déjà vérifié.');
     }
     await database.execute('UPDATE employee SET isVerified = 1 WHERE id = ?', [id]);
-    logger.info(`[${requestId}] Email utilisateur vérifié (admin action)`, { id });
+    logger.info(`[${requestId}] User email verified (admin action)`, { id });
     return ApiResponder.success(res, null, "L'email de l'utilisateur a été vérifié avec succès.");
   } catch (error) {
-    logger.error(`[${requestId}] Erreur verifyUserEmail`, { error, id });
+    logger.error(`[${requestId}] Error verifyUserEmail`, { error, id });
     return ApiResponder.error(res, error);
   }
 }

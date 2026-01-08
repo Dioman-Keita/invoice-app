@@ -1,11 +1,11 @@
--- Création de la base
+-- Create database
 CREATE DATABASE IF NOT EXISTS cmdt_invoice_db
 CHARACTER SET utf8mb4
 COLLATE utf8mb4_unicode_ci;
 
 USE cmdt_invoice_db;
 
--- Table des fournisseurs
+-- Suppliers table
 CREATE TABLE supplier (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -19,7 +19,7 @@ CREATE TABLE supplier (
     update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Table des employés
+-- Employees table
 CREATE TABLE employee (
     id VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci PRIMARY KEY NOT NULL,
     firstname VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE employee (
     isActive BOOLEAN DEFAULT TRUE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Canal officiel: demandes de migration de rôle (soumission par l'utilisateur)
+-- Official channel: role migration requests (submitted by the user)
 CREATE TABLE IF NOT EXISTS role_migration_request (
     id INT PRIMARY KEY AUTO_INCREMENT,
     requester_id VARCHAR(50) NOT NULL,
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS role_migration_request (
     FOREIGN KEY (reviewed_by) REFERENCES employee(id) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Table d'historique des migrations de rôle utilisateur
+-- User role migration history table
 CREATE TABLE user_role_migration (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id VARCHAR(50) NOT NULL,
@@ -69,7 +69,7 @@ CREATE TABLE user_role_migration (
     FOREIGN KEY (request_id) REFERENCES role_migration_request(id) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Journal détaillé des événements du flux de migration de rôle
+-- Detailed role migration event log
 CREATE TABLE IF NOT EXISTS role_migration_event (
     id INT PRIMARY KEY AUTO_INCREMENT,
     request_id INT NOT NULL,
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS role_migration_event (
     FOREIGN KEY (performed_by) REFERENCES employee(id) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Table des paramètres utilisateurs
+-- User settings table
 CREATE TABLE user_settings (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id VARCHAR(50) NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE user_settings (
     FOREIGN KEY (user_id) REFERENCES employee(id)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Tables des activitées utilisateurs
+-- User activities table
 CREATE TABLE user_activity (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id VARCHAR(50),
@@ -113,7 +113,7 @@ CREATE TABLE user_activity (
     FOREIGN KEY (user_id) REFERENCES employee(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Table des départements
+-- Departments table
 CREATE TABLE department (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name ENUM('Finance', 'Comptabilité', 'Contrôle de gestion', 'Audit interne', 'Facturation', 'Comptabilité client', 'Gestion des factures') DEFAULT 'Finance',
@@ -121,7 +121,7 @@ CREATE TABLE department (
     FOREIGN KEY (employee_id) REFERENCES employee(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Table des factures
+-- Invoices table
 CREATE TABLE invoice (
     id VARCHAR(30) PRIMARY KEY,
     num_cmdt VARCHAR(12) NOT NULL,
@@ -146,7 +146,7 @@ CREATE TABLE invoice (
     FOREIGN KEY (created_by) REFERENCES employee(id) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Table des pièces jointes
+-- Attachments table
 CREATE TABLE attachments (
     id INT PRIMARY KEY AUTO_INCREMENT,
     documents JSON,
@@ -154,7 +154,7 @@ CREATE TABLE attachments (
     FOREIGN KEY (invoice_id) REFERENCES invoice(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Table des tokens (authentification)
+-- Authentication tokens table
 CREATE TABLE auth_token (
     id INT PRIMARY KEY AUTO_INCREMENT,
     token VARCHAR(767) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL UNIQUE,
@@ -164,7 +164,7 @@ CREATE TABLE auth_token (
     FOREIGN KEY (employee_id) REFERENCES employee(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Table tampon pour gerer les envoies d'emails lors du register 
+-- Pending verification table
 CREATE TABLE pending_verification (
     id VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci PRIMARY KEY NOT NULL,
     firstname VARCHAR(100) NOT NULL,
@@ -180,7 +180,7 @@ CREATE TABLE pending_verification (
     update_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Table de log des exportations
+-- Export log table
 CREATE TABLE export_log (
     id INT PRIMARY KEY AUTO_INCREMENT,
     invoice_id VARCHAR(30),
@@ -191,7 +191,7 @@ CREATE TABLE export_log (
     FOREIGN KEY (exported_by) REFERENCES employee(id)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Table de log des actions
+-- Audit log table
 CREATE TABLE audit_log (
     id INT PRIMARY KEY AUTO_INCREMENT,
     action ENUM('INSERT', 'UPDATE', 'DELETE', 'EXPORT', 'SELECT'),
@@ -203,7 +203,7 @@ CREATE TABLE audit_log (
     FOREIGN KEY (performed_by) REFERENCES employee(id)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Table de log des erreurs système
+-- System error log table
 CREATE TABLE system_error_log (
     id INT PRIMARY KEY AUTO_INCREMENT,
     level ENUM('ERROR', 'WARN', 'CRITICAL') DEFAULT 'ERROR',
@@ -215,7 +215,7 @@ CREATE TABLE system_error_log (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Table des décisions DFC (approbation/rejet) avec commentaires optionnels
+-- DFC decisions table
 CREATE TABLE dfc_decision (
     id INT PRIMARY KEY AUTO_INCREMENT,
     invoice_id VARCHAR(30) NOT NULL,
@@ -228,7 +228,7 @@ CREATE TABLE dfc_decision (
     FOREIGN KEY (decided_by) REFERENCES employee(id) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- table pour gérer les compteurs par année fiscale
+-- Fiscal year counter table
 CREATE TABLE fiscal_year_counter (
     id INT PRIMARY KEY AUTO_INCREMENT,
     fiscal_year VARCHAR(7) NOT NULL,
@@ -238,7 +238,7 @@ CREATE TABLE fiscal_year_counter (
     UNIQUE KEY unique_fiscal_year (fiscal_year)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Table pour gérer les compteurs d'employés par année fiscale
+-- Employee fiscal year counter table
 CREATE TABLE employee_fiscal_year_counter (
     id INT PRIMARY KEY AUTO_INCREMENT,
     fiscal_year VARCHAR(7) NOT NULL,
@@ -248,7 +248,7 @@ CREATE TABLE employee_fiscal_year_counter (
     UNIQUE KEY unique_employee_fiscal_year (fiscal_year)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- table enregistrant les parametres critiques de l'application
+-- Critical application settings table
 CREATE TABLE app_settings (
     id INT PRIMARY KEY AUTO_INCREMENT,
     setting_key VARCHAR(100) UNIQUE NOT NULL,
@@ -260,7 +260,7 @@ CREATE TABLE app_settings (
     FOREIGN KEY (created_by) REFERENCES employee(id) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Table app_settings configuration initiale
+-- Table app_settings initial configuration
 INSERT INTO app_settings (setting_key, setting_value, description) VALUES
 ('fiscal_year', '"2025"', 'Année fiscale en cours'),
 ('cmdt_format', '{"padding": 4, "max": 999999999999}', 'Format des numéros CMDT (support 1 milliard/an)'),
@@ -286,19 +286,20 @@ CREATE INDEX idx_dfc_decision_by ON dfc_decision(decided_by);
 CREATE INDEX idx_dfc_decision_at ON dfc_decision(decided_at);
 CREATE UNIQUE INDEX idx_supplier_account_number ON supplier(account_number);
 
--- Index pour les vérifications par année fiscale
+-- Index for fiscal year checks
 CREATE INDEX idx_invoice_fiscal_year ON invoice(fiscal_year);
 CREATE INDEX idx_invoice_cmdt_fiscal ON invoice(fiscal_year, num_cmdt);
 CREATE INDEX idx_invoice_num_invoice_fiscal ON invoice(fiscal_year, num_invoice);
 
--- Index pour la performance des compteurs par année fiscal
+-- Index for performance of fiscal year counters
 CREATE INDEX idx_employee_fiscal_year ON employee(fiscal_year);
 CREATE INDEX idx_fiscal_year_counter_year ON fiscal_year_counter(fiscal_year);
 CREATE INDEX idx_employee_fiscal_year_counter_year ON employee_fiscal_year_counter(fiscal_year);
 CREATE INDEX idx_pending_verification_fiscal_year ON pending_verification(fiscal_year);
 CREATE INDEX idx_employee_created_at ON employee(created_at);
 CREATE INDEX idx_employee_isVerified_created_at ON employee(isVerified, created_at);
--- Index pour le flux de migration de rôle
+
+-- Index for role migration flow
 CREATE INDEX idx_role_mig_req_status_created ON role_migration_request(status, created_at);
 CREATE INDEX idx_role_mig_req_requester ON role_migration_request(requester_id, created_at);
 CREATE INDEX idx_role_mig_event_request ON role_migration_event(request_id, created_at);
@@ -306,15 +307,15 @@ CREATE INDEX idx_role_mig_event_event_created ON role_migration_event(event, cre
 CREATE INDEX idx_user_role_mig_user_created ON user_role_migration(user_id, created_at);
 CREATE INDEX idx_user_role_mig_request ON user_role_migration(request_id);
 
--- Vues sur les audits
+-- Audit views
 CREATE VIEW view_audit_log AS SELECT * FROM audit_log;
 CREATE VIEW view_recent_audit_log AS SELECT * FROM view_audit_log ORDER BY performed_at DESC LIMIT 100;
 
--- Vues sur les exports
+-- Export views
 CREATE VIEW view_exports_by_agent AS SELECT * FROM export_log;
 CREATE VIEW view_recent_export_by_agent AS SELECT * FROM view_exports_by_agent ORDER BY exported_at DESC LIMIT 100;
 
--- Vues sur les factures
+-- Invoice views
 CREATE VIEW view_invoice AS SELECT * FROM invoice;
 CREATE VIEW view_invoice_by_status_reject AS SELECT * FROM view_invoice WHERE status = 'Oui';
 CREATE VIEW view_invoice_by_status_accept AS SELECT * FROM view_invoice WHERE status = 'Non';

@@ -24,8 +24,8 @@ import type { Response, Request, NextFunction } from 'express';
 
 const app = express();
 
-// --------------- 1. CONFIGURATION CHEMIN FRONTEND ---------------
-// C'est ici que le lien avec Electron se fait (via la variable d'env)
+// --------------- 1. FRONTEND PATH CONFIGURATION ---------------
+// Link with Electron via environment variable
 const FRONTEND_PATH = process.env.CLIENT_DIST_PATH || path.join(__dirname, '..', 'client', 'dist');
 
 console.log('📂 EXPRESS SERVING FRONTEND FROM:', FRONTEND_PATH);
@@ -50,17 +50,17 @@ if (process.env.NODE_ENV === 'development') {
     app.use(debugCookies);
 }
 
-// --------------- 3. FICHIERS STATIQUES (CSS, JS, IMAGES) ---------------
-// Servir les assets du frontend avant tout le reste
+// --------------- 3. STATIC FILES (CSS, JS, IMAGES) ---------------
+// Serve frontend assets before everything else
 app.use(express.static(FRONTEND_PATH));
 
 // Health Check
 app.get('/api/health', (_req, res) => {
-    res.json({ status: 'OK', message: 'Serveur fonctionnel' });
+    res.json({ status: 'OK', message: 'Server is running' });
 });
 
-// --------------- 4. ROUTES API (IMPORTANT : AVANT LE FRONTEND) ---------------
-// On déclare les API avant pour être sûr qu'elles soient prioritaires
+// --------------- 4. API ROUTES (IMPORTANT: BEFORE FRONTEND) ---------------
+// Declare APIs first to ensure they are prioritized
 app.use('/api/migration', migrationRoutes);
 app.use('/api', authRoutes);
 app.use('/api', invoiceRoutes);
@@ -72,20 +72,20 @@ app.use('/api', statsRoute);
 app.use('/api', usersRoute);
 app.use('/api/system', systemRoutes);
 
-// --------------- 5. ROUTE FALLBACK FRONTEND (SPA) ---------------
-// C'EST LA CORRECTION CRITIQUE POUR EXPRESS 5
-// On utilise une Regex /^(.*)$/ au lieu de '*' qui fait crasher Express 5
+// --------------- 5. FRONTEND FALLBACK ROUTE (SPA) ---------------
+// CRITICAL FIX FOR EXPRESS 5: 
+// Use Regex /^(.*)$/ instead of '*' which crashes Express 5
 app.get(/^(.*)$/, (req, res, next) => {
-    // Sécurité supplémentaire : si c'est une route /api qui n'a pas été trouvée plus haut
+    // Extra security: if it's an /api route not found above
     if (req.path.startsWith('/api')) {
-        return next(); // On passe au gestionnaire d'erreur 404
+        return next(); // Pass to 404 error handler
     }
 
-    // Sinon, on renvoie l'index.html de React
+    // Otherwise, return React's index.html
     res.sendFile(path.join(FRONTEND_PATH, 'index.html'));
 });
 
-// --------------- 6. GESTION DES ERREURS ---------------
+// --------------- 6. ERROR HANDLING ---------------
 app.use((err: Error & { type?: string; status?: number }, req: Request, res: Response, _next: NextFunction) => {
     const errorContext = {
         url: req.originalUrl,
@@ -95,14 +95,14 @@ app.use((err: Error & { type?: string; status?: number }, req: Request, res: Res
         stack: err.stack
     };
 
-    // Gestion spécifique JSON malformé
+    // Handle malformed JSON
     if (err?.type === 'entity.parse.failed' || (err instanceof SyntaxError && err.status === 400)) {
-        logger.error('Erreur de parsing JSON', errorContext);
-        return ApiResponder.badRequest(res, 'Requête JSON invalide');
+        logger.error('JSON parsing error', errorContext);
+        return ApiResponder.badRequest(res, 'Invalid JSON request');
     }
 
-    // Gestion générique
-    logger.error('Erreur non gérée', errorContext);
+    // Generic error handler
+    logger.error('Unhandled error', errorContext);
     return ApiResponder.error(res, err);
 });
 

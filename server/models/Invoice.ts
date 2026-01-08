@@ -36,8 +36,8 @@ class Invoice implements InvoiceModel {
 				formatDate(invoiceData.invoice_date),
 				invoiceData.invoice_type,
 				invoiceData.folio,
-				// Si contient une virgule, on suppose format FR (1.000,00) -> on vire les points, remplace virgule par point.
-				// Sinon (format US ou standard JS 1000.00), on garde tel quel (juste suppression espaces).
+				// If contains a comma, we assume FR format (1.000,00) -> remove dots, replace comma with dot.
+				// Otherwise (US format or standard JS 1000.00), keep as is (just remove spaces).
 				String(invoiceData.invoice_amount).includes(',')
 					? String(invoiceData.invoice_amount).replace(/\s/g, '').replace(/\./g, '').replace(',', '.')
 					: String(invoiceData.invoice_amount).replace(/\s/g, ''),
@@ -47,7 +47,7 @@ class Invoice implements InvoiceModel {
 				invoiceData.created_by_role
 			]
 
-			// Insertion incluant fiscal_year
+			// Insertion including fiscal_year
 			const query = "INSERT INTO invoice(id, num_cmdt, num_invoice, fiscal_year, invoice_object, supplier_id, invoice_nature, invoice_arr_date, invoice_date, invoice_type, folio, amount, status, created_by, created_by_email, created_by_role) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 			const result = await database.execute(query, params);
 
@@ -61,7 +61,7 @@ class Invoice implements InvoiceModel {
 					action: 'INSERT',
 					performed_by: invoiceData.created_by || null,
 					record_id: id,
-					description: `Ajout des documents à la facture nouvellement créée ${id}`
+					description: `Added documents to the newly created invoice ${id}`
 				});
 			}
 
@@ -70,10 +70,10 @@ class Invoice implements InvoiceModel {
 				action: 'INSERT',
 				record_id: invoiceData.created_by,
 				performed_by: invoiceData.created_by,
-				description: `Création d'une facture par l'utilisateur ${invoiceData.created_by} role : [${invoiceData.created_by_role}]`
+				description: `Invoice creation by user ${invoiceData.created_by} role: [${invoiceData.created_by_role}]`
 			})
 
-			logger.debug("Création de la facture " + id + " avec succès", {
+			logger.debug("Invoice " + id + " created successfully", {
 				userId: invoiceData.created_by,
 				email: invoiceData.created_by_email,
 				role: invoiceData.created_by_role
@@ -84,7 +84,7 @@ class Invoice implements InvoiceModel {
 				data: result
 			}
 		} catch (error) {
-			logger.error(`Une erreur est survenue lors de la création de la facture`, {
+			logger.error(`An error occurred during invoice creation`, {
 				errorMessage: error instanceof Error ? error.message : 'unknown error',
 				stack: error instanceof Error ? error.stack : 'unknown stack'
 			})
@@ -113,14 +113,14 @@ class Invoice implements InvoiceModel {
 				action: 'UPDATE',
 				record_id: id,
 				performed_by: performedBy,
-				description: `Mise à jour du statut DFC à ${newStatus} pour la facture ${id}`
+				description: `Updated DFC status to ${newStatus} for invoice ${id}`
 			});
 
 			return {
 				success: true
 			}
 		} catch (error) {
-			logger.error(`Erreur lors de la mise à jour du statut DFC pour la facture ${id}`, {
+			logger.error(`Error during DFC status update for invoice ${id}`, {
 				errorMessage: error instanceof Error ? error.message : 'unknown error',
 				stack: error instanceof Error ? error.stack : 'unknown stack'
 			});
@@ -149,11 +149,11 @@ class Invoice implements InvoiceModel {
 				table_name: 'invoice',
 				action: 'SELECT',
 				performed_by: null,
-				description: `Récupération des factures DFC en attente pour l'année fiscale ${fiscalYear}`
+				description: `Retrieved pending DFC invoices for fiscal year ${fiscalYear}`
 			});
 			return rows || [];
 		} catch (error) {
-			logger.error('Erreur lors de la récupération des factures DFC en attente', {
+			logger.error('Error during pending DFC invoices retrieval', {
 				errorMessage: error instanceof Error ? error.message : 'unknown error'
 			});
 			return [];
@@ -221,15 +221,15 @@ class Invoice implements InvoiceModel {
 					break;
 
 				default:
-					throw new Error('Type de recherche non supporté');
+					throw new Error('Unsupported search type');
 			}
 
-			// Normaliser le résultat en tableau
+			// Normalize result to array
 			if (rows && !Array.isArray(rows)) {
 				rows = [rows];
 			}
 
-			// Parser les documents JSON
+			// Parse JSON documents
 			if (rows && rows.length > 0) {
 				rows = rows.map((row: InvoiceRecord & { documents?: string | string[] }) => {
 					const invoiceRow = row as InvoiceRecord;
@@ -255,27 +255,27 @@ class Invoice implements InvoiceModel {
 			return rows || [];
 
 		} catch (error) {
-			logger.error(`Une erreur est survenue lors de la recherche de la facture`, {
+			logger.error(`An error occurred while searching for the invoice`, {
 				errorMessage: error instanceof Error ? error.message : 'unknown error',
 				stack: error instanceof Error ? error.stack : 'unknown stack',
 				findType: config.findBy,
 				id: id
 			});
-			throw error; // Propager l'erreur pour que l'appelant puisse la gérer
+			throw error; // Propagate the error so the caller can handle it
 		}
 	}
 
 	async deleteInvoice(id: number): Promise<{ success: boolean }> {
 		try {
-			// Vérifier d'abord si la facture existe
+			// Check if invoice exists first
 			const existingInvoice = await this.findInvoice(id, { findBy: 'id', limit: 1, orderBy: 'desc' });
 
 			if (!existingInvoice || existingInvoice.length === 0) {
-				logger.warn(`Tentative de suppression d'une facture inexistante: ${id}`);
+				logger.warn(`Attempt to delete non-existent invoice: ${id}`);
 				return { success: false };
 			}
 
-			// Utiliser 'invoice' au lieu de 'form'
+			// Use 'invoice' instead of 'form'
 			const query = "DELETE FROM invoice WHERE id = ?";
 			await database.execute(query, [id]);
 
@@ -283,15 +283,15 @@ class Invoice implements InvoiceModel {
 				table_name: 'invoice',
 				action: 'DELETE',
 				record_id: id.toString(),
-				performed_by: 'system', // À remplacer par l'ID utilisateur réel
-				description: `Suppression de la facture ${id}`
+				performed_by: 'system', // REPLACE with actual userId
+				description: `Deleted invoice ${id}`
 			});
 
-			logger.debug(`Facture ${id} supprimée avec succès`);
+			logger.debug(`Invoice ${id} deleted successfully`);
 			return { success: true };
 
 		} catch (error) {
-			logger.error(`Erreur lors de la suppression de la facture ${id}`, {
+			logger.error(`Error during invoice deletion ${id}`, {
 				errorMessage: error instanceof Error ? error.message : 'unknown error',
 				stack: error instanceof Error ? error.stack : 'unknown stack'
 			});
@@ -330,12 +330,12 @@ class Invoice implements InvoiceModel {
 
 			await database.execute(query, params);
 
-			// Mise à jour des pièces jointes
+			// Update attachments
 			if (data.documents) {
-				// On supprime les anciens documents pour cette facture
+				// Remove old documents for this invoice
 				await database.execute("DELETE FROM attachments WHERE invoice_id = ?", [data.id]);
 
-				// On insère les nouveaux documents s'il y en a
+				// Insert new documents if any
 				if (Array.isArray(data.documents) && data.documents.length > 0) {
 					await database.execute(
 						"INSERT INTO attachments(documents, invoice_id) VALUES (?,?)",
@@ -349,10 +349,10 @@ class Invoice implements InvoiceModel {
 				action: 'UPDATE',
 				record_id: data.id,
 				performed_by: data.created_by || null,
-				description: `Mise à jour de la facture ${data.id} par l'utilisateur ${data.created_by || 'Utilisateur'}`
+				description: `Updated invoice ${data.id} by user ${data.created_by || 'User'}`
 			});
 
-			logger.debug(`Facture ${data.id} mise à jour avec succès`, {
+			logger.debug(`Invoice ${data.id} updated successfully`, {
 				userId: data.created_by,
 				email: data.created_by_email
 			});
@@ -360,7 +360,7 @@ class Invoice implements InvoiceModel {
 			return { success: true };
 
 		} catch (error) {
-			logger.error(`Erreur lors de la mise à jour de la facture ${data.id}`, {
+			logger.error(`Error during invoice update ${data.id}`, {
 				errorMessage: error instanceof Error ? error.message : 'unknown error',
 				stack: error instanceof Error ? error.stack : 'unknown stack'
 			});
@@ -371,13 +371,13 @@ class Invoice implements InvoiceModel {
 	async getLastInvoiceNum(): Promise<{ success: boolean, invoiceNum: string | null }> {
 		try {
 			const fiscalYear = await getSetting('fiscal_year');
-			// Utiliser 'invoice' au lieu de 'form'
+			// Use 'invoice' instead of 'form'
 			const result = await database.execute(
 				"SELECT num_cmdt FROM invoice WHERE fiscal_year = ? ORDER BY create_at DESC LIMIT 1",
 				[fiscalYear]
 			);
 
-			// Correction du traitement du résultat
+			// Fixing result processing
 			let invoiceNum = null;
 
 			if (result && Array.isArray(result) && result.length > 0) {
@@ -388,16 +388,15 @@ class Invoice implements InvoiceModel {
 				table_name: 'invoice',
 				action: 'SELECT',
 				performed_by: null,
-				description: 'Récupération du dernier numéro de facture'
+				description: 'Retrieved last invoice number'
 			});
 
 			return {
 				success: true,
 				invoiceNum: invoiceNum
 			};
-
 		} catch (error) {
-			logger.error('Une erreur est survenue lors de la récupération du dernier numéro de facture', {
+			logger.error('An error occurred during last invoice number retrieval', {
 				err: error instanceof Error ? error.message : 'Unknown error',
 				stack: error instanceof Error ? error.stack : 'Unknown stack'
 			});
@@ -411,13 +410,13 @@ class Invoice implements InvoiceModel {
 	async getTheLatestInvoiceNumber(): Promise<{ success: boolean; lastInvoiceNumber: string }> {
 		try {
 			const fiscalYear = await getSetting('fiscal_year');
-			// Utiliser 'invoice' au lieu de 'form'
+			// Use 'invoice' instead of 'form'
 			const result = await database.execute(
 				"SELECT num_cmdt FROM invoice WHERE fiscal_year = ? ORDER BY create_at DESC LIMIT 1",
 				[fiscalYear]
 			);
 
-			// Correction du traitement du résultat
+			// Fixing result processing
 			let invoiceNum = null;
 
 			if (result && Array.isArray(result) && result.length > 0) {
@@ -428,7 +427,7 @@ class Invoice implements InvoiceModel {
 				table_name: 'invoice',
 				action: 'SELECT',
 				performed_by: null,
-				description: 'Récupération du dernier numéro de facture'
+				description: 'Retrieval of the last invoice number'
 			});
 
 			return {
@@ -437,7 +436,7 @@ class Invoice implements InvoiceModel {
 			};
 
 		} catch (error) {
-			logger.error('Une erreur est survenue lors de la récupération du dernier numéro de facture', {
+			logger.error('An error occurred during last invoice number retrieval', {
 				err: error instanceof Error ? error.message : 'Unknown error',
 				stack: error instanceof Error ? error.stack : 'Unknown stack'
 			});
@@ -448,7 +447,7 @@ class Invoice implements InvoiceModel {
 		}
 	}
 
-	// ✅ NOUVEAU : Méthode pour récupérer les attachments d'une facture
+	// ✅ NEW: Method to retrieve invoice attachments
 	async getInvoiceAttachments(invoiceId: string): Promise<{ success: boolean; documents: string[] }> {
 		try {
 			const result = await database.execute<Array<{ documents: string }>>(
@@ -471,7 +470,7 @@ class Invoice implements InvoiceModel {
 				documents: []
 			};
 		} catch (error) {
-			logger.error(`Erreur lors de la récupération des attachments pour la facture ${invoiceId}`, {
+			logger.error(`Error during attachments retrieval for invoice ${invoiceId}`, {
 				errorMessage: error instanceof Error ? error.message : 'unknown error',
 				stack: error instanceof Error ? error.stack : 'unknown stack'
 			});
@@ -482,29 +481,29 @@ class Invoice implements InvoiceModel {
 		}
 	}
 
-	// ✅ NOUVEAU : Méthode pour mettre à jour les attachments
+	// ✅ NEW: Method to update attachments
 	async updateInvoiceAttachments(invoiceId: string, documents: string[], performedBy: string): Promise<{ success: boolean }> {
 		try {
-			// Vérifier si la facture existe
+			// Check if invoice exists
 			const invoice = await this.findInvoice(invoiceId, { findBy: 'id', limit: 1 });
 			if (!invoice || invoice.length === 0) {
 				return { success: false };
 			}
 
-			// Vérifier si des attachments existent déjà
+			// Check if attachments already exist
 			const existing = await database.execute(
 				"SELECT id FROM attachments WHERE invoice_id = ?",
 				[invoiceId]
 			);
 
 			if (existing && Array.isArray(existing) && existing.length > 0) {
-				// Mettre à jour
+				// Update
 				await database.execute(
 					"UPDATE attachments SET documents = ? WHERE invoice_id = ?",
 					[JSON.stringify(documents), invoiceId]
 				);
 			} else {
-				// Créer
+				// Create
 				await database.execute(
 					"INSERT INTO attachments(documents, invoice_id) VALUES (?,?)",
 					[JSON.stringify(documents), invoiceId]
@@ -516,12 +515,12 @@ class Invoice implements InvoiceModel {
 				action: 'UPDATE',
 				performed_by: performedBy,
 				record_id: invoiceId,
-				description: `Mise à jour des attachments pour la facture ${invoiceId}`
+				description: `Updated attachments for invoice ${invoiceId}`
 			});
 
 			return { success: true };
 		} catch (error) {
-			logger.error(`Erreur lors de la mise à jour des attachments pour la facture ${invoiceId}`, {
+			logger.error(`Error during attachments update for invoice ${invoiceId}`, {
 				errorMessage: error instanceof Error ? error.message : 'unknown error',
 				stack: error instanceof Error ? error.stack : 'unknown stack'
 			});
@@ -529,7 +528,7 @@ class Invoice implements InvoiceModel {
 		}
 	}
 
-	// ✅ NOUVEAU : Méthode pour supprimer les attachments
+	// ✅ NEW: Method to delete attachments
 	async deleteInvoiceAttachments(invoiceId: string, performedBy: string): Promise<{ success: boolean }> {
 		try {
 			await database.execute(
@@ -542,12 +541,12 @@ class Invoice implements InvoiceModel {
 				action: 'DELETE',
 				performed_by: performedBy,
 				record_id: invoiceId,
-				description: `Suppression des attachments pour la facture ${invoiceId}`
+				description: `Deleted attachments for invoice ${invoiceId}`
 			});
 
 			return { success: true };
 		} catch (error) {
-			logger.error(`Erreur lors de la suppression des attachments pour la facture ${invoiceId}`, {
+			logger.error(`Error during attachments deletion for invoice ${invoiceId}`, {
 				errorMessage: error instanceof Error ? error.message : 'unknown error',
 				stack: error instanceof Error ? error.stack : 'unknown stack'
 			});

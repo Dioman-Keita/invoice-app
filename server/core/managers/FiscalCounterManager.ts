@@ -7,24 +7,24 @@ export abstract class FiscalCounterManager {
     protected abstract getEntityName(): string;
 
     /**
-     * Initialise un compteur fiscal pour une année spécifique
+     * Initializes a fiscal counter for a specific year
      */
     async initializeFiscalCounter(fiscalYear: string, startNumber: number = 0): Promise<void> {
         try {
             const fiscalYearNum = Number(fiscalYear);
             const currentYear = new Date().getFullYear();
 
-            // Validation de l'année fiscale
+            // Fiscal year validation
             if (isNaN(fiscalYearNum)) {
-                throw new Error(`Année fiscale invalide: ${fiscalYear}`);
+                throw new Error(`Invalid fiscal year: ${fiscalYear}`);
             }
 
             if (fiscalYearNum < currentYear) {
-                throw new Error(`Impossible d'initialiser un compteur pour une année antérieure (${fiscalYear}).`);
+                throw new Error(`Cannot initialize counter for a past year (${fiscalYear}).`);
             }
 
-            // Vérifier si le compteur existe déjà
-            const existing = await database.execute<{id: number}[]>(
+            // Check if counter already exists
+            const existing = await database.execute<{ id: number }[]>(
                 `SELECT id FROM ${this.getCounterTable()} WHERE fiscal_year = ?`,
                 [fiscalYear]
             );
@@ -34,12 +34,12 @@ export abstract class FiscalCounterManager {
                     `INSERT INTO ${this.getCounterTable()} (fiscal_year, ${this.getCounterField()}) VALUES (?, ?)`,
                     [fiscalYear, startNumber]
                 );
-                logger.info(`✅ Compteur ${this.getEntityName()} initialisé pour ${fiscalYear} à ${startNumber}`);
+                logger.info(`✅ ${this.getEntityName()} counter initialized for ${fiscalYear} at ${startNumber}`);
             } else {
-                logger.info(`ℹ️ Compteur ${this.getEntityName()} pour ${fiscalYear} existe déjà`);
+                logger.info(`ℹ️ ${this.getEntityName()} counter for ${fiscalYear} already exists`);
             }
         } catch (error) {
-            logger.error(`❌ Erreur lors de l'initialisation du compteur ${this.getEntityName()} pour ${fiscalYear}`, {
+            logger.error(`❌ Error initializing ${this.getEntityName()} counter for ${fiscalYear}`, {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 stack: error instanceof Error ? error.stack : 'Unknown stack'
             });
@@ -48,11 +48,11 @@ export abstract class FiscalCounterManager {
     }
 
     /**
-     * Récupère le compteur fiscal actuel
+     * Retrieves the current fiscal counter
      */
     async getCurrentCounter(fiscalYear: string): Promise<number> {
         try {
-            const rows = await database.execute<{[key: string]: number}[]>(
+            const rows = await database.execute<{ [key: string]: number }[]>(
                 `SELECT ${this.getCounterField()} FROM ${this.getCounterTable()} WHERE fiscal_year = ? LIMIT 1`,
                 [fiscalYear]
             );
@@ -61,11 +61,11 @@ export abstract class FiscalCounterManager {
                 return Number(rows[0][this.getCounterField()]);
             }
 
-            // Auto-initialisation si absent
+            // Auto-initialize if missing
             await this.initializeFiscalCounter(fiscalYear);
             return 0;
         } catch (error) {
-            logger.error(`❌ Erreur lors de la récupération du compteur ${this.getEntityName()} pour ${fiscalYear}`, {
+            logger.error(`❌ Error retrieving ${this.getEntityName()} counter for ${fiscalYear}`, {
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
             throw error;
@@ -73,7 +73,7 @@ export abstract class FiscalCounterManager {
     }
 
     /**
-     * Met à jour le compteur fiscal
+     * Updates the fiscal counter
      */
     async updateCounter(fiscalYear: string, newValue: number): Promise<void> {
         try {
@@ -84,9 +84,9 @@ export abstract class FiscalCounterManager {
                 [newValue, fiscalYear]
             );
 
-            logger.debug(`🔄 Compteur ${this.getEntityName()} mis à jour pour ${fiscalYear}: ${newValue}`);
+            logger.debug(`🔄 ${this.getEntityName()} counter updated for ${fiscalYear}: ${newValue}`);
         } catch (error) {
-            logger.error(`❌ Erreur lors de la mise à jour du compteur ${this.getEntityName()} pour ${fiscalYear}`, {
+            logger.error(`❌ Error updating ${this.getEntityName()} counter for ${fiscalYear}`, {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 stack: error instanceof Error ? error.stack : 'Unknown stack'
             });
@@ -95,7 +95,7 @@ export abstract class FiscalCounterManager {
     }
 
     /**
-     * Incrémente le compteur fiscal et retourne la nouvelle valeur
+     * Increments the fiscal counter and returns the new value
      */
     async incrementCounter(fiscalYear: string): Promise<number> {
         try {
@@ -104,7 +104,7 @@ export abstract class FiscalCounterManager {
             await this.updateCounter(fiscalYear, newValue);
             return newValue;
         } catch (error) {
-            logger.error(`❌ Erreur lors de l'incrémentation du compteur ${this.getEntityName()} pour ${fiscalYear}`, {
+            logger.error(`❌ Error incrementing ${this.getEntityName()} counter for ${fiscalYear}`, {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 stack: error instanceof Error ? error.stack : 'Unknown stack'
             });
@@ -113,11 +113,11 @@ export abstract class FiscalCounterManager {
     }
 
     /**
-     * Récupère l'historique des compteurs
+     * Retrieves counter history
      */
-    async getCounterHistory(): Promise<Array<{fiscal_year: string; last_number: number}>> {
+    async getCounterHistory(): Promise<Array<{ fiscal_year: string; last_number: number }>> {
         try {
-            const rows = await database.execute<{fiscal_year: string; last_number: number}[]>(
+            const rows = await database.execute<{ fiscal_year: string; last_number: number }[]>(
                 `SELECT fiscal_year, ${this.getCounterField()} as last_number 
                  FROM ${this.getCounterTable()} 
                  ORDER BY fiscal_year DESC`
@@ -128,7 +128,7 @@ export abstract class FiscalCounterManager {
                 last_number: Number(row.last_number)
             })) : [];
         } catch (error) {
-            logger.error(`❌ Erreur lors de la récupération de l'historique du compteur ${this.getEntityName()}`, {
+            logger.error(`❌ Error retrieving ${this.getEntityName()} counter history`, {
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
             return [];
@@ -136,17 +136,17 @@ export abstract class FiscalCounterManager {
     }
 
     /**
-     * Vérifie si un compteur existe pour une année fiscale
+     * Checks if a counter exists for a fiscal year
      */
     async counterExists(fiscalYear: string): Promise<boolean> {
         try {
-            const rows = await database.execute<{id: number}[]>(
+            const rows = await database.execute<{ id: number }[]>(
                 `SELECT id FROM ${this.getCounterTable()} WHERE fiscal_year = ?`,
                 [fiscalYear]
             );
             return Array.isArray(rows) && rows.length > 0;
         } catch (error) {
-            logger.error(`❌ Erreur lors de la vérification de l'existence du compteur ${this.getEntityName()}`, {
+            logger.error(`❌ Error checking ${this.getEntityName()} counter existence`, {
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
             return false;

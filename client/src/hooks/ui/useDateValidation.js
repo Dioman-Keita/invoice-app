@@ -7,53 +7,53 @@ export const useDateValidation = () => {
   const notificationTimeoutsRef = useRef({});
 
   const validateDateOrder = useCallback((invoiceDate, arrivalDate, options = {}) => {
-    const { 
+    const {
       showWarning = true,
-      cooldownMs = 5000, // 5 secondes entre les notifications
+      cooldownMs = 5000, // 5 seconds between notifications
       fieldNames = {
         invoice: "Date de la facture",
         arrival: "Date d'arrivée du courrier"
       }
     } = options;
 
-    // Vérifier si les deux dates sont présentes et bien formatées
+    // Check if both dates are present and properly formatted
     if (!invoiceDate || !arrivalDate) {
       return { isValid: true };
     }
 
-    // Vérifier le format des dates (DD/MM/YYYY)
+    // Check date format (DD/MM/YYYY)
     const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
     if (!dateRegex.test(invoiceDate) || !dateRegex.test(arrivalDate)) {
-      return { isValid: true }; // Laisser Zod gérer les formats invalides
+      return { isValid: true }; // Let Zod handle invalid formats
     }
 
-    // Convertir les dates en objets Date
+    // Convert dates to Date objects
     const invoiceDateObj = new Date(invoiceDate.split('/').reverse().join('-'));
     const arrivalDateObj = new Date(arrivalDate.split('/').reverse().join('-'));
 
-    // Vérifier si les dates sont valides
+    // Check if dates are valid
     if (isNaN(invoiceDateObj.getTime()) || isNaN(arrivalDateObj.getTime())) {
-      return { isValid: true }; // Laisser Zod gérer les dates invalides
+      return { isValid: true }; // Let Zod handle invalid dates
     }
 
-    // Comparer les dates - seulement si les deux sont valides
+    // Compare dates - only if both are valid
     if (arrivalDateObj < invoiceDateObj) {
       const fieldKey = `date_order_${invoiceDate}_${arrivalDate}`;
       const now = Date.now();
       const lastNotification = lastNotificationRef.current[fieldKey] || 0;
 
-      // Vérifier si on est en cooldown
+      // Check if in cooldown
       if (now - lastNotification < cooldownMs) {
         return { isValid: false };
       }
 
       if (showWarning) {
-        // Nettoyer les timeouts précédents
+        // Clean up previous timeouts
         if (notificationTimeoutsRef.current[fieldKey]) {
           clearTimeout(notificationTimeoutsRef.current[fieldKey]);
         }
 
-        // Programmer la notification avec un délai
+        // Schedule notification with delay
         notificationTimeoutsRef.current[fieldKey] = setTimeout(() => {
           warning(
             `Attention : La ${fieldNames.arrival.toLowerCase()} (${arrivalDate}) est antérieure à la ${fieldNames.invoice.toLowerCase()} (${invoiceDate}). Vérifiez la cohérence.`
@@ -61,7 +61,7 @@ export const useDateValidation = () => {
           lastNotificationRef.current[fieldKey] = Date.now();
         }, 1000);
       }
-      
+
       return { isValid: false };
     }
 

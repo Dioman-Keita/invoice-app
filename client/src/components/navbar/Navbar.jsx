@@ -7,7 +7,7 @@ function Navbar() {
 
   return (
     <>
-      {/* Bouton de déclenchement du menu */}
+      {/* Button trigger */}
       <div
         className="fixed left-0 top-1/2 transform -translate-y-1/2 z-40 group cursor-pointer"
         onClick={() => setIsOpen(true)}
@@ -18,23 +18,23 @@ function Navbar() {
           flex items-center justify-between w-[50px] sm:w-[130px] md:w-[110px] lg:w-[120px]
           hover:bg-green-800 hover:shadow-xl"
         >
-          {/* Texte qui apparaît au hover */}
+          {/* Text that appears on hover */}
           <span
             className="text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap ml-2"
           >
             Menu
           </span>
-          
-          {/* Icône burger toujours visible */}
+
+          {/* Burger icon always visible */}
           <div className="flex-shrink-0">
             <Bars3Icon className="w-6 h-6 text-white" />
           </div>
         </div>
       </div>
 
-      <NavbarPanel 
-        isOpen={isOpen} 
-        onClose={() => setIsOpen(false)} 
+      <NavbarPanel
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
       />
     </>
   );

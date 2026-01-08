@@ -14,14 +14,14 @@ function ValidatedAmountInput({
         trigger
     } = useFormContext();
 
-    // Utiliser useWatch pour une surveillance performante
+    // Use useWatch for efficient surveillance
     const fieldValue = watch(name);
 
-    // Mémoïser les fonctions de formatage
+    // Memoize formatting functions
     const formatWithSpaces = useCallback((value) => {
         if (!value) return "";
 
-        // Séparer la partie entière de la partie décimale
+        // Separate the integer part from the decimal part
         const parts = value.toString().split(/[.,]/);
         const integerPart = parts[0].replace(/[^\d]/g, "");
         const decimalPart = parts.length > 1 ? parts[1].substring(0, 3) : null;
@@ -38,7 +38,7 @@ function ValidatedAmountInput({
         return value;
     }, []);
 
-    // Calculer la valeur d'affichage mémoïsée
+    // Memoize display value calculation
     const displayValue = useMemo(() => {
         if (!fieldValue) return "";
         const valueToFormat = typeof fieldValue === 'number' ? fieldValue.toString() : fieldValue;
@@ -47,28 +47,28 @@ function ValidatedAmountInput({
 
     const MAX_AMOUNT = 100_000_000_000;
 
-    // Gérer les changements de manière optimisée
+    // Handle changes optimally
     const handleChange = useCallback((e) => {
         let inputValue = e.target.value;
 
-        // Autoriser seulement chiffres, espace (pour le formatage), point et virgule
+        // Allow only digits, space (for formatting), dot and comma
         let cleanValue = inputValue.replace(/[^\d.,]/g, "");
 
-        // Remplacer le point par la virgule pour la saisie (unifier le séparateur visuel)
+        // Replace dot with comma for input (unify visual separator)
         cleanValue = cleanValue.replace('.', ',');
 
-        // Gérer les multiples virgules (garder seulement la première)
+        // Handle multiple commas (keep only the first)
         const parts = cleanValue.split(',');
         if (parts.length > 2) {
             cleanValue = parts[0] + ',' + parts.slice(1).join('');
         }
 
-        // Limiter à 3 décimales
+        // Limit to 3 decimals
         if (parts.length > 1) {
             cleanValue = parts[0] + ',' + parts[1].substring(0, 3);
         }
 
-        // Nettoyer les zéros inutiles au début
+        // Clean leading zeros
         cleanValue = formatNumberWith0(cleanValue);
 
         if (!cleanValue || cleanValue === ",") {
@@ -76,7 +76,7 @@ function ValidatedAmountInput({
             return;
         }
 
-        // Pour la valeur stockée dans RHF, on normalise avec un point
+        // Normalize value stored in RHF with a dot
         const normalizedValue = cleanValue.replace(',', '.');
         const numeric = parseFloat(normalizedValue);
 
@@ -87,12 +87,12 @@ function ValidatedAmountInput({
         }
     }, [name, setValue, formatNumberWith0]);
 
-    // Gérer le blur pour la validation
+    // Handle blur for validation
     const handleBlur = useCallback(() => {
         trigger(name);
     }, [name, trigger]);
 
-    // Enregistrer le champ avec react-hook-form
+    // Register the field with react-hook-form
     const { ref, ...inputProps } = register(name);
 
     return (

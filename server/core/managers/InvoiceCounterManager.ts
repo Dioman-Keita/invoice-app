@@ -14,14 +14,14 @@ export class InvoiceCounterManager extends FiscalCounterManager {
     }
 
     /**
-     * Récupère le dernier numéro de facture utilisé pour une année fiscale
+     * Retrieves the last invoice number used for a fiscal year
      */
     async getLastInvoiceNumber(fiscalYear: string): Promise<number> {
         return this.getCurrentCounter(fiscalYear);
     }
 
     /**
-     * Vérifie si un numéro de séquence est disponible
+     * Checks if a sequence number is available
      */
     async isSequenceAvailable(fiscalYear: string, sequenceNumber: number): Promise<boolean> {
         const current = await this.getCurrentCounter(fiscalYear);

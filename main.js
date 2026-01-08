@@ -5,7 +5,7 @@ const fs = require('fs');
 const http = require('http');
 const log = require('electron-log');
 
-// --- 1. CONFIGURATION LOGS ---
+// --- 1. LOGS CONFIGURATION ---
 log.transports.file.level = 'info';
 log.transports.file.fileName = 'main.log';
 Object.assign(console, {
@@ -15,7 +15,7 @@ Object.assign(console, {
     warn: log.warn
 });
 
-// --- 2. CONFIGURATION DEEP LINK ---
+// --- 2. DEEP LINK CONFIGURATION ---
 if (process.defaultApp) {
     if (process.argv.length >= 2) {
         app.setAsDefaultProtocolClient('invoice-app', process.execPath, [path.resolve(process.argv[1])]);
@@ -24,12 +24,12 @@ if (process.defaultApp) {
     app.setAsDefaultProtocolClient('invoice-app');
 }
 
-// --- 3. VARIABLES GLOBALES ---
+// --- 3. GLOBALS VAR ---
 let mainWindow = null;
 let backendProcess = null;
 let deepLinkUrl = null;
-let isAppReady = false; // <-- NOUVEAU : On track si React est prêt
-let isQuitting = false; // <-- NOUVEAU : On track si on a confirmé le quit
+let isAppReady = false; // <-- NEW : Track if React is ready
+let isQuitting = false; // <-- NEW : Track if we confirmed quit
 
 const BACKEND_PORT = 3000;
 const BACKEND_URL = `http://127.0.0.1:${BACKEND_PORT}`;
@@ -41,24 +41,24 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
     app.quit();
 } else {
-    app.on('second-instance', (event, commandLine, workingDirectory) => {
+    app.on('second-instance', (_event, commandLine, _workingDirectory) => {
         if (mainWindow) {
             if (mainWindow.isMinimized()) mainWindow.restore();
             mainWindow.focus();
 
-            // 1. Récupération robuste du lien (Warm Start)
+            // 1. Robust link retrieval (Warm Start)
             const urlArg = commandLine.find(arg => arg.includes('invoice-app://'));
 
             if (urlArg) {
-                // Nettoyage brut
+                // Raw cleaning
                 let deepLink = urlArg.replace(/["']/g, "").trim();
                 log.info(`🔗 Deep link détecté (Instance courante): ${deepLink}`);
 
-                // 2. Mise à jour de la variable globale (Buffer)
+                // 2. Update global variable (Buffer)
                 deepLinkUrl = deepLink;
 
-                // 3. Si l'app est déjà prête, on envoie tout de suite.
-                // Sinon, on ne fait RIEN. Le listener 'did-finish-load' s'en chargera quand React sera prêt.
+                // 3. If app is ready, send immediately.
+                // Otherwise, do nothing. The 'did-finish-load' listener will handle it when React is ready.
                 if (isAppReady) {
                     mainWindow.webContents.send('deep-link', deepLink);
                     log.info('📤 Deep link envoyé immédiatement (App Ready)');
@@ -80,8 +80,8 @@ app.on('open-url', (event, url) => {
 });
 
 if (process.platform === 'win32') {
-    // Cold Start : On cherche simplement l'argument
-    // On ne fait RIEN d'autre ici, tout se jouera dans le createWindow
+    // Cold Start : Simply look for the argument
+    // Do nothing else here, everything will happen in createWindow
     const startupUrl = process.argv.find(arg => arg.includes('invoice-app://'));
     if (startupUrl) {
         deepLinkUrl = startupUrl.replace(/["']/g, "").trim();
@@ -89,7 +89,7 @@ if (process.platform === 'win32') {
     }
 }
 
-// --- 5. CHEMINS ---
+// --- 5. PATHS ---
 function getResourcesPaths() {
     const isProd = app.isPackaged;
     const rootPath = isProd ? process.resourcesPath : __dirname;
@@ -108,7 +108,7 @@ function getResourcesPaths() {
 // --- 6. DOCKER ---
 function ensureDockerIsRunning(cwd) {
     return new Promise((resolve) => {
-        log.info('🐳 Vérification Docker...');
+        log.info('🐳 Docker verification...');
         exec('docker compose up -d --remove-orphans', { cwd }, (error, stdout, stderr) => {
             if (error) log.warn(`⚠️ Docker warning: ${error.message}`);
             else log.info(`✅ Docker Output: ${stdout}`);
@@ -120,12 +120,12 @@ function ensureDockerIsRunning(cwd) {
 // --- 7. BACKEND ---
 async function startBackend() {
     const paths = getResourcesPaths();
-    log.info('🚀 Démarrage Backend...');
+    log.info('🚀 Starting Backend...');
 
     await ensureDockerIsRunning(paths.serverPath);
 
     if (!fs.existsSync(paths.serverEntry)) {
-        log.error('❌ Fichier server.js introuvable !');
+        log.error('❌ File server.js not found !');
         return;
     }
 
@@ -160,7 +160,7 @@ function stopBackend() {
     }
 }
 
-// --- 8. ATTENTE SERVEUR ---
+// --- 8. WAIT SERVEUR ---
 function waitForServer() {
     return new Promise((resolve, reject) => {
         let attempts = 0;
@@ -169,13 +169,18 @@ function waitForServer() {
         const check = () => {
             attempts++;
             http.get(BACKEND_URL + '/api/health', (res) => {
-                log.info(`✅ Backend connecté !`);
+                log.info(`✅ Backend connected !`);
                 resolve();
-            }).on('error', (err) => {
-                if (attempts >= maxAttempts) {
-                    reject(new Error(`Timeout Backend`));
-                } else {
-                    setTimeout(check, 1000);
+            }).on('error', () => {
+                try {
+                    if (attempts >= maxAttempts) {
+                        reject(new Error(`Timeout Backend`));
+                    } else {
+                        setTimeout(check, 1000);
+                    }
+                } catch (error) {
+                    log.error(`❌ Error waiting for server: ${error.message}`);
+                    reject(error);
                 }
             });
         };
@@ -185,7 +190,7 @@ function waitForServer() {
 
 // --- 9. UI ---
 function createMainWindow() {
-    // 1. Création de la fenêtre
+    // 1. Create the window
     mainWindow = new BrowserWindow({
         width: 1024,
         height: 700,
@@ -200,7 +205,7 @@ function createMainWindow() {
         }
     });
 
-    // 2. Le HTML Simple & Efficace
+    // 2. Simple & Efficient HTML
     const loadingHtml = `
     <!DOCTYPE html>
     <html>
@@ -244,31 +249,31 @@ function createMainWindow() {
     </html>
     `;
 
-    // 3. Chargement et affichage
+    // 3. Load and display
     mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(loadingHtml)}`);
     mainWindow.show();
 
-    // 4. Lancement Backend
+    // 4. Launch Backend
     startBackend();
 
-    // 5. Attente du serveur et redirection
+    // 5. Wait for server and redirect
     waitForServer()
         .then(() => {
-            log.info('🌍 Serveur prêt, chargement application...');
+            log.info('🌍 Server ready, loading application...');
 
             const targetUrl = app.isPackaged ? BACKEND_URL : VITE_DEV_URL;
             mainWindow.loadURL(targetUrl);
 
-            // On écoute la fin du chargement de la vraie page (PAS du loading screen)
+            // We listen for the end of the loading of the true page (NOT the loading screen)
             mainWindow.webContents.once('did-finish-load', () => {
                 log.info('✅ React Application Loaded (did-finish-load)');
                 isAppReady = true;
 
-                // SI on a un deep link en attente (Cold Start OU Warm Start pdt le chargement)
+                // If we have a deep link waiting (Cold Start OR Warm Start during loading)
                 if (deepLinkUrl) {
                     log.info(`� Envoi du Deep Link en attente : ${deepLinkUrl}`);
 
-                    // Petit délai pour laisser React s'hydrater (Router)
+                    // Small delay to let React hydrate (Router)
                     setTimeout(() => {
                         mainWindow.webContents.send('deep-link', deepLinkUrl);
                         // On ne clear pas forcément deepLinkUrl si on veut pouvoir le rejouer au reload, 
@@ -288,14 +293,14 @@ function createMainWindow() {
             });
         });
 
-    // 6. Intersection de la fermeture pour confirmation
+    // 6. Intersection of the closing for confirmation
     mainWindow.on('close', (e) => {
-        if (isQuitting) return; // Autoriser la fermeture si on a déjà confirmé
+        if (isQuitting) return; // Allow closing if already confirmed
 
         e.preventDefault();
 
         if (!isAppReady) {
-            // FALLBACK : Si React n'est pas encore prêt (Splash Screen / Backend loading)
+            // FALLBACK : If React is not ready (Splash Screen / Backend loading)
             // On montre une boîte de dialogue native bloquante.
             const choice = dialog.showMessageBoxSync(mainWindow, {
                 type: 'warning',
@@ -312,7 +317,7 @@ function createMainWindow() {
                 app.quit();
             }
         } else {
-            // CAS NOMINAL : React est prêt, on utilise le modal stylisé.
+            // CAS NOMINAL : React is ready, we use the styled modal.
             mainWindow.webContents.send('request-close');
         }
     });
@@ -322,16 +327,16 @@ function createMainWindow() {
 
 // IPC to finally quit
 ipcMain.on('confirm-quit', () => {
-    isQuitting = true; // On autorise maintenant la fermeture effective
+    isQuitting = true; // Allow closing now
     app.quit();
 });
 
 
-// Déplacement de la logique de démarrage À L'INTÉRIEUR du bloc "else" (Primary Instance)
-// pour garantir que la seconde instance ne lance JAMAIS le backend ni la fenêtre.
+// Move the startup logic INSIDE the "else" block (Primary Instance)
+// to guarantee that the second instance never launches the backend or the window.
 if (gotTheLock) {
     function setupMenu() {
-        // Conserver uniquement View, Help et Window; retirer File et Edit
+        // Keep only View, Help and Window; remove File and Edit
         const template = [
             { role: 'viewMenu' },
             {

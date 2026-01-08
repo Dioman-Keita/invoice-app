@@ -5,16 +5,16 @@ import { QueryBuilder } from '../utils/QueryBuilder';
 import { AuthenticatedRequest } from '../types/express/request';
 import database from '../config/database';
 
-// =============================================================================
-// FONCTIONS DE RECHERCHE
-// =============================================================================
+// ==================
+// SEARCH FUNCTIONS
+// ==================
 
 export async function advancedInvoiceSearch(
   req: AuthenticatedRequest,
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
-  
+
   try {
     const user = req.user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
@@ -22,7 +22,7 @@ export async function advancedInvoiceSearch(
     const result = await QueryBuilder.searchInvoices(req.query);
     return ApiResponder.success(res, result.rows, undefined, result.meta);
   } catch (error) {
-    logger.error(`[${requestId}] Erreur advancedInvoiceSearch`, {
+    logger.error(`[${requestId}] Error advancedInvoiceSearch`, {
       errorMessage: error instanceof Error ? error.message : 'unknown error',
       stack: error instanceof Error ? error.stack : 'unknown stack',
       query: req.query
@@ -36,7 +36,7 @@ export async function advancedSupplierSearch(
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
-  
+
   try {
     const user = req.user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
@@ -44,7 +44,7 @@ export async function advancedSupplierSearch(
     const result = await QueryBuilder.searchSuppliers(req.query);
     return ApiResponder.success(res, result.rows, undefined, result.meta);
   } catch (error) {
-    logger.error(`[${requestId}] Erreur advancedSupplierSearch`, {
+    logger.error(`[${requestId}] Error advancedSupplierSearch`, {
       errorMessage: error instanceof Error ? error.message : 'unknown error',
       stack: error instanceof Error ? error.stack : 'unknown stack',
       query: req.query
@@ -58,7 +58,7 @@ export async function relationalSearch(
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
-  
+
   try {
     const user = req.user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
@@ -66,7 +66,7 @@ export async function relationalSearch(
     const result = await QueryBuilder.searchRelational(req.query);
     return ApiResponder.success(res, result.rows, undefined, result.meta);
   } catch (error) {
-    logger.error(`[${requestId}] Erreur relationalSearch`, {
+    logger.error(`[${requestId}] Error relationalSearch`, {
       errorMessage: error instanceof Error ? error.message : 'unknown error',
       stack: error instanceof Error ? error.stack : 'unknown stack',
       query: req.query
@@ -76,7 +76,7 @@ export async function relationalSearch(
 }
 
 // =============================================================================
-// FONCTIONS D'HISTORIQUE ET CONFIGURATION
+// HISTORY AND CONFIGURATION FUNCTIONS
 // =============================================================================
 
 export async function getExportHistory(
@@ -84,7 +84,7 @@ export async function getExportHistory(
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
-  
+
   try {
     const user = req.user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
@@ -98,17 +98,17 @@ export async function getExportHistory(
       ORDER BY exported_at DESC 
       LIMIT 20
     `;
-    
+
     if (!user.sup) {
       logger.warn('getExportHistory: user.sup is undefined');
       return ApiResponder.success(res, [], 'Aucun export trouvé');
     }
-    
+
     const rows = await database.execute<Array<{ invoice_id: string; format: string; exported_at: string }>>(query, [user.sup]);
 
     return ApiResponder.success(res, rows, 'Historique des exports récupéré');
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getExportHistory`, {
+    logger.error(`[${requestId}] Error getExportHistory`, {
       errorMessage: error instanceof Error ? error.message : 'unknown error',
       stack: error instanceof Error ? error.stack : 'unknown stack'
     });
@@ -121,7 +121,7 @@ export async function getFiscalYears(
   res: Response
 ): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
-  
+
   try {
     const user = req.user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
@@ -132,7 +132,7 @@ export async function getFiscalYears(
 
     return ApiResponder.success(res, fiscalYears, 'Années fiscales récupérées');
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getFiscalYears`, {
+    logger.error(`[${requestId}] Error getFiscalYears`, {
       errorMessage: error instanceof Error ? error.message : 'unknown error',
       stack: error instanceof Error ? error.stack : 'unknown stack'
     });

@@ -9,7 +9,7 @@ function Verify() {
     const navigate = useNavigate();
     const [status, setStatus] = useState('loading');
     const [message, setMessage] = useState('Vérification en cours...');
-    const [countdown, setCountdown] = useState(5); // Compte à rebours de 5 secondes
+    const [countdown, setCountdown] = useState(5); // 5 seconds countdown
     const { finalizeRegister, isAuthenticated, user } = useAuth();
     const timeoutRef = useRef(null);
 
@@ -23,21 +23,21 @@ function Verify() {
 
         const verify = async () => {
             try {
-                console.log('🔐 Verify - Début de vérification');
+                console.log('🔐 Verify - Verification start');
                 const result = await finalizeRegister(token);
 
-                console.log('🔐 Verify - Résultat finalizeRegister:', result);
+                console.log('🔐 Verify - finalizeRegister result:', result);
 
                 if (result?.success) {
                     setStatus('success');
                     setMessage('Votre inscription est vérifiée.');
-                    // On ne touche plus à window.history manuellement pour éviter les conflits HashRouter
+                    // No longer manually touching window.history to avoid HashRouter conflicts
                 } else {
                     setStatus('error');
                     setMessage(result.message || 'Échec de la vérification.');
                 }
             } catch (err) {
-                console.error("Erreur dans verify():", err);
+                console.error("Error in verify():", err);
                 setStatus('error');
                 setMessage("Erreur lors de la vérification.");
             }
@@ -46,7 +46,7 @@ function Verify() {
         verify();
     }, [finalizeRegister, params]);
 
-    // ✅ Compte à rebours de 5 secondes
+    // ✅ 5 seconds countdown
     useEffect(() => {
         if (status === 'success' && isAuthenticated && user) {
             const timer = setInterval(() => {
@@ -63,13 +63,13 @@ function Verify() {
         }
     }, [status, isAuthenticated, user]);
 
-    // ✅ REDIRECTION AVEC TIMEOUT DE 5 SECONDES
+    // ✅ REDIRECTION WITH 5 SECONDS TIMEOUT
     useEffect(() => {
         if (isAuthenticated && user) {
-            console.log('🔍 Tentative de redirection...');
+            console.log('🔍 Redirection attempt...');
             console.log('🔍 User role:', user.role);
 
-            // Nettoyer tout timeout précédent
+            // Clear any previous timeout
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
             }
@@ -83,13 +83,13 @@ function Verify() {
                     targetPath = '/dfc_traitment';
                 }
 
-                console.log('📍 Redirection après 5s vers:', targetPath);
+                console.log('📍 Redirection after 5s to:', targetPath);
 
-                // ✅ Utilisation de navigate pour HashRouter
+                // ✅ Using navigate for HashRouter
                 navigate(targetPath, { replace: true });
             }, 5000); // 5 secondes
 
-            // Nettoyage à la destruction du composant
+            // Cleanup on component destruction
             return () => {
                 if (timeoutRef.current) {
                     clearTimeout(timeoutRef.current);
@@ -98,13 +98,13 @@ function Verify() {
         }
     }, [isAuthenticated, user, navigate]);
 
-    // ✅ Fonction de redirection manuelle
+    // ✅ Manual redirection function
     const handleManualRedirect = () => {
         let targetPath = '/dashboard';
         if (user?.role === 'invoice_manager') targetPath = '/facture';
         if (user?.role === 'dfc_agent') targetPath = '/dfc_traitment';
 
-        console.log('🖱️ Redirection manuelle vers:', targetPath);
+        console.log('🖱️ Manual redirection to:', targetPath);
         navigate(targetPath, { replace: true });
     };
 

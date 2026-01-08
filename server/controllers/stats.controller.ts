@@ -14,7 +14,7 @@ function parseGranularity(t?: string): Granularity {
   return t && ['day', 'week', 'month', 'fiscal_year'].includes(t) ? (t as Granularity) : 'fiscal_year';
 }
 
-// Types de lignes utilisées
+// Types of rows used
 type EmployeeInvoiceRow = { employee_id: string | null; employee_name: string | null; total: number; total_amount?: number };
 type DfcAgentRow = { agent_id: string | null; agent_name: string | null; approved: number; rejected: number; total: number };
 type SupplierCreatedRow = { employee_id: string | null; employee_name: string | null; total: number };
@@ -22,7 +22,7 @@ type SupplierActivityRow = { supplier_id: number | null; supplier_name: string |
 type InvoiceBucketRow = { bucket?: string; total: number; total_amount: number };
 type DfcTotals = { approved: number; rejected: number; total: number };
 
-// Helper: normaliser en tableau avec typage générique
+// Helper: normalize to array with generic typing
 function asArray<T>(value: T | T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : value ? [value] : [];
 }
@@ -96,7 +96,7 @@ export async function getInvoicesByEmployee(
       type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getInvoicesByEmployee`, {
+    logger.error(`[${requestId}] Error getInvoicesByEmployee`, {
       error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
@@ -193,7 +193,7 @@ export async function getDfcAgentsRates(
       type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getDfcAgentsRates`, {
+    logger.error(`[${requestId}] Error getDfcAgentsRates`, {
       error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
@@ -265,7 +265,7 @@ export async function getSuppliersCreatedByEmployee(
       type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getSuppliersCreatedByEmployee`, {
+    logger.error(`[${requestId}] Error getSuppliersCreatedByEmployee`, {
       error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
@@ -334,7 +334,7 @@ export async function getSuppliersActivity(
        FROM supplier s
        INNER JOIN invoice i ON i.supplier_id = s.id
        WHERE i.fiscal_year = ? 
-         AND i.status = 'Non'  // ← AJOUT CRITIQUE
+         AND i.status = 'Non'  // ← CRITICAL ADDITION
        GROUP BY bucket, s.id, s.name
        ORDER BY bucket, total_invoices DESC`,
       [fy]
@@ -348,14 +348,14 @@ export async function getSuppliersActivity(
       type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getSuppliersActivity`, {
+    logger.error(`[${requestId}] Error getSuppliersActivity`, {
       error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
 }
 
-// ========================= Statistiques globales =========================
+// ========================= Global statistics =========================
 export async function getInvoicesSummary(
   req: Request<unknown, unknown, unknown, { fiscalYear?: string; type?: string }>,
   res: Response
@@ -426,7 +426,7 @@ export async function getInvoicesSummary(
       type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getInvoicesSummary`, {
+    logger.error(`[${requestId}] Error getInvoicesSummary`, {
       error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
@@ -518,14 +518,14 @@ export async function getDfcOverview(
       type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getDfcOverview`, {
+    logger.error(`[${requestId}] Error getDfcOverview`, {
       error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
 }
 
-// Fonctions utilitaires pour les buckets
+// Utility functions for buckets
 function bucketExpr(entity: 'invoice' | 'dfc_decision', type: Granularity): string {
   const ts = entity === 'invoice' ? 'IFNULL(update_at, create_at)' : 'IFNULL(update_at, decided_at)';
   switch (type) {
@@ -548,7 +548,7 @@ function supplierBucketExpr(type: Granularity): string {
   }
 }
 
-// AJOUT: Fonctions manquantes pour la compatibilité avec les routes
+// ADDITION: Missing functions for route compatibility
 export async function getInvoicesByEmployeeTimeseries(
   req: Request<{ id: string }, unknown, unknown, { fiscalYear?: string; type?: string }>,
   res: Response
@@ -607,7 +607,7 @@ export async function getInvoicesByEmployeeTimeseries(
       type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getInvoicesByEmployeeTimeseries`, {
+    logger.error(`[${requestId}] Error getInvoicesByEmployeeTimeseries`, {
       error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
@@ -697,14 +697,14 @@ export async function getDfcAgentTimeseries(
       type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getDfcAgentTimeseries`, {
+    logger.error(`[${requestId}] Error getDfcAgentTimeseries`, {
       error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
 }
 
-// AJOUT: Fonctions pour la compatibilité avec les anciennes routes
+// ADDITION: Functions for compatibility with old routes
 export async function getSuppliersCreatedSummary(
   req: Request<unknown, unknown, unknown, { fiscalYear?: string; type?: string }>,
   res: Response
@@ -760,7 +760,7 @@ export async function getSuppliersCreatedSummary(
       type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getSuppliersCreatedSummary`, {
+    logger.error(`[${requestId}] Error getSuppliersCreatedSummary`, {
       error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
@@ -824,14 +824,14 @@ export async function getSuppliersCreatedByEmployeeTimeseries(
       type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getSuppliersCreatedByEmployeeTimeseries`, {
+    logger.error(`[${requestId}] Error getSuppliersCreatedByEmployeeTimeseries`, {
       error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
 }
 
-// AJOUT: Fonctions de compatibilité pour les anciens noms
+// ADDITION: Compatibility functions for old names
 export const getSuppliersOverview = getSuppliersActivity;
 
 export async function getSupplierSummary(
@@ -876,7 +876,7 @@ export async function getSupplierSummary(
       type: g
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getSupplierSummary`, {
+    logger.error(`[${requestId}] Error getSupplierSummary`, {
       error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
@@ -958,14 +958,14 @@ export async function getSuppliersTop(
       metric
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getSuppliersTop`, {
+    logger.error(`[${requestId}] Error getSuppliersTop`, {
       error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
 }
 
-// ========================= KPIs Globaux du Dashboard =========================
+// ========================= Global Dashboard KPIs =========================
 export async function getGlobalDashboardKpis(
   req: Request<unknown, unknown, unknown, { type?: string; dateFrom?: string; dateTo?: string }>,
   res: Response
@@ -1016,14 +1016,14 @@ export async function getGlobalDashboardKpis(
       dateFrom
     });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getGlobalDashboardKpis`, {
+    logger.error(`[${requestId}] Error getGlobalDashboardKpis`, {
       error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
   }
 }
 
-// ========================= Statistiques Personnelles =========================
+// ========================= Personal Statistics =========================
 // Types pour les stats personnelles
 type PersonalStats = {
   // Pour invoice_manager
@@ -1056,7 +1056,7 @@ export async function getPersonalStats(
 
     const fy = await getSetting('fiscal_year');
 
-    // Récupérer les stats selon le rôle
+    // Fetch stats according to role
     let personalStats: PersonalStats = { role: userRole as string };
 
     if (userRole === 'invoice_manager' || userRole === 'admin') {
@@ -1076,7 +1076,7 @@ export async function getPersonalStats(
     });
 
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getPersonalStats`, {
+    logger.error(`[${requestId}] Error getPersonalStats`, {
       error: error instanceof Error ? error.message : 'unknown',
       userId: req.user?.sup
     });
@@ -1084,7 +1084,7 @@ export async function getPersonalStats(
   }
 }
 
-// ========================= Stats pour Invoice Manager =========================
+// ========================= Stats for Invoice Manager =========================
 async function getInvoiceManagerStats(userId: string, fiscalYear: string): Promise<Partial<PersonalStats>> {
   const { dateFrom, dateTo } = await getEntityDateRange('invoice', fiscalYear);
 
@@ -1096,7 +1096,7 @@ async function getInvoiceManagerStats(userId: string, fiscalYear: string): Promi
     };
   }
 
-  // 1. Nombre total de factures créées par l'utilisateur
+  // 1. Total number of invoices created by user
   const invoicesResult = await database.execute<{ total_invoices: number }[] | { total_invoices: number }>(
     `SELECT COUNT(*) as total_invoices 
      FROM invoice 
@@ -1106,7 +1106,7 @@ async function getInvoiceManagerStats(userId: string, fiscalYear: string): Promi
   );
   const totalInvoices = asArray<{ total_invoices: number }>(invoicesResult)[0]?.total_invoices || 0;
 
-  // 2. Nombre de fournisseurs créés par l'utilisateur
+  // 2. Number of suppliers created by user
   const suppliersResult = await database.execute<{ total_suppliers: number }[] | { total_suppliers: number }>(
     `SELECT COUNT(*) as total_suppliers 
      FROM supplier 
@@ -1116,7 +1116,7 @@ async function getInvoiceManagerStats(userId: string, fiscalYear: string): Promi
   );
   const totalSuppliers = asArray<{ total_suppliers: number }>(suppliersResult)[0]?.total_suppliers || 0;
 
-  // 3. Taux de création moyen (factures/jour) - CORRIGÉ
+  // 3. Average creation rate (invoices/day) - FIXED
   const creationRateResult = await database.execute<{ avg_daily_invoices: any }[] | { avg_daily_invoices: any }>(
     `SELECT 
        COUNT(*) / NULLIF(DATEDIFF(MAX(create_at), MIN(create_at)) + 1, 0) as avg_daily_invoices
@@ -1131,7 +1131,7 @@ async function getInvoiceManagerStats(userId: string, fiscalYear: string): Promi
   let invoiceCreationRate = 0;
 
   if (avgDailyResult?.avg_daily_invoices) {
-    // Convertir en number et formater
+    // Convert to number and format
     const rate = parseFloat(avgDailyResult.avg_daily_invoices);
     invoiceCreationRate = isNaN(rate) ? 0 : parseFloat(rate.toFixed(1));
   }
@@ -1143,7 +1143,7 @@ async function getInvoiceManagerStats(userId: string, fiscalYear: string): Promi
   };
 }
 
-// ========================= Stats pour Agent DFC =========================
+// ========================= Stats for DFC Agent =========================
 async function getDfcAgentStats(userId: string, fiscalYear: string): Promise<Partial<PersonalStats>> {
   const { dateFrom, dateTo } = await getEntityDateRange('dfc_decision', fiscalYear);
 
@@ -1155,7 +1155,7 @@ async function getDfcAgentStats(userId: string, fiscalYear: string): Promise<Par
     };
   }
 
-  // 1. Décisions totales et taux
+  // 1. Total decisions and rates
   const decisionsResult = await database.execute<{
     approved: number;
     rejected: number;
@@ -1187,7 +1187,7 @@ async function getDfcAgentStats(userId: string, fiscalYear: string): Promise<Par
   const rejectionRate = decisions.total > 0 ?
     parseFloat(((decisions.rejected / decisions.total) * 100).toFixed(1)) : 0;
 
-  // 2. Taux de traitement moyen (décisions/jour) - CORRIGÉ
+  // 2. Average processing rate (decisions/day) - FIXED
   const processingRateResult = await database.execute<{ avg_daily_decisions: any }[] | { avg_daily_decisions: any }>(
     `SELECT 
        COUNT(*) / NULLIF(DATEDIFF(MAX(decided_at), MIN(decided_at)) + 1, 0) as avg_daily_decisions
@@ -1202,7 +1202,7 @@ async function getDfcAgentStats(userId: string, fiscalYear: string): Promise<Par
   let processingRate = 0;
 
   if (avgDailyDecisions?.avg_daily_decisions) {
-    // Convertir en number et formater
+    // Convert to number and format
     const rate = parseFloat(avgDailyDecisions.avg_daily_decisions);
     processingRate = isNaN(rate) ? 0 : parseFloat(rate.toFixed(1));
   }
@@ -1213,7 +1213,7 @@ async function getDfcAgentStats(userId: string, fiscalYear: string): Promise<Par
     processingRate
   };
 }
-// ========================= Stats pour Tous les Agents (Admin seulement) =========================
+// ========================= Stats for All Agents (Admin only) =========================
 export async function getAllAgentsStats(
   req: AuthenticatedRequest,
   res: Response
@@ -1229,7 +1229,7 @@ export async function getAllAgentsStats(
 
     const fy = await getSetting('fiscal_year');
 
-    // Récupérer tous les employés actifs
+    // Fetch all active employees
     const employeesResult = await database.execute<{
       id: string;
       firstname: string;
@@ -1264,13 +1264,13 @@ export async function getAllAgentsStats(
         department: employee.department
       };
 
-      // Stats pour invoice_manager et admin
+      // Stats for invoice_manager and admin
       if (employee.role === 'invoice_manager' || employee.role === 'admin') {
         const invoiceStats = await getInvoiceManagerStats(employee.id, fy);
         stats = { ...stats, ...invoiceStats };
       }
 
-      // Stats pour dfc_agent et admin
+      // Stats for dfc_agent and admin
       if (employee.role === 'dfc_agent' || employee.role === 'admin') {
         const dfcStats = await getDfcAgentStats(employee.id, fy);
         stats = { ...stats, ...dfcStats };
@@ -1285,7 +1285,7 @@ export async function getAllAgentsStats(
     });
 
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getAllAgentsStats`, {
+    logger.error(`[${requestId}] Error getAllAgentsStats`, {
       error: error instanceof Error ? error.message : 'unknown'
     });
     return ApiResponder.error(res, error);
@@ -1305,7 +1305,7 @@ export async function getAvailableInvoiceDays(req: AuthenticatedRequest, res: Re
     const list = (Array.isArray(rows) ? rows : (rows ? [rows] : [])).map(r => r.day);
     return ApiResponder.success(res, list, 'Jours disponibles', { fiscalYear: fy });
   } catch (error) {
-    logger.error(`[${requestId}] Erreur getAvailableInvoiceDays`, { error: error instanceof Error ? error.message : 'unknown' });
+    logger.error(`[${requestId}] Error getAvailableInvoiceDays`, { error: error instanceof Error ? error.message : 'unknown' });
     return ApiResponder.error(res, error);
   }
 } 

@@ -32,27 +32,27 @@ import useInvoice from '../../hooks/features/useInvoice.js';
 import useToastFeedback from '../../hooks/ui/useToastFeedBack.js';
 import { useAuth } from '../../hooks/auth/useAuth.js';
 
-// Helper pour parser les montants de manière robuste (compatible FR/EN)
+// Helper to robustly parse amounts (compatible with FR/EN formats)
 const parseCurrencyAmount = (value) => {
   console.log("💱 ParseCurrencyAmount input:", value, "Type:", typeof value);
   if (value === null || value === undefined || value === '') return 0;
   if (typeof value === 'number') return value;
 
   let str = value.toString();
-  // 1. Nettoyage basique : espaces (insécables ou non)
+  // 1. Basic cleanup: spaces (including non-breaking spaces)
   str = str.replace(/\s/g, '');
   console.log("   Step 1 (No spaces):", str);
 
   if (!str) return 0;
 
-  // 2. Gestion des séparateurs
-  // Cas spécifique : s'il y a à la fois des points et des virgules
+  // 2. Separators handling
+  // Specific case: if both dots and commas are present
   if (str.includes(',') && str.includes('.')) {
     const lastComma = str.lastIndexOf(',');
     const lastDot = str.lastIndexOf('.');
 
     if (lastComma > lastDot) {
-      // Format type 1.234,56 (Eur/FR old school) -> On vire les points, on garde la virgule comme décimale
+      // Format type 1.234,56 (Eur/FR old school) -> Remove dots, use comma as decimal
       str = str.replace(/\./g, '').replace(',', '.');
     } else {
       // Format type 1,234.56 (US) -> On vire les virgules
@@ -81,7 +81,7 @@ const parseCurrencyAmount = (value) => {
 
 
 
-// Helpers de formatage pour l'input (portés de ValidatedAmountInput)
+// Formatting helpers for input (ported from ValidatedAmountInput)
 const formatWithSpaces = (value) => {
   if (value === undefined || value === null || value === '') return "";
   const parts = value.toString().split(/[.,]/);
@@ -177,7 +177,7 @@ function Search() {
           setFiscalYears(response.data || []);
         }
       } catch (err) {
-        console.error('Erreur chargement années fiscales:', err);
+        console.error('Error loading fiscal years:', err);
       }
     };
     fetchFiscalYears();
@@ -189,7 +189,7 @@ function Search() {
           setSuppliers(response.data || []);
         }
       } catch (err) {
-        console.error('Erreur chargement fournisseurs:', err);
+        console.error('Error loading suppliers:', err);
       }
     };
     fetchSuppliers();
@@ -546,19 +546,19 @@ function Search() {
   const handleAmountChange = (e) => {
     let inputValue = e.target.value;
 
-    // 1. On récupère la valeur brute (sans espaces)
+    // 1. Get raw value (without spaces)
     // On autorise chiffres, points, virgules
     let rawValue = inputValue.replace(/[^0-9.,]/g, '');
 
-    // 2. Normalisation du séparateur (tout en virgule pour le format FR)
+    // 2. Normalize separator (everything to comma for FR format)
     rawValue = rawValue.replace('.', ',');
 
-    // 3. Gestion des virgules multiples et décimales
+    // 3. Handle multiple commas and decimals
     const parts = rawValue.split(',');
     let integerPart = parts[0];
     let decimalPart = parts.length > 1 ? parts[1].substring(0, 3) : null;
 
-    // 4. Nettoyage zéros début
+    // 4. Leading zeros cleanup
     if (integerPart.length > 1 && integerPart.startsWith('0')) {
       integerPart = integerPart.replace(/^0+/, '');
       if (integerPart === '') integerPart = '0';
@@ -570,7 +570,7 @@ function Search() {
     // 6. Reconstruction
     let finalValue = formattedInteger;
     if (parts.length > 1 || rawValue.endsWith(',')) {
-      // Si on a commencé une décimale ou si on a tapé une virgule
+      // If we started a decimal or typed a comma
       finalValue += ',' + (decimalPart || '');
     }
 
@@ -797,7 +797,7 @@ function Search() {
 
     let num = amount;
     if (typeof amount === 'string') {
-      // Conversion sécurisée : on enlève espaces, on change virgule en point
+      // Safe conversion: remove spaces, change comma to dot
       num = parseFloat(amount.toString().replace(/\s/g, '').replace(',', '.'));
     }
 

@@ -6,7 +6,7 @@ import Navbar from '../../components/navbar/Navbar.jsx';
 import api from '../../services/api';
 import { formatAmountSmart } from '../../utils/formatAmount.js';
 
-// Import de Chart.js
+// Chart.js imports
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -21,7 +21,7 @@ import {
 } from 'chart.js';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 
-// Enregistrement des composants Chart.js
+// Register Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -48,7 +48,7 @@ import {
   ChevronDownIcon
 } from '@heroicons/react/24/outline';
 
-// Composant pour état vide
+// Component for empty state
 function EmptyState({ title, description, icon: Icon }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
@@ -61,7 +61,7 @@ function EmptyState({ title, description, icon: Icon }) {
   );
 }
 
-// Carte de métrique avec données par année fiscale
+// Metric card with data by fiscal year
 function PrimaryMetricCard({ title, value, description, icon: Icon, color = 'blue', loading = false }) {
   const colorConfig = {
     blue: {
@@ -150,13 +150,13 @@ function PrimaryMetricCard({ title, value, description, icon: Icon, color = 'blu
   );
 }
 
-// Composant de pagination CORRIGÉ - TOUJOURS VISIBLE SUR TOUS LES ÉCRANS
+// Pagination component - ALWAYS VISIBLE ON ALL SCREENS
 function Pagination({ currentPage, totalPages, onPageChange }) {
   console.log('Pagination - currentPage:', currentPage, 'totalPages:', totalPages); // Debug
 
   return (
     <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 sm:px-6">
-      {/* Navigation mobile - TOUJOURS VISIBLE */}
+      {/* Mobile navigation - ALWAYS VISIBLE */}
       <div className="flex justify-between flex-1 sm:hidden">
         <button
           onClick={() => onPageChange(currentPage - 1)}
@@ -179,7 +179,7 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
         </button>
       </div>
 
-      {/* Navigation desktop - TOUJOURS VISIBLE */}
+      {/* Desktop navigation - ALWAYS VISIBLE */}
       <div className="flex flex-1 items-center justify-between">
         <div>
           <p className="text-sm text-gray-700">
@@ -223,7 +223,7 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
   );
 }
 
-// Fonction pour déterminer le statut d'activité du fournisseur
+// Activity status calculation based on invoice count
 function getSupplierActivityStatus(invoiceCount) {
   if (invoiceCount === 0) return { status: 'Inactif', color: 'text-gray-500', bg: 'bg-gray-100' };
   if (invoiceCount <= 5) return { status: 'Faible', color: 'text-yellow-600', bg: 'bg-yellow-100' };
@@ -232,7 +232,7 @@ function getSupplierActivityStatus(invoiceCount) {
   return { status: 'Très élevé', color: 'text-green-600', bg: 'bg-green-100' };
 }
 
-// COMPOSANT GRAPHIQUE LINÉAIRE POUR LES KPIs
+// KPI Line Chart component
 function KpiLineChart({ data, title, selectedFiscalYear, loading = false }) {
   const chartOptions = {
     responsive: true,
@@ -470,7 +470,7 @@ function KpiLineChart({ data, title, selectedFiscalYear, loading = false }) {
   );
 }
 
-// COMPOSANT GRAPHIQUE COMPARATIF CORRIGÉ
+// Horizontal Bar Chart comparison component
 function ComparisonChart({ data, title, selectedFiscalYear, loading = false }) {
   const chartOptions = {
     responsive: true,
@@ -656,7 +656,7 @@ function ComparisonChart({ data, title, selectedFiscalYear, loading = false }) {
   );
 }
 
-// Tableau de données avec pagination CORRIGÉ - PAGINATION TOUJOURS VISIBLE
+// Data table with pagination (always visible)
 function PrimaryDataTable({
   title,
   headers,
@@ -746,7 +746,7 @@ function PrimaryDataTable({
             </table>
           </div>
 
-          {/* PAGINATION TOUJOURS VISIBLE MÊME AVEC UNE SEULE PAGE */}
+          {/* Pagination always visible, even with a single page */}
           {data && data.length > 0 && (
             <div className="mt-6">
               <Pagination
@@ -768,7 +768,7 @@ function PrimaryDataTable({
   );
 }
 
-// Hook personnalisé pour les données par année fiscale
+// Custom hook for fiscal year-specific data
 function useFiscalYearStatsData(endpoint, fiscalYearId) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -802,7 +802,7 @@ function useFiscalYearStatsData(endpoint, fiscalYearId) {
   return { data, loading, error };
 }
 
-// Hook pour récupérer les années fiscales
+// Hook to fetch fiscal years
 function useFiscalYears() {
   const [fiscalYears, setFiscalYears] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -825,7 +825,7 @@ function useFiscalYears() {
 
         setFiscalYears(years);
       } catch (err) {
-        console.error('Erreur lors du chargement des années fiscales:', err);
+        console.error('Error loading fiscal years:', err);
         setError(err);
         setFiscalYears([]);
       } finally {

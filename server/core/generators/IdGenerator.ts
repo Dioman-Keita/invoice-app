@@ -51,13 +51,13 @@ export class IdGenerator {
 
     private async isIdExists(table: string, id: string): Promise<boolean> {
         try {
-            const result = await database.execute<{id: string}[]>(
+            const result = await database.execute<{ id: string }[]>(
                 `SELECT id FROM ${table} WHERE id = ? LIMIT 1`,
                 [id]
             );
             return Array.isArray(result) && result.length > 0;
         } catch (error) {
-            logger.error(`❌ Erreur lors de la vérification de l'existence de l'ID ${id}`, {
+            logger.error(`❌ Error checking ID existence ${id}`, {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 stack: error instanceof Error ? error.stack : 'Unknown stack',
                 table
@@ -67,7 +67,7 @@ export class IdGenerator {
     }
 
     /**
-     * Génère un identifiant unique pour une entité
+     * Generates a unique identifier for an entity
      */
     async generateId(entity: EntityType): Promise<string> {
         const config = idMap[entity];
@@ -84,20 +84,20 @@ export class IdGenerator {
                 attempts++;
 
                 if (attempts > config.maxAttempts) {
-                    throw new Error(`Impossible de générer un ID unique après ${config.maxAttempts} tentatives pour ${entity}`);
+                    throw new Error(`Unable to generate unique ID after ${config.maxAttempts} attempts for ${entity}`);
                 }
 
-                // Incrémenter le compteur et récupérer le nouveau numéro
+                // Increment counter and get new number
                 sequenceNumber = await counterManager.incrementCounter(fiscalYear);
 
-                // Générer l'ID
+                // Generate ID
                 generatedId = await this.generateSecureId(entity, fiscalYear, sequenceNumber);
 
-                // Vérifier l'unicité
+                // Check uniqueness
                 const exists = await this.isIdExists(config.table, generatedId);
 
                 if (!exists) {
-                    logger.info(`✅ ID généré avec succès: ${generatedId}`, {
+                    logger.info(`✅ ID generated successfully: ${generatedId}`, {
                         entity,
                         fiscalYear,
                         sequenceNumber,
@@ -106,7 +106,7 @@ export class IdGenerator {
                     return generatedId;
                 }
 
-                logger.warn(`⚠️ Conflit d'ID détecté, régénération: ${generatedId}`, {
+                logger.warn(`⚠️ ID conflict detected, regenerating: ${generatedId}`, {
                     entity,
                     fiscalYear,
                     sequenceNumber,
@@ -115,10 +115,10 @@ export class IdGenerator {
 
             } while (attempts <= config.maxAttempts);
 
-            throw new Error(`Échec de la génération d'ID pour ${entity} après ${attempts} tentatives`);
+            throw new Error(`ID generation failed for ${entity} after ${attempts} attempts`);
 
         } catch (error) {
-            logger.error(`❌ Erreur critique lors de la génération d'ID pour ${entity}`, {
+            logger.error(`❌ Critical error during ID generation for ${entity}`, {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 stack: error instanceof Error ? error.stack : 'Unknown stack',
             });
@@ -127,11 +127,11 @@ export class IdGenerator {
     }
 
     /**
-     * Génère plusieurs IDs en lot
+     * Generates multiple IDs in batch
      */
     async generateBatchIds(entity: EntityType, count: number = 1): Promise<string[]> {
         if (count < 1 || count > 100) {
-            throw new Error('Le nombre d\'IDs à générer doit être compris entre 1 et 100');
+            throw new Error('The number of IDs to generate must be between 1 and 100');
         }
 
         const ids: string[] = [];
@@ -141,19 +141,19 @@ export class IdGenerator {
                 const id = await this.generateId(entity);
                 ids.push(id);
             } catch (error) {
-                logger.error(`❌ Échec de la génération d'ID batch #${i + 1} pour ${entity}`, {
+                logger.error(`❌ Batch ID generation failed #${i + 1} for ${entity}`, {
                     error: error instanceof Error ? error.message : 'Unknown error'
                 });
                 throw error;
             }
         }
 
-        logger.info(`✅ Lot de ${count} IDs générés avec succès pour ${entity}`);
+        logger.info(`✅ Batch of ${count} IDs generated successfully for ${entity}`);
         return ids;
     }
 
     /**
-     * Valide le format d'un ID généré
+     * Validates the format of a generated ID
      */
     validateIdFormat(id: string, entity: EntityType): boolean {
         const config = idMap[entity];
@@ -164,7 +164,7 @@ export class IdGenerator {
     }
 
     /**
-     * Extrait les informations d'un ID généré
+     * Extracts information from a generated ID
      */
     parseGeneratedId(id: string): {
         prefix: string;
@@ -186,7 +186,7 @@ export class IdGenerator {
             return null;
         }
 
-        // Déterminer le type d'entité
+        // Determine entity type
         let entityType: EntityType | undefined;
         if (prefix === 'INV') entityType = 'invoice';
         if (prefix === 'EMP') entityType = 'employee';
@@ -201,10 +201,10 @@ export class IdGenerator {
     }
 }
 
-// Export singleton pour compatibilité
+// Export singleton for compatibility
 export const idGenerator = new IdGenerator();
 
-// Exports individuels pour la rétrocompatibilité
+// Individual exports for backward compatibility
 export const IDGenerator = idGenerator.generateId.bind(idGenerator);
 export const generateBatchIds = idGenerator.generateBatchIds.bind(idGenerator);
 export const validateIdFormat = idGenerator.validateIdFormat.bind(idGenerator);

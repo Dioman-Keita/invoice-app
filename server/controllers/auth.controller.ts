@@ -54,7 +54,7 @@ export async function checkAuthStatus(req: AuthenticatedRequest, res: Response):
 }
 
 export async function openAppRedirect(req: Request, res: Response) {
-    // 1. On récupère les paramètres depuis l'URL HTTP
+    // 1. Retrieve parameters from the HTTP URL
     // Ex: http://127.0.0.1:3000/api/open-app?path=verify&token=xyz
     const { token, path } = req.query;
 
@@ -62,11 +62,11 @@ export async function openAppRedirect(req: Request, res: Response) {
         return res.status(400).send("Lien invalide : paramètres manquants.");
     }
 
-    // 2. On construit le Deep Link pour Electron
-    // Résultat : invoice-app:///verify?token=xyz (Triple slash pour forcer le chemin absolu)
+    // 2. Construct the Deep Link for Electron
+    // Result: invoice-app:///verify?token=xyz (Triple slash to force absolute path)
     const deepLink = `invoice-app:///${path}?token=${token}`;
 
-    // 3. Page HTML de rebond (Bridge)
+    // 3. HTML Jump Page (Bridge)
     const html = `
         <!DOCTYPE html>
         <html lang="fr">
@@ -87,7 +87,7 @@ export async function openAppRedirect(req: Request, res: Response) {
                 <a href="${deepLink}" class="btn">Ouvrir l'application</a>
             </div>
             <script>
-                // Tentative d'ouverture automatique
+                // Automatic opening attempt
                 setTimeout(function() {
                     window.location.href = "${deepLink}";
                 }, 500);

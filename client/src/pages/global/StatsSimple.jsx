@@ -33,7 +33,7 @@ function StatsSimple() {
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
 
-  // Données de fallback minimales
+  // Minimal fallback data
   const getFallbackStats = (role = 'invoice_manager') => {
     const baseStats = {
       invoice_manager: {
@@ -61,14 +61,14 @@ function StatsSimple() {
     return baseStats[role] || baseStats.invoice_manager;
   };
 
-  // Charger les stats personnelles depuis l'API
+  // Load personal stats from API
   useEffect(() => {
     const fetchPersonalStats = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Initialiser avec les données de fallback immédiatement
+        // Initialize with fallback data immediately
         setStats(getFallbackStats(user?.role));
 
         const response = await api.get('/stats/personal');
@@ -76,18 +76,18 @@ function StatsSimple() {
         if (response.success) {
           const result = response;
           setStats(result.data);
-          // Utiliser l'année fiscale de l'API si disponible
+          // Use fiscal year from API if available
           if (result.meta?.fiscalYear) {
             setFiscalYear(result.meta.fiscalYear);
           }
 
-          // Créer les données graphiques à partir des stats existantes
+          // Create chart data from existing stats
           prepareChartData(result.data);
         } else {
-          throw new Error('Erreur lors du chargement des statistiques');
+          throw new Error('Error loading statistics');
         }
       } catch (error) {
-        console.error('Erreur chargement stats personnelles:', error);
+        console.error('Error loading personal stats:', error);
         setError(error.message);
       } finally {
         setLoading(false);
@@ -97,7 +97,7 @@ function StatsSimple() {
     if (user) {
       fetchPersonalStats();
     } else {
-      // Fallback si pas d'utilisateur
+      // Fallback if no user
       setStats(getFallbackStats());
       setLoading(false);
     }
@@ -114,11 +114,11 @@ function StatsSimple() {
 
           if (dates.length > 0) {
             const today = new Date().toISOString().split('T')[0];
-            // Si la date d'aujourd'hui est dispo, on la prend
+            // If today's date is available, use it
             if (dates.includes(today)) {
               setSelectedDate(today);
             } else {
-              // Sinon on prend la plus récente (la première car triée DESC par le backend probablement, sinon on trie)
+              // Otherwise take the most recent one (first one as it's probably sorted DESC by backend)
               const sorted = [...dates].sort((a, b) => b.localeCompare(a));
               setSelectedDate(sorted[0]);
             }
@@ -161,20 +161,20 @@ function StatsSimple() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (e) {
-      console.error('Erreur export:', e);
+      console.error('Export error:', e);
     } finally {
       setExporting(false);
     }
   };
 
-  // Créer des données graphiques significatives selon le rôle
+  // Create meaningful chart data according to role
   const prepareChartData = (statsData) => {
     if (!statsData) return;
 
     const { role } = statsData;
 
     if (role === 'invoice_manager') {
-      // Diagramme en barres pour les gestionnaires de factures
+      // Bar chart for invoice managers
       setChartData({
         type: 'bar',
         data: {
@@ -203,7 +203,7 @@ function StatsSimple() {
       });
     }
     else if (role === 'dfc_agent') {
-      // Diagramme en barres pour les agents DFC
+      // Bar chart for DFC agents
       setChartData({
         type: 'bar',
         data: {
@@ -232,7 +232,7 @@ function StatsSimple() {
       });
     }
     else if (role === 'admin') {
-      // Diagramme combiné pour les administrateurs
+      // Combined chart for admins
       setChartData({
         type: 'bar',
         data: {
@@ -268,7 +268,7 @@ function StatsSimple() {
     }
   };
 
-  // Initialiser le graphique
+  // Initialize chart
   useEffect(() => {
     if (!chartData || !chartRef.current) return;
 
@@ -390,7 +390,7 @@ function StatsSimple() {
     });
   };
 
-  // Statistiques pour Invoice Manager - LIBELLÉS EXPLICITES
+  // Statistics for Invoice Manager - EXPLICIT LABELS
   const getInvoiceManagerStats = () => [
     {
       label: 'Factures créées',
@@ -415,7 +415,7 @@ function StatsSimple() {
     }
   ];
 
-  // Statistiques pour Agent DFC
+  // Statistics for DFC Agent
   const getDfcAgentStats = () => [
     {
       label: 'Taux d\'approbation',
@@ -440,7 +440,7 @@ function StatsSimple() {
     }
   ];
 
-  // Statistiques pour Admin (combinaison des deux)
+  // Statistics for Admin (combination of the two)
   const getAdminStats = () => [
     ...getInvoiceManagerStats(),
     ...getDfcAgentStats()
@@ -514,7 +514,7 @@ function StatsSimple() {
         <Navbar />
 
         <div className="container mx-auto px-4 py-8">
-          {/* En-tête simplifiée */}
+          {/* Simplified header */}
           <div className="mb-8">
             <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
@@ -612,7 +612,7 @@ function StatsSimple() {
             </div>
           ) : (
             <>
-              {/* Cartes de statistiques personnelles */}
+              {/* Personal statistics cards */}
               <div className={`grid gap-6 mb-8 ${stats?.role === 'admin'
                 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6'
                 : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
@@ -635,7 +635,7 @@ function StatsSimple() {
                       className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 transition-all duration-200 group relative ${loading ? 'opacity-70' : 'hover:shadow-md'
                         }`}
                     >
-                      {/* Tooltip amélioré */}
+                      {/* Improved tooltip */}
                       {!loading && (
                         <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 whitespace-nowrap">
                           {stat.description}
@@ -656,7 +656,7 @@ function StatsSimple() {
                 })}
               </div>
 
-              {/* Diagramme en barres avec données réelles */}
+              {/* Bar chart with real data */}
               {chartData && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
                   <div className="h-80">
@@ -667,7 +667,7 @@ function StatsSimple() {
             </>
           )}
 
-          {/* Message d'information */}
+          {/* Information message */}
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
             <div className="flex items-start">
               <div className="flex-shrink-0 bg-white p-2 rounded-lg">

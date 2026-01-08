@@ -47,7 +47,7 @@ export default function ResetPassword() {
         }
     }, [token, setError]);
 
-    // Validation du mot de passe
+    // Password validation
     const validatePassword = (password) => {
         if (password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères (incluant au moins un chiffre).';
         if (!/[A-Z]/.test(password)) return 'Le mot de passe doit contenir au moins une lettre majuscule.';
@@ -67,7 +67,7 @@ export default function ResetPassword() {
         setBackendError('');
 
         try {
-            // Format correct pour le serveur - inclure confirmPassword
+            // Correct format for the server - include confirmPassword
             const credentials = {
                 token: token,
                 password: data.password,
@@ -79,9 +79,9 @@ export default function ResetPassword() {
             if (result.success) {
                 setIsSuccess(true);
                 setBackendError('');
-                // window.history.replaceState({}, document.title, window.location.pathname); // Supprimé pour compatibilité Electron HashRouter
+                // window.history.replaceState({}, document.title, window.location.pathname); // Removed for Electron HashRouter compatibility
 
-                // Timeout pour la redirection
+                // Redirection timeout
                 setTimeout(() => navigate('/login'), 5000);
             } else {
                 setBackendError(result.message || 'Échec de la réinitialisation.');
@@ -91,7 +91,7 @@ export default function ResetPassword() {
         }
     };
 
-    // Indicateur de force du mot de passe
+    // Password strength indicator
     const getPasswordStrength = () => {
         if (!passwordValue) return { strength: 0, color: 'gray' };
 
@@ -111,15 +111,15 @@ export default function ResetPassword() {
     const passwordStrength = getPasswordStrength();
     const loading = isSubmitting || authLoading;
 
-    // Conditions de désactivation du bouton
+    // Button disabling conditions
     const isButtonDisabled =
-        !token || // Token absent
-        isSuccess || // Succès
-        !passwordValue || // Pas de mot de passe saisi
-        !confirmPasswordValue || // Pas de confirmation
-        passwordValue !== confirmPasswordValue || // Mots de passe différents
-        errors.password !== undefined || // Erreur de validation du mot de passe
-        errors.confirmPassword !== undefined; // Erreur de validation de confirmation
+        !token || // Missing token
+        isSuccess || // Success
+        !passwordValue || // No password entered
+        !confirmPasswordValue || // No confirmation
+        passwordValue !== confirmPasswordValue || // Different passwords
+        errors.password !== undefined || // Password validation error
+        errors.confirmPassword !== undefined; // Confirmation validation error
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-verify p-4">
@@ -146,7 +146,7 @@ export default function ResetPassword() {
                 )}
 
                 <form onSubmit={handleSubmit(onSubmit)} method='post'>
-                    {/* Nouveau mot de passe */}
+                    {/* New password */}
                     <div className="mb-4">
                         <label className="block text-sm mb-1">Nouveau mot de passe</label>
                         <div className="relative">

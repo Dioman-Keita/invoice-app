@@ -72,7 +72,7 @@ function NavbarPanel({ isOpen, onClose }) {
     ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
   `;
 
-  // Tous les items disponibles (y compris GitHub et Messagerie)
+  // All available items (including GitHub and Messaging)
   const allMenuItems = useMemo(() => ([
     { label: 'Statistiques', icon: <ChartBarIcon className="w-6 h-6" />, action: 'stats' },
     { label: 'Nouvelle facture', icon: <DocumentPlusIcon className="w-6 h-6" />, action: 'newInvoice' },
@@ -89,7 +89,6 @@ function NavbarPanel({ isOpen, onClose }) {
     { label: 'Tableau de bord', icon: <ChartBarIcon className="w-6 h-6" />, action: 'dashboard' },
     { label: 'Gestion des utilisateurs', icon: <UserGroupIcon className="w-6 h-6" />, action: 'users' },
     { label: 'Statistiques avancées', icon: <ChartBarIcon className="w-6 h-6" />, action: 'adminStats' },
-    // NOUVEAU: Messagerie admin
     {
       label: 'Messagerie Admin',
       icon: <EnvelopeIcon className="w-6 h-6" />,
@@ -112,31 +111,31 @@ function NavbarPanel({ isOpen, onClose }) {
     }
   ]), []);
 
-  // Filtrer les actions disponibles selon le rôle
+  // Filter available actions based on role
   const availableActions = useMemo(() => {
     const userRole = user?.role;
 
-    // Définir les actions admin
+    // Define admin actions
     const adminActions = ['dashboard', 'users', 'adminStats', 'adminMessaging', 'adminLogs', 'search'];
 
-    // Pour les non-connectés, montrer seulement les pages publiques
+    // For non-authenticated users, show only public pages
     if (!userRole) {
       return allMenuItems.filter(item =>
         ['home', 'help', 'github'].includes(item.action)
       );
     }
 
-    // Filtrer selon le rôle
+    // Filter based on role
     let filteredItems = [...allMenuItems];
 
     switch (userRole) {
       case 'admin':
-        // Admin voit tout SAUF roleMigration
+        // Admin sees everything except roleMigration
         filteredItems = filteredItems.filter(item => item.action !== 'roleMigration');
         break;
 
       case 'invoice_manager':
-        // Invoice manager voit tout SAUF les pages admin, dfc_traitment ET adminMessaging
+        // Invoice manager sees everything except admin pages, dfc_traitment, and adminMessaging
         filteredItems = filteredItems.filter(item =>
           !adminActions.includes(item.action) &&
           item.action !== 'dfc_traitment'
@@ -144,8 +143,8 @@ function NavbarPanel({ isOpen, onClose }) {
         break;
 
       case 'dfc_agent':
-        // DFC agent voit tout SAUF admin, newInvoice, adminMessaging
-        // MAIS IL VOIT roleMigration (car il peut migrer vers invoice_manager)
+        // DFC agent sees everything except admin pages, newInvoice, and adminMessaging
+        // BUT SEE roleMigration (he can migrate to invoice_manager)
         filteredItems = filteredItems.filter(item =>
           !adminActions.includes(item.action) &&
           item.action !== 'newInvoice'
@@ -153,7 +152,7 @@ function NavbarPanel({ isOpen, onClose }) {
         break;
 
       default:
-        // Par défaut, cacher roleMigration et adminMessaging pour les autres rôles
+        // Default: hide roleMigration and adminMessaging for other roles
         filteredItems = filteredItems.filter(item =>
           item.action !== 'roleMigration' &&
           !adminActions.includes(item.action)
@@ -164,7 +163,7 @@ function NavbarPanel({ isOpen, onClose }) {
     return filteredItems;
   }, [user, allMenuItems]);
 
-  // Séparer les items en catégories
+  // Separate items into categories
   const { baseItems, adminItems, additionalItems } = useMemo(() => {
     const adminActions = ['dashboard', 'users', 'adminStats', 'adminMessaging', 'adminLogs', 'search'];
 
@@ -202,14 +201,14 @@ function NavbarPanel({ isOpen, onClose }) {
     [availableActions, favoriteActions]
   );
 
-  // Fonction pour vérifier si une section est vide (tous les éléments sont dans les favoris)
+  // Function to check if a section is empty (all items are in favorites)
   const isSectionEmpty = (sectionItems) => {
     return sectionItems.every(({ action }) => favoriteActions.includes(action));
   };
 
   const contentClasses = `p-4 space-y-3 overflow-y-auto flex-1 pb-6`;
 
-  // Fonction pour ouvrir le lien GitHub
+  // Function to open the GitHub link
   const openGitHub = () => {
     window.open('https://github.com/Dioman-Keita/invoice-app', '_blank', 'noopener,noreferrer');
   };
@@ -246,7 +245,6 @@ function NavbarPanel({ isOpen, onClose }) {
       case 'adminStats':
         navigate('/admin-stats');
         break;
-      // NOUVEAU: Navigation vers la page de messagerie admin
       case 'adminMessaging':
         navigate('/admin-messaging');
         break;
@@ -389,7 +387,7 @@ function NavbarPanel({ isOpen, onClose }) {
               </button>
             ))}
 
-          {/* Menu admin - Afficher le titre seulement si la section n'est pas vide */}
+          {/* Menu admin - Display the title only if the section is not empty */}
           {!isSectionEmpty(adminItems) && (
             <div className="pt-6 pb-2">
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider pl-4">Administration</h3>
@@ -429,7 +427,7 @@ function NavbarPanel({ isOpen, onClose }) {
               </button>
             ))}
 
-          {/* Options supplémentaires (GitHub) - Afficher le titre seulement si la section n'est pas vide */}
+          {/* Additional options (GitHub) - Display the title only if the section is not empty */}
           {!isSectionEmpty(additionalItems) && (
             <div className="pt-6 pb-2">
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider pl-4">Autres</h3>

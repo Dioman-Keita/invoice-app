@@ -28,9 +28,9 @@ class Database {
                 enableKeepAlive: true,
                 keepAliveInitialDelay: 0
             });
-            logger.info('Pool MySQL initialisée avec succès');
+            logger.info('MySQL pool initialized successfully');
         } catch (error) {
-            logger.error('Une erreur est survenue lors de l\'initialisation du pool', error);
+            logger.error('Error occurred during pool initialization', error);
             throw error;
         }
     }
@@ -38,11 +38,11 @@ class Database {
     public async getConnection(): Promise<PoolConnection> {
         try {
             if (!this.pool) {
-                throw new Error('Pool de connexion non initialisé');
+                throw new Error('Connection pool not initialized');
             }
             return await this.pool.getConnection();
         } catch (error) {
-            logger.error('Erreur lors de l\'obtention de la connexion', error);
+            logger.error('Error obtaining connection', error);
             throw error;
         }
     }
@@ -54,7 +54,7 @@ class Database {
             const [rows] = await connection.execute(query, params);
             return rows as T;
         } catch (error) {
-            logger.error("Une erreur est survenue lors de l'execution de votre requete", { error, query, params });
+            logger.error("Error occurred during query execution", { error, query, params });
             throw error;
         } finally {
             connection?.release();
@@ -66,10 +66,10 @@ class Database {
         try {
             connection = await this.getConnection();
             await connection.execute("SELECT 1");
-            logger.info("Connexion à la base de données réussie");
+            logger.info("Database connection successful");
             return true;
         } catch (error) {
-            logger.error("Echec de la connection à la base de donnée", error);
+            logger.error("Database connection failed", error);
             return false;
         } finally {
             connection?.release();
@@ -80,10 +80,10 @@ class Database {
         try {
             if (this.pool) {
                 await this.pool.end();
-                logger.info('Pool MySQL fermée avec succès');
+                logger.info('MySQL pool closed successfully');
             }
         } catch (error) {
-            logger.error('Erreur lors de la fermeture de la pool', error);
+            logger.error('Error closing pool', error);
             throw error;
         }
     }
@@ -97,7 +97,7 @@ process.on("SIGINT", async () => {
         await database.close();
         process.exit(0);
     } catch (error) {
-        logger.error("Une erreur est survenue lors de la fermeture securisée de la pool", error);
+        logger.error("Error occurred during secure pool closure", error);
         process.exit(1);
     }
 });

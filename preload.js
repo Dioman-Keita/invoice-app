@@ -2,13 +2,13 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electron', {
     onDeepLink: (callback) => {
-        // 1. On définit la fonction listener nommée
+        // 1. Define the named listener function
         const listener = (event, url) => callback(url);
 
-        // 2. On attache l'écouteur
+        // 2. Attach the listener
         ipcRenderer.on('deep-link', listener);
 
-        // 3. IMPORTANT : On retourne une fonction pour le retirer
+        // 3. IMPORTANT : Return a function to remove the listener
         return () => {
             ipcRenderer.removeListener('deep-link', listener);
         };
