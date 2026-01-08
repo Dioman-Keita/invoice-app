@@ -54,7 +54,7 @@ export const invoiceSchema = z.object({
                 ctx.addIssue({ code: 'custom', message: "Format requis: JJ/MM/AAAA" });
                 return;
             }
-            if (!isValidateDate(val)) {
+            if (!isValidateDate(val, { allowedFutur: true })) {
                 ctx.addIssue({ code: 'custom', message: "Date invalide ou dans le futur" });
             }
         }),
@@ -68,7 +68,7 @@ export const invoiceSchema = z.object({
                 ctx.addIssue({ code: 'custom', message: "Format requis: JJ/MM/AAAA" });
                 return;
             }
-            if (!isValidateDate(val)) {
+            if (!isValidateDate(val, { allowedFutur: true })) {
                 ctx.addIssue({ code: 'custom', message: "Date invalide ou dans le futur" });
             }
         }),
@@ -119,7 +119,7 @@ export const invoiceSchema = z.object({
     folio: z.enum(["1 copie", "Orig + 1 copie", "Orig + 2 copies", "Orig + 3 copies"], { error: "Folio invalide" }),
     documents: z.array(z.enum(allowedDocument)).optional().transform(val => val?.filter(Boolean))
 }).refine((data) => {
-    if (!isValidateDate(data.invoice_date) || !isValidateDate(data.invoice_arrival_date)) return true;
+    if (!isValidateDate(data.invoice_date, { allowedFutur: true }) || !isValidateDate(data.invoice_arrival_date, { allowedFutur: true })) return true;
     const invoiceDate = parseDate(data.invoice_date);
     const arrivalDate = parseDate(data.invoice_arrival_date);
     if (!invoiceDate || !arrivalDate) return true;
