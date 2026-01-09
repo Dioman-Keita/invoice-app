@@ -12,12 +12,18 @@ import { fetchInvoiceDetailsById, fetchRelationalDetailsBySupplierId, fetchSuppl
 import database from '../config/database';
 import { getSetting } from '../helpers/settings';
 import { mapInvoiceStatsOdt } from '../services/export/mappers';
+import { carboneConfig } from '../config/carbone.config';
 
 export async function exportData(req: AuthenticatedRequest, res: Response): Promise<Response> {
   const requestId = req.headers['x-request-id'] || 'unknown';
   try {
     const user = req.user;
     if (!user) return ApiResponder.unauthorized(res, 'Utilisateur non authentifié');
+
+    const EXPORT_MAX_ROWS = carboneConfig.maxRecords;
+
+    // Allow long-running exports (PDF/XLSX generation can be slow)
+    res.setTimeout(300000);
 
     const { type, variant, format, search } = (req.body || {}) as {
       type: ExportType;
@@ -30,12 +36,29 @@ export async function exportData(req: AuthenticatedRequest, res: Response): Prom
       return ApiResponder.badRequest(res, 'type, variant et format sont requis');
     }
 
+    const searchPayload = { ...(search || {}) };
+    if (variant === 'list') {
+      searchPayload.page = 1;
+      searchPayload.limit = EXPORT_MAX_ROWS;
+    }
+
     // Execute the same search as the Search module
-    const result = await runSearch(type, search || {});
+    const result = await runSearch(type, searchPayload);
+
+    if (variant === 'list' && (result?.meta?.total || 0) > EXPORT_MAX_ROWS) {
+      return ApiResponder.badRequest(
+        res,
+        `Export limité à ${EXPORT_MAX_ROWS} lignes. Affinez vos filtres (année fiscale, dates, fournisseur, etc.) pour réduire le volume.`,
+        {
+          maxRows: EXPORT_MAX_ROWS,
+          totalRows: result.meta.total
+        }
+      );
+    }
 
     // Resolve missing date range if structure requires it
-    const dateFrom = search?.dateFrom || search?.supplier_created_from;
-    const dateTo = search?.dateTo || search?.supplier_created_to;
+    const dateFrom = searchPayload?.dateFrom || searchPayload?.supplier_created_from;
+    const dateTo = searchPayload?.dateTo || searchPayload?.supplier_created_to;
     const dateRange = await resolveDateRange(type, dateFrom, dateTo);
 
     // Fiscal year (root) if necessary

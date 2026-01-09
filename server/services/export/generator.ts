@@ -3,6 +3,7 @@ import * as carbone from 'carbone';
 import { ExportFormat, ExportTemplateInfo } from './types';
 import { ExportSchemas } from './schemas';
 import logger from '../../utils/Logger';
+import { carboneConfig } from '../../config/carbone.config';
 
 let loPathInjected = false;
 function ensureLibreOfficeOnPath() {
@@ -63,10 +64,21 @@ export async function renderWithCarbone(template: ExportTemplateInfo, data: any,
       attempt += 1;
       try {
         const result: Buffer = await new Promise((resolve, reject) => {
-          carbone.render(absoluteTemplatePath, data, { convertTo, timezone: 'Africa/Bamako', lang: 'fr' }, (err: any, res: Buffer) => {
+          const renderOptions = {
+            convertTo,
+            timezone: 'Africa/Bamako',
+            lang: 'fr',
+            timeout: carboneConfig.timeout
+          } as any;
+          carbone.render(
+            absoluteTemplatePath,
+            data,
+            renderOptions,
+            (err: any, res: Buffer) => {
             if (err) return reject(err);
             resolve(res);
-          });
+            }
+          );
         });
         const base = path.basename(absoluteTemplatePath, path.extname(absoluteTemplatePath));
         const ext = convertTo === 'pdf' ? 'pdf' : (convertTo === 'xlsx' ? 'xlsx' : 'odt');

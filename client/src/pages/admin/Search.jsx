@@ -809,6 +809,22 @@ function Search() {
     }).format(num) + ' FCFA';
   };
 
+  const formatAmountNoCurrency = (amount) => {
+    if (amount === undefined || amount === null || amount === '') return '0';
+
+    let num = amount;
+    if (typeof amount === 'string') {
+      num = parseFloat(amount.toString().replace(/\s/g, '').replace(',', '.'));
+    }
+
+    if (isNaN(num)) return 'Montant invalide';
+
+    return new Intl.NumberFormat('fr-FR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 3
+    }).format(num);
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'Non spécifié';
     try {
@@ -1682,8 +1698,8 @@ function Search() {
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{result.invoice_count}</span>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{formatAmount(result.total_amount)}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatAmount(result.avg_amount)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{formatAmountNoCurrency(result.total_amount)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatAmountNoCurrency(result.avg_amount)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{result.last_invoice_date ? formatDate(result.last_invoice_date) : 'N/A'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                   <div className="flex space-x-2">
@@ -2385,11 +2401,11 @@ function Search() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-600 mb-1">Montant total</label>
-                          <p className="text-xl font-bold text-gray-900">{formatAmount(selectedGroupedResult.total_amount)}</p>
+                          <p className="text-xl font-bold text-gray-900">{formatAmountNoCurrency(selectedGroupedResult.total_amount)}</p>
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-600 mb-1">Montant moyen</label>
-                          <p className="text-xl font-bold text-gray-900">{formatAmount(selectedGroupedResult.avg_amount)}</p>
+                          <p className="text-xl font-bold text-gray-900">{formatAmountNoCurrency(selectedGroupedResult.avg_amount)}</p>
                         </div>
                         {selectedGroupedResult.last_invoice_date && (
                           <div className="md:col-span-3">
