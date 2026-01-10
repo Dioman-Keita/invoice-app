@@ -1,4 +1,4 @@
-# Invoice Management System (CMDT) 🚀
+# Invoice Management System 🚀
 
 **Enterprise-level Invoice Management System** designed for scalability and offline-first usage.  
 *Hybrid Architecture: Electron + Express + Docker.*
@@ -11,6 +11,7 @@
 * [🎥 Demo & Visuals](#-demo--visuals)
 * [🏗️ Architecture](#️-architecture)
 * [✨ Key Features](#-key-features)
+* [⚠️ Known Limitations](#️-known-limitations--architecture-decisions)
 * [🛠 Tech Stack](#-tech-stack)
 * [⚡ Installation & Setup](#-installation--setup)
 * [🔗 Deep Linking](#-deep-linking)
@@ -22,7 +23,7 @@
 
 ## 📋 Overview
 
-**Invoice App** `v0.0.0` is a robust, offline-first desktop application that brings the power of a full-stack web server to the desktop. Use it to manage invoices, suppliers, and fiscal workflows with enterprise-grade security.
+**Invoice App** `v1.0.0` is a robust, offline-first desktop application that brings the power of a full-stack web server to the desktop. Use it to manage invoices, suppliers, and fiscal workflows with enterprise-grade security.
 
 **Unique Selling Point**: Unlike standard Electron apps, this project runs a **real Node.js/Express server** and a **Dockerized MySQL database** locally on the user's machine, packaged into a single `.exe`.
 
@@ -84,6 +85,16 @@ This project solves the "Client-Server on Desktop" challenge through a hybrid de
 
 * Dedicated interface for "Direction Financière et Comptable".
 * Validation/Rejection workflow with mandatory comments.
+
+---
+
+## ⚠️ Known Limitations & Architecture Decisions
+
+### Deep Linking (Cold Start)
+The application supports deep linking (e.g., clicking a "Reset Password" link in an email) **only when the application is already running (Warm Start)**.
+
+*   **Behavior:** If the app is fully closed, clicking a magic link will launch the application, but **the specific action (token validation) will fail**.
+*   **Reason:** This is a deliberate architectural choice to maintain a strict **"Local First"** philosophy. We chose not to rely on external buffering servers or complex cloud relays. Since the local backend (Docker + Node) takes a few seconds to boot, it cannot validate the token immediately upon a cold launch.
 
 ---
 
@@ -168,7 +179,7 @@ This command compiles the entire stack into a single standalone installer:
 npm run dist
 ```
 
-*Output: `release/Invoice App Setup 0.0.0.exe`*
+*Output: `release/Invoice App Setup 1.0.0.exe`*
 
 ---
 
@@ -177,7 +188,7 @@ npm run dist
 The app registers `invoice-app://` in the Windows Registry.
 
 * **Warm Start**: If the app is open, the renderer receives the link instantly via `IPC`.
-* **Cold Start**: If closed, Electron launches, waits for the server to boot (health check), and *then* processes the pending link.
+* **Cold Start**: If closed, Electron launches the application but **will not** trigger the deep link action (see *Known Limitations*).
 
 ---
 
@@ -194,24 +205,15 @@ The embedded server exposes a full REST API at `http://localhost:3000/api`.
 ## 🗺 Roadmap
 
 * [x] **Phase 1**: Hybrid Architecture & Docker Integration
-* [x] **Phase 2**: Deep Linking & Asset Protection
+* [x] **Phase 2**: Deep Linking (Warm Start) & Asset Protection
 * [ ] **Phase 3**: Auto-updater
-* [ ] **Phase 4**: Multi-machine sync (Remote DB option)
-* [ ] **Phase 5**: Turborepo integration for better monorepo management
-* [ ] **Phase 6**: Complete Frontend migration to TypeScript (TSX)
-* [ ] **Phase 7**: Frontend architecture migration to feature-based design
-  * Reorganize client code by features instead of technical layers
-  * Implement modular, scalable folder structure
-  * Improve code maintainability and developer experience
-* [ ] **Phase 8**: Backend model extraction and refactoring
-  * Extract business logic from controllers to dedicated model layer
-  * Separate data access logic from business rules
-  * Improve testability and code organization
-* [ ] **Phase 9**: Progressive migration to Prisma ORM
-  * Replace raw SQL queries with Prisma Client
-  * Implement type-safe database operations
-  * Leverage Prisma migrations for schema management
-* [ ] **Phase 10**: Comprehensive code reorganization and architectural refactoring
+* [ ] **Phase 4**: **Future: Add "Lite Mode" using SQLite for users without Docker**
+* [ ] **Phase 5**: Multi-machine sync (Remote DB option)
+* [ ] **Phase 6**: Turborepo integration for better monorepo management
+* [ ] **Phase 7**: Complete Frontend migration to TypeScript (TSX)
+* [ ] **Phase 8**: Frontend architecture migration to feature-based design
+* [ ] **Phase 9**: Backend model extraction and refactoring
+* [ ] **Phase 10**: Progressive migration to Prisma ORM
 * [ ] **Phase 11**: Systematic Jest integration for comprehensive pre-launch testing
 
 ---
