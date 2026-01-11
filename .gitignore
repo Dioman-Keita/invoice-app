@@ -67,3 +67,4 @@ Thumbs.db
 release/
 client/dist/
 server/dist/
+common/helpers/*.js
