@@ -14,6 +14,7 @@
 * [⚠️ Known Limitations](#️-known-limitations--architecture-decisions)
 * [🛠 Tech Stack](#-tech-stack)
 * [⚡ Installation & Setup](#-installation--setup)
+* [🚀 Post-Installation Setup](#-post-installation-setup-first-time-users)
 * [🔗 Deep Linking](#-deep-linking)
 * [📡 API Documentation](#-api-documentation)
 * [🗺 Roadmap](#-roadmap)
@@ -180,6 +181,63 @@ npm run dist
 ```
 
 *Output: `release/Invoice App Setup 1.0.0.exe`*
+
+---
+
+## 🚀 Post-Installation Setup (First Time Users)
+
+After installing the `.exe` file, you need to set up the database before launching the application for the first time.
+
+### Step 1: Install MySQL Docker Image
+
+Pull the MySQL 8.2 Docker image:
+
+```bash
+docker pull mysql:8.2
+```
+
+### Step 2: Download Project Source Code
+
+Download the project ZIP file from the repository and extract it to your desired location.
+
+### Step 3: Configure Environment Variables
+
+1. Navigate to the `invoice-app/server` folder in the extracted project.
+2. Rename `.env.example` to `.env`
+3. Open the `.env` file and modify the database password to a more secure value:
+   - **Important**: Only the database-related variables (`DB_PASSWORD`, `DB_NAME`, `DB_HOST`, `DB_USER`, `DB_PORT`) need to be configured.
+   - Other environment variables have no effect on the build; these modifications are only to initialize Docker with the correct database configuration.
+
+### Step 4: Initialize the Database
+
+1. Navigate to the `server/` folder in your terminal.
+2. Access the MySQL container:
+   ```bash
+   docker exec -it final_mysql mysql -u root -p
+   ```
+   Enter the password you defined in your `.env` file (the `DB_PASSWORD` value).
+3. Select the database:
+   ```sql
+   USE cmdt_invoice_db;
+   ```
+4. Open the file `server/mysql/db/db.sql` in a text editor, select all (`Ctrl+A`), copy (`Ctrl+C`), then paste the entire SQL script into your MySQL terminal (`Ctrl+V`).
+5. Wait for the script to execute completely.
+6. Verify the installation by running:
+   ```sql
+   SELECT * FROM app_settings;
+   ```
+   You should see configuration records displayed.
+
+### Step 5: Launch the Application
+
+1. Close the MySQL terminal (type `exit` or press `Ctrl+D`).
+2. Launch the installed `.exe` file. The application will automatically start the Docker container.
+
+> [!TIP]
+> **Troubleshooting**: If you see a Docker timeout error when launching the `.exe` file for the first time:
+> 1. Close the application completely
+> 2. Verify that **Docker Desktop** is running (check the system tray or open Docker Desktop and click "Start" if it's not running)
+> 3. Relaunch the `.exe` file
 
 ---
 
