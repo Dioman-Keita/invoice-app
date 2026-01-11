@@ -228,6 +228,19 @@ Download the project ZIP file from the repository and extract it to your desired
    ```
    You should see configuration records displayed.
 
+#### 👤 Default User Accounts
+
+After database initialization, the following default accounts are created and ready to use:
+
+| Role | Email | Password | Department |
+|------|-------|----------|------------|
+| **Admin** | `admin@invoice-app.local` | `admin123` | Finance |
+| **Invoice Manager** | `manager@invoice-app.local` | `manager123` | Facturation |
+| **DFC Agent** | `dfc@invoice-app.local` | `dfc123` | Comptabilité |
+
+> [!WARNING]
+> **Security Note**: These are default accounts for initial setup. For production use, **change these passwords immediately** after first login.
+
 ### Step 5: Launch the Application
 
 1. Close the MySQL terminal (type `exit` or press `Ctrl+D`).
@@ -238,6 +251,44 @@ Download the project ZIP file from the repository and extract it to your desired
 > 1. Close the application completely
 > 2. Verify that **Docker Desktop** is running (check the system tray or open Docker Desktop and click "Start" if it's not running)
 > 3. Relaunch the `.exe` file
+
+---
+
+### 📧 Email Configuration (Optional)
+
+> [!NOTE]
+> **Email Functionality**: After installing the `.exe` file, email functionality (password reset, verification emails, etc.) **will not be functional** by default. This is by design for security and flexibility reasons.
+
+To enable email functionality in your custom build:
+
+1. **Create a Google Account** (if you don't have one)
+2. **Enable Two-Factor Authentication (2FA)** on your Google account:
+   - Go to your Google Account settings
+   - Navigate to Security → 2-Step Verification
+   - Follow the setup process
+3. **Generate an App Password**:
+   - Still in Security settings, go to "App passwords"
+   - Select "Mail" and your device
+   - Generate the password and **copy it** to a secure location (notepad, password manager, etc.)
+4. **Download/Clone the Project**:
+   - Download the ZIP file or clone the repository
+   - Extract/open the project folder
+5. **Configure Email Settings**:
+   - Navigate to `invoice-app/server/`
+   - Open the `.env.example` file
+   - Locate the `{#email configuration}` section
+   - Set `GMAIL_USER` to your Google account email address
+   - Set `GMAIL_PASS` to the app password you generated and saved
+6. **Rebuild the Application**:
+   - Return to the project root (`invoice-app/`)
+   - Run the build command:
+     ```bash
+     npm run dist
+     ```
+   - The new `.exe` file in the `release/` folder will have fully functional email capabilities
+
+> [!WARNING]
+> **Security**: Keep your app password secure. Never commit it to version control or share it publicly.
 
 ---
 
@@ -267,12 +318,13 @@ The embedded server exposes a full REST API at `http://localhost:3000/api`.
 * [ ] **Phase 3**: Auto-updater
 * [ ] **Phase 4**: **Future: Add "Lite Mode" using SQLite for users without Docker**
 * [ ] **Phase 5**: Multi-machine sync (Remote DB option)
-* [ ] **Phase 6**: Turborepo integration for better monorepo management
-* [ ] **Phase 7**: Complete Frontend migration to TypeScript (TSX)
-* [ ] **Phase 8**: Frontend architecture migration to feature-based design
-* [ ] **Phase 9**: Backend model extraction and refactoring
-* [ ] **Phase 10**: Progressive migration to Prisma ORM
-* [ ] **Phase 11**: Systematic Jest integration for comprehensive pre-launch testing
+* [ ] **Phase 6**: Cross-platform support (macOS & Linux)
+* [ ] **Phase 7**: Turborepo integration for better monorepo management
+* [ ] **Phase 8**: Complete Frontend migration to TypeScript (TSX)
+* [ ] **Phase 9**: Frontend architecture migration to feature-based design
+* [ ] **Phase 10**: Backend model extraction and refactoring
+* [ ] **Phase 11**: Progressive migration to Prisma ORM
+* [ ] **Phase 12**: Systematic Jest integration for comprehensive pre-launch testing
 
 ---
 
