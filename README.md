@@ -94,8 +94,8 @@ This project solves the "Client-Server on Desktop" challenge through a hybrid de
 ### Deep Linking (Cold Start)
 The application supports deep linking (e.g., clicking a "Reset Password" link in an email) **only when the application is already running (Warm Start)**.
 
-*   **Behavior:** If the app is fully closed, clicking a magic link will launch the application, but **the specific action (token validation) will fail**.
-*   **Reason:** This is a deliberate architectural choice to maintain a strict **"Local First"** philosophy. We chose not to rely on external buffering servers or complex cloud relays. Since the local backend (Docker + Node) takes a few seconds to boot, it cannot validate the token immediately upon a cold launch.
+*   **Behavior:** If the app is fully closed, clicking a magic link **will not launch the application** because the server is completely shut down.
+*   **Reason:** This is a deliberate architectural choice to maintain a strict **"Local First"** philosophy. We chose not to rely on external buffering servers or complex cloud relays. Since the local backend (Docker + Node) is completely stopped when the app is closed, the deep link cannot be processed.
 
 ---
 
@@ -297,7 +297,7 @@ To enable email functionality in your custom build:
 The app registers `invoice-app://` in the Windows Registry.
 
 * **Warm Start**: If the app is open, the renderer receives the link instantly via `IPC`.
-* **Cold Start**: If closed, Electron launches the application but **will not** trigger the deep link action (see *Known Limitations*).
+* **Cold Start**: If the app is closed, clicking a deep link **will not launch the application** because the server is completely shut down (see *Known Limitations*).
 
 ---
 

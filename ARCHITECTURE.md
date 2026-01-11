@@ -44,11 +44,7 @@ The application registers the `invoice-app://` protocol in the Windows Registry,
 * ✅ **Works perfectly**: If the application is already open when a deep link is clicked, the renderer receives the link instantly via `IPC` and can immediately process the action (e.g., token validation, password reset).
 
 **Cold Start (Application Closed):**
-* ⚠️ **Limited functionality**: If the application is completely closed, clicking a deep link will:
-  1. Launch Electron
-  2. Electron will attempt to start the backend server
-  3. However, the backend (Docker + Node.js) requires several seconds to boot
-  4. During this boot period, the deep link action (token validation) **will fail or timeout**
+* ❌ **Does not work**: If the application is completely closed, clicking a deep link **will not launch the application** because the server is completely shut down. The deep link cannot be processed when the backend is not running.
 
 **Why This Limitation Exists:**
 This is a deliberate architectural choice aligned with the **"Local First"** philosophy:
@@ -58,7 +54,7 @@ This is a deliberate architectural choice aligned with the **"Local First"** phi
 * Implementing a workaround would require external infrastructure, which conflicts with the offline-first, local-only design principles
 
 **User Impact:**
-Users must ensure the application is **already running** (Warm Start) before clicking deep links from emails. If the application is closed, they should:
+Users must ensure the application is **already running** (Warm Start) before clicking deep links from emails. If the application is closed, they must:
 1. Launch the application first
 2. Wait for it to fully initialize
 3. Then click the deep link (or copy/paste the token manually)
@@ -108,7 +104,7 @@ Packaging a complex Node.js app (with native dependencies) into an Electron exe 
 
 **Status**: Known limitation, **Won't Fix** (by design)
 
-**Description**: Deep linking (e.g., `invoice-app://reset-password?token=...`) only works reliably when the application is already running (Warm Start). If the application is completely closed (Cold Start), the deep link will launch the app, but the specific action will fail because the local backend requires time to boot.
+**Description**: Deep linking (e.g., `invoice-app://reset-password?token=...`) only works when the application is already running (Warm Start). If the application is completely closed (Cold Start), clicking a deep link will not launch the application because the server is completely shut down.
 
 **Architecture Decision Record (ADR)**:
 This behavior is an intentional trade-off of the **"Local First"** architecture. The design prioritizes:
