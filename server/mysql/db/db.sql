@@ -248,6 +248,69 @@ CREATE TABLE employee_fiscal_year_counter (
     UNIQUE KEY unique_employee_fiscal_year (fiscal_year)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- Default employees initialization (Admin, Invoice Manager, DFC Agent)
+INSERT INTO employee (
+    id,
+    firstname,
+    lastname,
+    email,
+    password,
+    employee_cmdt_id,
+    role,
+    phone,
+    department,
+    fiscal_year,
+    isVerified,
+    isActive
+) VALUES
+(
+    'EMP-FY2025-00000001',
+    'Admin',
+    'System',
+    'admin@invoice-app.local',
+    '$2b$10$xENhsjlHWP3jsZkxyheFCuSJmQiNSQUUNKSdcnG88a9RI4TLYbDm.',
+    'CMDT-ADMIN-001',
+    'admin',
+    '+221701234567',
+    'Finance',
+    '2025',
+    TRUE,
+    TRUE
+),
+(
+    'EMP-FY2025-00000002',
+    'Manager',
+    'Invoice',
+    'manager@invoice-app.local',
+    '$2b$10$aE5q71aYszOU0o.CI5e3PefqEs94yEr4OtcQSBnvXcE3UNdMyDQfu',
+    'CMDT-MGR-001',
+    'invoice_manager',
+    '+221701234568',
+    'Facturation',
+    '2025',
+    TRUE,
+    TRUE
+),
+(
+    'EMP-FY2025-00000003',
+    'Agent',
+    'DFC',
+    'dfc@invoice-app.local',
+    '$2b$10$vn5KO72QW25FwSpu7q1FweLBIaHwQi/vBMPpPiYeqAXN..NIohuYG',
+    'CMDT-DFC-001',
+    'dfc_agent',
+    '+221701234569',
+    'Comptabilité',
+    '2025',
+    TRUE,
+    TRUE
+);
+
+-- Initialize employee fiscal year counter for 2025 (3 default employees created)
+INSERT INTO employee_fiscal_year_counter (fiscal_year, last_employee_number) VALUES
+('2025', 3)
+ON DUPLICATE KEY UPDATE last_employee_number = 3;
+
 -- Critical application settings table
 CREATE TABLE app_settings (
     id INT PRIMARY KEY AUTO_INCREMENT,
