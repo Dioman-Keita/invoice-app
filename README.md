@@ -213,6 +213,7 @@ Download the project ZIP file from the repository and extract it to your desired
 1. Navigate to the `server/` folder in your terminal.
 2. Access the MySQL container:
    ```bash
+   docker compose up -d
    docker exec -it final_mysql mysql -u root -p
    ```
    Enter the password you defined in your `.env` file (the `DB_PASSWORD` value).
