@@ -92,10 +92,11 @@ This project solves the "Client-Server on Desktop" challenge through a hybrid de
 ## ⚠️ Known Limitations & Architecture Decisions
 
 ### Deep Linking (Cold Start)
+
 The application supports deep linking (e.g., clicking a "Reset Password" link in an email) **only when the application is already running (Warm Start)**.
 
-*   **Behavior:** If the app is fully closed, clicking a magic link **will not launch the application** because the server is completely shut down.
-*   **Reason:** This is a deliberate architectural choice to maintain a strict **"Local First"** philosophy. We chose not to rely on external buffering servers or complex cloud relays. Since the local backend (Docker + Node) is completely stopped when the app is closed, the deep link cannot be processed.
+* **Behavior:** If the app is fully closed, clicking a magic link **will not launch the application** because the server is completely shut down.
+* **Reason:** This is a deliberate architectural choice to maintain a strict **"Local First"** philosophy. We chose not to rely on external buffering servers or complex cloud relays. Since the local backend (Docker + Node) is completely stopped when the app is closed, the deep link cannot be processed.
 
 ---
 
@@ -161,16 +162,11 @@ npm run electron:dev
 
 #### 🛠️ Database Initialization (First Use)
 
-If this is your first time using the app:
+The database is **automatically initialized** when the Docker container starts for the first time. The `server/mysql/db/db.sql` script is mounted to `/docker-entrypoint-initdb.d`, which MySQL executes on startup.
 
-1. Run `npm run electron:dev` once to let Docker create the container.
-2. Open your terminal and access the MySQL container:
-
-    ```bash
-    docker exec -it final_mysql mysql -u root -p
-    ```
-
-3. Execute the schema located at `server/mysql/db/db.sql` to initialize tables.
+1. Run `npm run electron:dev`.
+2. Wait for Docker containers to spin up.
+3. The database is ready! No manual SQL execution required.
 
 ### Build for Production (`.exe`)
 
@@ -186,55 +182,31 @@ npm run dist
 
 ## 🚀 Post-Installation Setup (First Time Users)
 
-After installing the `.exe` file, you need to set up the database before launching the application for the first time.
+After installing the `.exe` file, the setup is **fully automated**.
 
-### Step 1: Install MySQL Docker Image
+### Requirements
 
-Pull the MySQL 8.2 Docker image:
+* **Docker Desktop**: Must be installed and running.
+* **LibreOffice**: Required for PDF generation.
 
-```bash
-docker pull mysql:8.2
-```
+### Installation & Launch
 
-### Step 2: Download Project Source Code
+1. **Install the Application**: Run the setup `.exe`.
+2. **Start Docker Desktop**: Ensure it is running.
+3. **Launch the App**: Open the installed application.
+    * The app checks for the MySQL Docker image.
+    * It verifies the container status.
+    * **The database is automatically initialized** on the first run.
 
-Download the project ZIP file from the repository and extract it to your desired location.
-
-### Step 3: Configure Environment Variables
-
-1. Navigate to the `invoice-app/server` folder in the extracted project.
-2. Rename `.env.example` to `.env`
-3. Open the `.env` file and modify the database password to a more secure value:
-   - **Important**: Only the database-related variables (`DB_PASSWORD`, `DB_NAME`, `DB_HOST`, `DB_USER`, `DB_PORT`) need to be configured.
-   - Other environment variables have no effect on the build; these modifications are only to initialize Docker with the correct database configuration.
-
-### Step 4: Initialize the Database
-
-1. Navigate to the `server/` folder in your terminal.
-2. Access the MySQL container:
-   ```bash
-   docker compose up -d
-   docker exec -it final_mysql mysql -u root -p
-   ```
-   Enter the password you defined in your `.env` file (the `DB_PASSWORD` value).
-3. Select the database:
-   ```sql
-   USE cmdt_invoice_db;
-   ```
-4. Open the file `server/mysql/db/db.sql` in a text editor, select all (`Ctrl+A`), copy (`Ctrl+C`), then paste the entire SQL script into your MySQL terminal (`Ctrl+V`).
-5. Wait for the script to execute completely.
-6. Verify the installation by running:
-   ```sql
-   SELECT * FROM app_settings;
-   ```
-   You should see configuration records displayed.
+> [!TIP]
+> **First Run**: The first launch might take a few extra seconds as it pulls the MySQL image and initializes the database volume.
 
 #### 👤 Default User Accounts
 
-After database initialization, the following default accounts are created and ready to use:
+The app initializes with default accounts.
 
 | Role | Email | Password | Department |
-|------|-------|----------|------------|
+| :--- | :--- | :--- | :--- |
 | **Admin** | `admin@invoice-app.local` | `admin123` | Finance |
 | **Invoice Manager** | `manager@invoice-app.local` | `manager123` | Facturation |
 | **DFC Agent** | `dfc@invoice-app.local` | `dfc123` | Comptabilité |
@@ -242,16 +214,13 @@ After database initialization, the following default accounts are created and re
 > [!WARNING]
 > **Security Note**: These are default accounts for initial setup. For production use, **change these passwords immediately** after first login.
 
-### Step 5: Launch the Application
+### Troubleshooting Launch
 
-1. Close the MySQL terminal (type `exit` or press `Ctrl+D`).
-2. Launch the installed `.exe` file. The application will automatically start the Docker container.
+If the app fails to start Docker:
 
-> [!TIP]
-> **Troubleshooting**: If you see a Docker timeout error when launching the `.exe` file for the first time:
-> 1. Close the application completely
-> 2. Verify that **Docker Desktop** is running (check the system tray or open Docker Desktop and click "Start" if it's not running)
-> 3. Relaunch the `.exe` file
+1. Close the application.
+2. Manually start **Docker Desktop**.
+3. Relaunch the app.
 
 ---
 
@@ -264,29 +233,31 @@ To enable email functionality in your custom build:
 
 1. **Create a Google Account** (if you don't have one)
 2. **Enable Two-Factor Authentication (2FA)** on your Google account:
-   - Go to your Google Account settings
-   - Navigate to Security → 2-Step Verification
-   - Follow the setup process
+   * Go to your Google Account settings
+   * Navigate to Security → 2-Step Verification
+   * Follow the setup process
 3. **Generate an App Password**:
-   - Still in Security settings, go to "App passwords"
-   - Select "Mail" and your device
-   - Generate the password and **copy it** to a secure location (notepad, password manager, etc.)
+   * Still in Security settings, go to "App passwords"
+   * Select "Mail" and your device
+   * Generate the password and **copy it** to a secure location (notepad, password manager, etc.)
 4. **Download/Clone the Project**:
-   - Download the ZIP file or clone the repository
-   - Extract/open the project folder
+   * Download the ZIP file or clone the repository
+   * Extract/open the project folder
 5. **Configure Email Settings**:
-   - Navigate to `invoice-app/server/`
-   - Open the `.env.example` file
-   - Locate the `{#email configuration}` section
-   - Set `GMAIL_USER` to your Google account email address
-   - Set `GMAIL_PASS` to the app password you generated and saved
+   * Navigate to `invoice-app/server/`
+   * Open the `.env.example` file
+   * Locate the `{#email configuration}` section
+   * Set `GMAIL_USER` to your Google account email address
+   * Set `GMAIL_PASS` to the app password you generated and saved
 6. **Rebuild the Application**:
-   - Return to the project root (`invoice-app/`)
-   - Run the build command:
+   * Return to the project root (`invoice-app/`)
+   * Run the build command:
+
      ```bash
      npm run dist
      ```
-   - The new `.exe` file in the `release/` folder will have fully functional email capabilities
+
+   * The new `.exe` file in the `release/` folder will have fully functional email capabilities
 
 > [!WARNING]
 > **Security**: Keep your app password secure. Never commit it to version control or share it publicly.
@@ -334,7 +305,7 @@ The embedded server exposes a full REST API at `http://localhost:3000/api`.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 1. Fork & Clone
-2. `git checkout -b my-feature`
+2. `git checkout -b my-feature/description`
 3. Submit PR
 
 ---
