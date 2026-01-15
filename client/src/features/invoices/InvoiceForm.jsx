@@ -100,14 +100,14 @@ function InvoiceForm() {
         lastInvoiceNumber={lastInvoiceNumber}
         isLoading={loading}
         fiscalYear={fiscalYear}
-        disabled={Number(remaining) === 0}
+        disabled={remaining !== null && Number(remaining) === 0}
       >
         {warningInfo?.warning === true && (
           <div className="mb-4 p-3 rounded-md bg-yellow-50 text-yellow-800 border border-yellow-200">
             Attention: le seuil annuel approche. Restant: {warningInfo.remaining}
           </div>
         )}
-        {Number(remaining) === 0 && (
+        {remaining !== null && Number(remaining) === 0 && (
           <div className="mb-4 p-3 rounded-md bg-red-50 text-red-800 border border-red-200">
             Le quota de numéros pour l'année fiscale courante est épuisé. Veuillez démarrer une nouvelle année fiscale.
           </div>
