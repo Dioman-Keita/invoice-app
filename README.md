@@ -1,4 +1,4 @@
-# Welcome to `rari`
+# Welcome to `invoice-app project`
 
 > [!Warning]
 > This project is work in progress and lacking most of its documentation.
