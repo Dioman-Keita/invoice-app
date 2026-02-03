@@ -1,3 +1,13 @@
+# Welcome to `rari`
+
+> [!Warning]
+> This project is work in progress and lacking most of its documentation.
+> Anything might change and code will move a lot. We do not encourage using it yet.
+> We'll have an official announcement before we migrate, so stay tuned.
+
+
+---
+
 # Invoice Management System 🚀
 
 **Enterprise-level Invoice Management System** designed for scalability and offline-first usage.  
