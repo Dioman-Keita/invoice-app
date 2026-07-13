@@ -69,7 +69,7 @@
     "@types/react-dom": "^19.1.7",
     "@typescript-eslint/eslint-plugin": "^8.46.2",
     "@typescript-eslint/parser": "^8.46.2",
-    "@vitejs/plugin-react": "^5.0.0",
+    "@vitejs/plugin-react": "^5.2.0",
     "autoprefixer": "^10.4.21",
     "concurrently": "^10.0.3",
     "electron": "^39.8.5",
@@ -83,7 +83,7 @@
     "tailwindcss": "^4.1.12",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "vite": "^7.3.3"
+    "vite": "^8.1.4"
   },
   "dependencies": {
     "electron-log": "^5.4.3",
